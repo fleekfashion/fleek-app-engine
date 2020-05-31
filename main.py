@@ -17,7 +17,6 @@
 Demonstrates how to create a simple echo API as well as how to deal with
 various authentication methods.
 """
-
 import base64
 import json
 import logging
@@ -46,6 +45,45 @@ PASSWORD = "fleek-app-prod1"
 DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5432', dbname=DBNAME)
+
+@app.route('/getRecs', methods=['GET'])
+def users():
+    cur = conn.cursor()
+
+    user_id = 2
+    batch = 1
+
+    query = f"SELECT * FROM user_product_recs WHERE user_id={user_id} AND batch={batch}"
+    cur.execute(query)
+    columns = [desc[0] for desc in cur.description]
+    values = cur.fetchone()
+
+    ctov = dict( (c, v) for c, v in zip(columns, values))
+
+    i = 0
+    top_p = []
+
+    cname = f"top_products_{i}"
+    while ctov.get(cname, 0):
+        top_p.append(ctov[cname])
+        i+=1
+        cname = f"top_products_{i}"
+
+    top_p = tuple(top_p)
+    query = f"SELECT * FROM product_info WHERE product_id in {top_p};"
+
+    cur.execute(query)
+    columns = [desc[0] for desc in cur.description]
+    values = cur.fetchall()
+
+    data = []
+    for value in values:
+        ctov = dict( (c, v) for c, v in zip(columns, value))
+        data.append(ctov)
+
+    pid_to_ind = dict( zip( top_p, range(len(top_p))))
+    data = sorted(data, key = lambda x: pid_to_ind[ x["product_id"]] )
+    return data
 
 @app.route('/getUsers', methods=['GET'])
 def users():
