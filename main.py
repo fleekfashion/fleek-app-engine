@@ -21,6 +21,8 @@ various authentication methods.
 import base64
 import json
 import logging
+import os
+import psycopg2
 
 from flask import Flask, jsonify, request
 
@@ -39,12 +41,37 @@ def _base64_decode(encoded_str):
         encoded_str += b'=' * num_missed_paddings
     return base64.b64decode(encoded_str).decode('utf-8')
 
+DATABASE_USER = "postgres"
+PASSWORD = "fleek-app-prod1"
+DBNAME = "ktest"
+conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
+                        host='localhost', port='5432', dbname=DBNAME)
 
-@app.route('/echo', methods=['POST'])
-def echo():
+@app.route('/getUsers', methods=['GET'])
+def users():
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM test_users;")
+    print(cur.fetchone())
+    return jsonify({'message': "hello"})
+
+
+@app.route('/repeat', methods=['POST'])
+def repeat():
     """Simple echo service."""
     message = request.get_json().get('message', '')
-    return jsonify({'message': message})
+    return jsonify({'message': "nahhh"})
+
+@app.route('/sendAction', methods=['POST'])
+def sendAction():
+
+    event = request.get_json().get('event', '')
+    method = request.get_json().get('method', '')
+    itemId = request.get_json().get('itemID', '')
+    userId = request.get_json().get('userId', '')
+    timestamp = request.get_json().get('timestamp', '')
+    print(event + " " + method + " " + itemId + " " + userId + " " + timestamp)
+    # do whatever you want with these 
+    return jsonify({'event is': event})
 
 
 # [START endpoints_auth_info_backend]

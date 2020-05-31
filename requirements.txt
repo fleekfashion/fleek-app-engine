@@ -6,3 +6,4 @@ pyyaml==5.3.1
 requests==2.23.0
 google-auth==1.16.0
 google-auth-oauthlib==0.4.1
+psycopg2-binary

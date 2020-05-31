@@ -13,5 +13,5 @@ endpoints_api_service:
   rollout_strategy: managed
  # [END configuration]
 
- beta_settings:
+beta_settings:
   cloud_sql_instances: fleek-prod:us-central1:fleek-app-prod1
