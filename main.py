@@ -24,11 +24,10 @@ import os
 import psycopg2
 
 from flask import Flask, jsonify, request
-
 from flask_cors import cross_origin
-
 from six.moves import http_client
 
+from src.rec import get_batch
 
 app = Flask(__name__)
 
@@ -45,6 +44,12 @@ PASSWORD = "fleek-app-prod1"
 DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5432', dbname=DBNAME)
+
+@app.route('/testQuery', methods=['GET'])
+def test_query():
+    data = get_batch(conn, 2, request.args)
+    print(data)
+    return jsonify(data)
 
 @app.route('/getRecs', methods=['GET'])
 def users():
