@@ -52,7 +52,7 @@ def test_query():
     return jsonify(data)
 
 @app.route('/getRecs', methods=['GET'])
-def users():
+def getRecs():
     cur = conn.cursor()
 
     user_id = 2
@@ -88,7 +88,7 @@ def users():
 
     pid_to_ind = dict( zip( top_p, range(len(top_p))))
     data = sorted(data, key = lambda x: pid_to_ind[ x["product_id"]] )
-    return data
+    return jsonify(data)
 
 @app.route('/getUsers', methods=['GET'])
 def users():
