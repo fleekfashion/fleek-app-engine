@@ -47,8 +47,7 @@ conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
 
 @app.route('/testQuery', methods=['GET'])
 def test_query():
-    data = get_batch(conn, 2, request.args)
-    print(data)
+    data = get_batch(conn, 1, request.args)
     return jsonify(data)
 
 @app.route('/getRecs', methods=['GET'])

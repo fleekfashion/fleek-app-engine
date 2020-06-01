@@ -80,7 +80,10 @@ def get_products_from_ids(conn, product_ids, FILTER=""):
 
 def get_random_products(conn, n_products, FILTER=""):
     with conn.cursor() as cur:
-        query = f" SELECT * FROM product_info TABLESAMPLE BERNOULLI({PROB}) {FILTER} LIMIT {n_products};"
+        query = f" SELECT * FROM product_info TABLESAMPLE BERNOULLI({PROB})"
+        if len(FILTER) > 0:
+            query += f" WHERE {FILTER}"
+        query += f" LIMIT {n_products};"
         print(query)
         cur_execute(cur, query)
         columns = get_columns(cur)
@@ -113,7 +116,7 @@ def get_batch(conn, user_id, args):
     if batch > 0:
         n_rand = MIN_PRODUCTS - len(products)
         n_rand = max(n_rand, len(products)//3)
-        rand_products = get_random_products(conn, n_rand)
+        rand_products = get_random_products(conn, n_rand, FILTER=FILTER)
         products = _random_merge(products, rand_products)
-    increment_user_batch(user_id)
+    increment_user_batch(conn, user_id)
     return products
