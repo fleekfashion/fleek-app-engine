@@ -13,19 +13,19 @@ produces:
 schemes:
 - "https"
 paths:
-  "/echo":
+  "/repeat":
     post:
-      description: "Echo back a given message."
-      operationId: "echo"
+      description: "Repeat back a given message."
+      operationId: "repeat"
       produces:
       - "application/json"
       responses:
         200:
-          description: "Echo"
+          description: "Repeat"
           schema:
             $ref: "#/definitions/echoMessage"
       parameters:
-      - description: "Message to echo"
+      - description: "Message to repeat"
         in: body
         name: message
         required: true
