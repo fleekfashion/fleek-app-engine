@@ -3,15 +3,18 @@ from random import shuffle
 import psycopg2
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
 
+MIN_PRODUCTS = 30
+PROB = 50
+DELIMITER = ",_,"
+
+PRODUCT_INFO_TABLE = "product_info"
+USER_PRODUCT_RECOMMENDATIONS_TABLE = "user_product_recommendations"
+
 def get_user_batch(conn, user_id):
     return 1
 
 def increment_user_batch(conn, user_id):
     return 1
-
-MIN_PRODUCTS = 30
-PROB = 50
-DELIMITER = ",_,"
 
 
 def _arg_to_filter(arg, value):
@@ -41,7 +44,7 @@ def _build_filter(args):
 def get_user_product_ids(conn, user_id, batch):
     with conn.cursor() as cur:
         
-        query = f"SELECT * FROM user_product_recs WHERE user_id={user_id} AND batch={batch};"
+        query = f"SELECT * FROM {USER_PRODUCT_RECOMMENDATIONS_TABLE} WHERE user_id={user_id} AND batch={batch};"
         cur_execute(cur, query)
         values = cur.fetchone()
         columns = get_columns(cur)
@@ -80,7 +83,7 @@ def get_products_from_ids(conn, product_ids, FILTER=""):
 
 def get_random_products(conn, n_products, FILTER=""):
     with conn.cursor() as cur:
-        query = f" SELECT * FROM product_info TABLESAMPLE BERNOULLI({PROB})"
+        query = f" SELECT * FROM {PRODUCT_INFO_TABLE} TABLESAMPLE BERNOULLI({PROB})"
         if len(FILTER) > 0:
             query += f" WHERE {FILTER}"
         query += f" LIMIT {n_products};"

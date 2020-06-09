@@ -28,6 +28,7 @@ from flask_cors import cross_origin
 from six.moves import http_client
 
 from src.rec import get_batch
+from src.event_upload import upload_event
 
 app = Flask(__name__)
 
@@ -43,50 +44,11 @@ DATABASE_USER = "postgres"
 PASSWORD = "fleek-app-prod1"
 DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
-                        host='localhost', port='5432', dbname=DBNAME)
+                        host='localhost', port='5431', dbname=DBNAME)
 
 @app.route('/testQuery', methods=['GET'])
 def test_query():
     data = get_batch(conn, 1, request.args)
-    return jsonify(data)
-
-@app.route('/getRecs', methods=['GET'])
-def getRecs():
-    cur = conn.cursor()
-
-    user_id = 2
-    batch = 1
-
-    query = f"SELECT * FROM user_product_recs WHERE user_id={user_id} AND batch={batch}"
-    cur.execute(query)
-    columns = [desc[0] for desc in cur.description]
-    values = cur.fetchone()
-
-    ctov = dict( (c, v) for c, v in zip(columns, values))
-
-    i = 0
-    top_p = []
-
-    cname = f"top_products_{i}"
-    while ctov.get(cname, 0):
-        top_p.append(ctov[cname])
-        i+=1
-        cname = f"top_products_{i}"
-
-    top_p = tuple(top_p)
-    query = f"SELECT * FROM product_info WHERE product_id in {top_p};"
-
-    cur.execute(query)
-    columns = [desc[0] for desc in cur.description]
-    values = cur.fetchall()
-
-    data = []
-    for value in values:
-        ctov = dict( (c, v) for c, v in zip(columns, value))
-        data.append(ctov)
-
-    pid_to_ind = dict( zip( top_p, range(len(top_p))))
-    data = sorted(data, key = lambda x: pid_to_ind[ x["product_id"]] )
     return jsonify(data)
 
 @app.route('/getUsers', methods=['GET'])
@@ -105,15 +67,8 @@ def repeat():
 
 @app.route('/sendAction', methods=['POST'])
 def sendAction():
-
-    event = request.get_json().get('event', '')
-    method = request.get_json().get('method', '')
-    itemId = request.get_json().get('itemID', '')
-    userId = request.get_json().get('userId', '')
-    timestamp = request.get_json().get('timestamp', '')
-    print(event + " " + method + " " + itemId + " " + userId + " " + timestamp)
-    # do whatever you want with these 
-    return jsonify({'event is': event})
+    res = upload_event(conn, request.args)
+    return jsonify({'event is': res})
 
 
 # [START endpoints_auth_info_backend]
@@ -148,18 +103,6 @@ def auth_info_google_id_token():
 def auth_info_firebase():
     """Auth info with Firebase auth."""
     return auth_info()
-
-
-@app.errorhandler(http_client.INTERNAL_SERVER_ERROR)
-def unexpected_error(e):
-    """Handle exceptions by returning swagger-compliant json."""
-    logging.exception('An error occured while processing the request.')
-    response = jsonify({
-        'code': http_client.INTERNAL_SERVER_ERROR,
-        'message': 'Exception: {}'.format(e)})
-    response.status_code = http_client.INTERNAL_SERVER_ERROR
-    return response
-
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
