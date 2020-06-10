@@ -13,7 +13,7 @@ def upload_event(conn, args):
     INSERT INTO {USER_EVENTS_TABLE}
         (user_id, product_id, event_timestamp, event, method)
     VALUES
-        ( {user_id}, {product_id}, {event_timestamp}, {event}, {method} );
+        ( {user_id}, {product_id}, {event_timestamp}, '{event}', '{method}' );
     """
     print(query)
     with conn.cursor() as cur:

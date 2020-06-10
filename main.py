@@ -65,7 +65,7 @@ def repeat():
     message = request.get_json().get('message', '')
     return jsonify({'message': "nahhh"})
 
-@app.route('/sendAction', methods=['POST'])
+@app.route('/sendEvent', methods=['POST'])
 def sendAction():
     res = upload_event(conn, request.args)
     return jsonify({'event is': res})
