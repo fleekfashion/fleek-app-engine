@@ -1,6 +1,9 @@
-def cur_execute(cur, query):
+def cur_execute(cur, query, conn=None):
     try:
         cur.execute(query)
+
+        if conn is not None:
+            conn.commit()
     except Exception as e:
         print(e)
         cur.execute("ROLLBACK;")

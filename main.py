@@ -46,6 +46,18 @@ DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 
+@app.route('/testPost', methods=['POST'])
+def test_post():
+    query = query = """
+        INSERT INTO user_events
+                (user_id, product_id, event_timestamp, event, method)
+                    VALUES
+                            ( 20, 20, 30, 'test_post', 'jupyter' );
+    """
+    with conn.cursor() as cur:
+        cur.execute(query)
+    return jsonify({"wow":True})
+
 @app.route('/testQuery', methods=['GET'])
 def test_query():
     data = get_batch(conn, 1, request.args)
@@ -67,42 +79,11 @@ def repeat():
 
 @app.route('/sendEvent', methods=['POST'])
 def sendAction():
-    res = upload_event(conn, request.args)
+    data = request.get_json(force=True)
+    print(data)
+    res = upload_event(conn, data)
     return jsonify({'event is': res})
 
-
-# [START endpoints_auth_info_backend]
-def auth_info():
-    """Retrieves the authenication information from Google Cloud Endpoints."""
-    encoded_info = request.headers.get('X-Endpoint-API-UserInfo', None)
-
-    if encoded_info:
-        info_json = _base64_decode(encoded_info)
-        user_info = json.loads(info_json)
-    else:
-        user_info = {'id': 'anonymous'}
-
-    return jsonify(user_info)
-# [START endpoints_auth_info_backend]
-
-
-@app.route('/auth/info/googlejwt', methods=['GET'])
-def auth_info_google_jwt():
-    """Auth info with Google signed JWT."""
-    return auth_info()
-
-
-@app.route('/auth/info/googleidtoken', methods=['GET'])
-def auth_info_google_id_token():
-    """Auth info with Google ID token."""
-    return auth_info()
-
-
-@app.route('/auth/info/firebase', methods=['GET'])
-@cross_origin(send_wildcard=True)
-def auth_info_firebase():
-    """Auth info with Firebase auth."""
-    return auth_info()
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
