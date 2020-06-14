@@ -46,44 +46,24 @@ DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 
-@app.route('/testPost', methods=['POST'])
-def test_post():
-    query = query = """
-        INSERT INTO user_events
-                (user_id, product_id, event_timestamp, event, method)
-                    VALUES
-                            ( 20, 20, 30, 'test_post', 'jupyter' );
-    """
-    with conn.cursor() as cur:
-        cur.execute(query)
-    return jsonify({"wow":True})
-
-@app.route('/testQuery', methods=['GET'])
+@app.route('/getUserProductBatch', methods=['GET'])
 def test_query():
-    data = get_batch(conn, 1, request.args)
+    args = request.args
+    user_id = args.get("user_id", -1)
+    data = get_batch(conn, user_id, request.args)
     return jsonify(data)
 
-@app.route('/getUsers', methods=['GET'])
-def users():
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM test_users;")
-    print(cur.fetchone())
-    return jsonify({'message': "hello"})
-
+@app.route('/pushUserEvent', methods=['POST'])
+def sendAction():
+    data = request.get_json(force=True)
+    res = upload_event(conn, data)
+    return jsonify({'event is': res})
 
 @app.route('/repeat', methods=['POST'])
 def repeat():
     """Simple echo service."""
     message = request.get_json().get('message', '')
     return jsonify({'message': "nahhh"})
-
-@app.route('/sendEvent', methods=['POST'])
-def sendAction():
-    data = request.get_json(force=True)
-    print(data)
-    res = upload_event(conn, data)
-    return jsonify({'event is': res})
-
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
