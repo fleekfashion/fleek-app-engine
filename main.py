@@ -27,18 +27,12 @@ from flask import Flask, jsonify, request
 from flask_cors import cross_origin
 from six.moves import http_client
 
+from src.utils import hashers
 from src.rec import get_batch
 from src.event_upload import upload_event
 
 app = Flask(__name__)
 
-
-def _base64_decode(encoded_str):
-    # Add paddings manually if necessary.
-    num_missed_paddings = 4 - len(encoded_str) % 4
-    if num_missed_paddings != 4:
-        encoded_str += b'=' * num_missed_paddings
-    return base64.b64decode(encoded_str).decode('utf-8')
 
 DATABASE_USER = "postgres"
 PASSWORD = "fleek-app-prod1"
@@ -46,15 +40,18 @@ DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 
+
 @app.route('/getUserProductBatch', methods=['GET'])
-def test_query():
+def getUserProductBatch():
     args = request.args
     user_id = args.get("user_id", -1)
+    if user_id != -1:
+        user_id = hashers.apple_id_to_user_id_hash(user_id)
     data = get_batch(conn, user_id, request.args)
     return jsonify(data)
 
 @app.route('/pushUserEvent', methods=['POST'])
-def sendAction():
+def pushUserEvent():
     data = request.get_json(force=True)
     res = upload_event(conn, data)
     return jsonify({'event is': res})
