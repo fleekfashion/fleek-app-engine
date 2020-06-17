@@ -108,7 +108,7 @@ def get_random_products(conn, n_products, FILTER=""):
     ## Create Query
     query = f" SELECT * FROM {PRODUCT_INFO_TABLE} TABLESAMPLE BERNOULLI({PROB})"
     if len(FILTER) > 0:
-        query += f" WHERE {FILTER}\n"
+        query += f" WHERE {FILTER} AND is_active=true\n"
     query += "ORDER BY RANDOM()\n"
     query += f" LIMIT {n_products};"
 
