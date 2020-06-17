@@ -105,11 +105,15 @@ def get_products_from_ids(conn, product_ids, FILTER=""):
 
 
 def get_random_products(conn, n_products, FILTER=""):
+    ## Create Query
+    query = f" SELECT * FROM {PRODUCT_INFO_TABLE} TABLESAMPLE BERNOULLI({PROB})"
+    if len(FILTER) > 0:
+        query += f" WHERE {FILTER}\n"
+    query += "ORDER BY RANDOM()\n"
+    query += f" LIMIT {n_products};"
+
+    ## Run Query
     with conn.cursor() as cur:
-        query = f" SELECT * FROM {PRODUCT_INFO_TABLE} TABLESAMPLE BERNOULLI({PROB})"
-        if len(FILTER) > 0:
-            query += f" WHERE {FILTER}"
-        query += f" LIMIT {n_products};"
         cur_execute(cur, query)
         columns = get_columns(cur)
         values = cur.fetchall()
