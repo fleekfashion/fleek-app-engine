@@ -146,8 +146,8 @@ def get_batch(conn, user_id, args):
             products.extend(personalized_products)
 
         print("Personalized_products: ", len(products))
-            for p in products:
-                p["product_name"] += " PERSONALIZED"
+        for p in products:
+            p["product_name"] += " PERSONALIZED"
 
     if batch > 0:
         n_rand = MIN_PRODUCTS - len(products)
