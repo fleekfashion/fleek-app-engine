@@ -6,6 +6,7 @@ from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
 MIN_PRODUCTS = 30
 PROB = 50
 DELIMITER = ",_,"
+OUR_IDS = set([1764367587500021222, 1281944956306160330])
 
 PRODUCT_INFO_TABLE = "product_info"
 USER_PRODUCT_RECOMMENDATIONS_TABLE = "user_product_recommendations"
@@ -142,6 +143,9 @@ def get_batch(conn, user_id, args):
     if len(product_ids) > 0:
         personalized_products = get_products_from_ids(conn, product_ids, FILTER=FILTER)
         products.extend(personalized_products)
+    if user_id in OUR_IDS:
+        for p in products:
+            p["product_name"] += " PERSONALIZED"
 
     if batch > 0:
         n_rand = MIN_PRODUCTS - len(products)
