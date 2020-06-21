@@ -140,12 +140,14 @@ def get_batch(conn, user_id, args):
     batch = batch_data["batch"] if batch_data["last_filter"] == FILTER else 1
     product_ids = get_user_product_ids(conn, user_id, batch=batch)
     products = []
-    if len(product_ids) > 0:
-        personalized_products = get_products_from_ids(conn, product_ids, FILTER=FILTER)
-        products.extend(personalized_products)
     if user_id in OUR_IDS:
-        for p in products:
-            p["product_name"] += " PERSONALIZED"
+        if len(product_ids) > 0:
+            personalized_products = get_products_from_ids(conn, product_ids, FILTER=FILTER)
+            products.extend(personalized_products)
+
+        print("Personalized_products: ", len(products))
+            for p in products:
+                p["product_name"] += " PERSONALIZED"
 
     if batch > 0:
         n_rand = MIN_PRODUCTS - len(products)
