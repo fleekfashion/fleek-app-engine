@@ -1,6 +1,5 @@
 from random import shuffle
 
-import psycopg2
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
 
 MIN_PRODUCTS = 30

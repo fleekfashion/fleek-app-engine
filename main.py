@@ -30,6 +30,7 @@ from six.moves import http_client
 from src.utils import hashers
 from src.rec import get_batch
 from src.event_upload import upload_event
+from src.single_product_info import get_single_product_info
 
 app = Flask(__name__)
 
@@ -48,6 +49,16 @@ def getUserProductBatch():
     if user_id != -1:
         user_id = hashers.apple_id_to_user_id_hash(user_id)
     data = get_batch(conn, user_id, request.args)
+    return jsonify(data)
+
+@app.route('/getSingleProductInfo', methods=['GET'])
+def getSingleProductInfo():
+    args = request.args
+    product_id = args.get("product_id", -1)
+    if product_id == -1:
+        data = {}
+    else:
+        data = get_single_product_info(conn, product_id)
     return jsonify(data)
 
 @app.route('/pushUserEvent', methods=['POST'])
