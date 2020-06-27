@@ -139,11 +139,13 @@ def get_batch(conn, user_id, args):
     batch = batch_data["batch"] if batch_data["last_filter"] == FILTER else 1
     product_ids = get_user_product_ids(conn, user_id, batch=batch)
     products = []
-    if user_id in OUR_IDS:
-        if len(product_ids) > 0:
-            personalized_products = get_products_from_ids(conn, product_ids, FILTER=FILTER)
-            products.extend(personalized_products)
+    if len(product_ids) > 0:
+        personalized_products = get_products_from_ids(conn, product_ids, FILTER=FILTER)
+        for p in personalized_products:
+            p["tags"] = ["personalized_product"]
+        products.extend(personalized_products)
 
+    if user_id in OUR_IDS:
         print("Personalized_products: ", len(products))
         for p in products:
             p["product_name"] += " PERSONALIZED"
@@ -152,6 +154,8 @@ def get_batch(conn, user_id, args):
         n_rand = MIN_PRODUCTS - len(products)
         n_rand = max(n_rand, len(products)//3)
         rand_products = get_random_products(conn, n_rand, FILTER=FILTER)
+        for p in rand_products:
+            p["tags"] = ["random_product"]
         products = _random_merge(products, rand_products)
 
     update_user_batch(conn, user_id, batch+1, last_filter=FILTER)

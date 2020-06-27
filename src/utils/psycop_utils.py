@@ -1,6 +1,6 @@
-def cur_execute(cur, query, conn=None):
+def cur_execute(cur, query, conn=None, params={}):
     try:
-        cur.execute(query)
+        cur.execute(query, params)
 
         if conn is not None:
             conn.commit()
