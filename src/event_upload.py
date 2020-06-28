@@ -15,6 +15,7 @@ def upload_event(conn, args):
     VALUES
         ( %(user_id)s, %(product_id)s, %(event_timestamp)s, %(event)s, %(method)s,  %(tags)s);
     """
+    print(f"User Event:", args)
     with conn.cursor() as cur:
         cur_execute(cur, query, conn=conn, params=args)
     return True
