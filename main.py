@@ -52,6 +52,7 @@ def getUserProductBatch():
     return jsonify(data)
 
 @app.route('/getSingleProductInfo', methods=['GET'])
+@cross_origin()
 def getSingleProductInfo():
     args = request.args
     product_id = args.get("product_id", -1)
