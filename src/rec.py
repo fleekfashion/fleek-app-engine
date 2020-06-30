@@ -5,7 +5,15 @@ from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
 MIN_PRODUCTS = 30
 PROB = 50
 DELIMITER = ",_,"
-OUR_IDS = set([1764367587500021222, 1338143769388061356, 1596069326878625953, 182814591431031699])
+
+OUR_IDS = set(
+        [
+        1338143769388061356, # Naman
+        1596069326878625953, # Kian 
+        182814591431031699, # Cyp
+        1117741357120322720 # Kelly
+    ]
+)
 
 PRODUCT_INFO_TABLE = "product_info"
 USER_PRODUCT_RECOMMENDATIONS_TABLE = "user_product_recommendations"
