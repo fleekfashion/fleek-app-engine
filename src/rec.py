@@ -60,6 +60,9 @@ def _arg_to_filter(arg, value):
         tag = value+ DELIMITER + "INVALID_TAG"
         product_tags = tuple(tag.split(DELIMITER))
         return f"product_tag in {product_tags}"
+    elif arg == "on_sale":
+        if value:
+            return "product_sale_price < product_price - 2"
     else:
         return ""
 
