@@ -47,9 +47,9 @@ def update_user_batch(conn, user_id, batch, last_filter):
 
 def _arg_to_filter(arg, value):
     if arg == "min_price":
-        return f"product_price > {value}"
+        return f"product_sale_price > {value}"
     elif arg == "max_price":
-        return f"product_price < {value}" ## ADD SALE PRICE
+        return f"product_sale_price < {value}"
     elif arg == "advertiser_name":
         names = value+DELIMITER+"INVALID_NAME"
         advertiser_names = tuple(names.split(DELIMITER))
