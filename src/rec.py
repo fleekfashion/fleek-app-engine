@@ -67,7 +67,7 @@ def _arg_to_filter(arg, value):
         return ""
 
 def _build_filter(args):
-    FILTER = ""
+    FILTER = "is_active"
     for k, v in args.items():
         f = _arg_to_filter(k, v)
         if len(f) != 0:
