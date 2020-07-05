@@ -42,7 +42,7 @@ conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 
 
-
+@app.route('/')
 @app.route('/getUserProductBatch', methods=['GET'])
 def getUserProductBatch():
     args = request.args
@@ -52,7 +52,6 @@ def getUserProductBatch():
     data = get_batch(conn, user_id, request.args)
     return jsonify(data)
 
-@app.route('/')
 @app.route('/getSingleProductInfo', methods=['GET'])
 @cross_origin()
 def getSingleProductInfo():
