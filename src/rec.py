@@ -16,6 +16,7 @@ OUR_IDS = set(
 )
 
 PRODUCT_INFO_TABLE = "product_info"
+TOP_PRODUCTS_TABLE = "top_product_info"
 USER_PRODUCT_RECOMMENDATIONS_TABLE = "user_product_recommendations"
 USER_BATCH_TABLE = "user_batch"
 
@@ -30,7 +31,7 @@ def get_user_batch(conn, user_id):
         cur_execute(cur, query)
         values = cur.fetchone()
         if values is None:
-            return {"batch": 1, "last_filter":"", "user_id": user_id}
+            return {"batch": None, "last_filter":"", "user_id": user_id}
         columns = get_columns(cur)
         data = get_labeled_values(columns, values)
     return data
@@ -99,7 +100,7 @@ def get_user_product_ids(conn, user_id, batch):
 
 def get_products_from_ids(conn, product_ids, FILTER=""):
     with conn.cursor() as cur:
-        query = f"SELECT * FROM product_info WHERE product_id in {product_ids}" 
+        query = f"SELECT * FROM {PRODUCT_INFO_TABLE} WHERE product_id in {product_ids}" 
         if len(FILTER) != 0:
             query += f"AND {FILTER};"
         cur_execute(cur, query)
@@ -115,11 +116,14 @@ def get_products_from_ids(conn, product_ids, FILTER=""):
     return data
 
 
-def get_random_products(conn, n_products, FILTER=""):
+def get_random_products(conn, n_products, top_products_only=False, FILTER=""):
     ## Create Query
-    query = f" SELECT * FROM {PRODUCT_INFO_TABLE} TABLESAMPLE BERNOULLI({PROB})"
+    table = TOP_PRODUCTS_TABLE if top_products_only else PRODUCT_INFO_TABLE 
+    sample = f"TABLESAMPLE BERNOULLI({PROB})" if top_products_only else ""
+    query = f" SELECT * FROM {table} {sample}"
+    query += "WHERE is_active=true\n"
     if len(FILTER) > 0:
-        query += f" WHERE {FILTER} AND is_active=true\n"
+        query += f" AND {FILTER}\n"
     query += "ORDER BY RANDOM()\n"
     query += f" LIMIT {n_products};"
 
@@ -145,29 +149,40 @@ def _random_merge(left, right):
     return res
         
 def get_batch(conn, user_id, args):
+    PRODUCTS = []
     FILTER = _build_filter(args)
     batch_data = get_user_batch(conn, user_id)
-    batch = batch_data["batch"] if batch_data["last_filter"] == FILTER else 1
-    product_ids = get_user_product_ids(conn, user_id, batch=batch)
-    products = []
-    if len(product_ids) > 0:
-        personalized_products = get_products_from_ids(conn, product_ids, FILTER=FILTER)
-        for p in personalized_products:
-            p["tags"] = ["personalized_product"]
-        products.extend(personalized_products)
+    batch = batch_data["batch"] if batch_data["last_filter"] == FILTER or batch_data["batch"] is None else 1
 
-    if user_id in OUR_IDS:
-        print("Personalized_products: ", len(products))
-        for p in products:
-            p["product_name"] += " PERSONALIZED"
+    ## New user: use top products
+    if batch is None:
+        N_TOP = 30
+        top_products = get_random_products(conn, N_TOP, FILTER=FILTER, top_products_only=True)
+        for p in top_products:
+            p["tags"] = ["top_product"]
+        PRODUCTS.extend(top_products)
+    else:
+        ## Get Personalized Products
+        product_ids = get_user_product_ids(conn, user_id, batch=batch)
+        if len(product_ids) > 0:
+            personalized_products = get_products_from_ids(conn, product_ids, FILTER=FILTER)
+            for p in personalized_products:
+                p["tags"] = ["personalized_product"]
+            PRODUCTS.extend(personalized_products)
+            
+        ## Add personalized tag
+        if user_id in OUR_IDS:
+            for p in PRODUCTS:
+                p["product_name"] += " PERSONALIZED"
 
-    if batch > 0:
-        n_rand = MIN_PRODUCTS - len(products)
-        n_rand = max(n_rand, len(products)//3)
-        rand_products = get_random_products(conn, n_rand, FILTER=FILTER)
-        for p in rand_products:
-            p["tags"] = ["random_product"]
-        products = _random_merge(products, rand_products)
+        update_user_batch(conn, user_id, batch+1, last_filter=FILTER)
 
-    update_user_batch(conn, user_id, batch+1, last_filter=FILTER)
-    return products
+    ## Add random products.
+    ## Fill to minimum batchsize or add 1/2 of # personalized.
+    #
+    n_rand = max(MIN_PRODUCTS - len(PRODUCTS), len(PRODUCTS)//2)
+    rand_products = get_random_products(conn, n_rand, FILTER=FILTER)
+    for p in rand_products:
+        p["tags"] = ["random_product"]
+    PRODUCTS = _random_merge(PRODUCTS, rand_products)
+    return PRODUCTS
