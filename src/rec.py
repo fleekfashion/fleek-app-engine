@@ -17,8 +17,8 @@ OUR_IDS = set(
 
 PROJECT = "staging"
 PRODUCT_INFO_TABLE = f"{PROJECT}.product_info"
-TOP_PRODUCTS_TABLE = "{PROJECT}.top_product_info"
-SIMILAR_ITEMS_TABLE = "{PROJECT}.similar_products"
+TOP_PRODUCTS_TABLE = f"{PROJECT}.top_product_info"
+SIMILAR_ITEMS_TABLE = f"{PROJECT}.similar_products"
 
 def _arg_to_filter(arg, value):
     if arg == "min_price":
@@ -86,16 +86,19 @@ def get_similar_items(conn, product_id):
     query = f"""
     SELECT *
     FROM {PRODUCT_INFO_TABLE} pi
-    INNER JOIN
+    INNER JOIN 
     ( 
         SELECT 
-            UNNEST(similar_products) AS product_id
+            UNNEST(similar_product_ids) AS product_id
         FROM {SIMILAR_ITEMS_TABLE}
         WHERE product_id={product_id}
     ) si
+    ON si.product_id = pi.product_id
     WHERE pi.is_active = true
     LIMIT 10;
     """
+
+    print(query)
 
     ## Run Query
     with conn.cursor() as cur:
