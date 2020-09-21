@@ -32,9 +32,11 @@ def _arg_to_filter(arg, value):
     elif arg == "product_tag":
         # TODO This is a hack. When there is only one item,
         # the tuple adds an unneccessary comma.
-        tag = value+ DELIMITER + "INVALID_TAG"
-        product_tags = tuple(tag.split(DELIMITER))
-        return f"product_tag in {product_tags}"
+        tags = value.split(DELIMITER)
+        tags = [ f"'{t}'" for t in tags ]
+        tags = ", ".join(tags)
+        labels = f"ARRAY[{tags}]"
+        return f"product_labels && {labels}"
     elif arg == "on_sale":
         if value:
             return "product_sale_price < product_price - 2"
@@ -76,7 +78,7 @@ def get_random_products(conn, n_products, top_products_only=False, FILTER=""):
 
 def get_batch(conn, user_id, args):
     FILTER = _build_filter(args)
-    products = get_random_products(conn, 30, FILTER=FILTER, top_products_only=True)
+    products = get_random_products(conn, 30, FILTER=FILTER, top_products_only=False)
     return products 
 
 
