@@ -17,7 +17,7 @@ OUR_IDS = set(
 
 PROJECT = "staging"
 PRODUCT_INFO_TABLE = f"{PROJECT}.product_info"
-TOP_PRODUCTS_TABLE = "top_product_info"
+TOP_PRODUCTS_TABLE = "{PROJECT}.top_product_info"
 SIMILAR_ITEMS_TABLE = "{PROJECT}.similar_products"
 
 def _arg_to_filter(arg, value):
