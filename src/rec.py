@@ -84,14 +84,16 @@ def get_batch(conn, user_id, args):
 
 def get_similar_items(conn, product_id):
     query = f"""
-    SELECT *
+    SELECT pi.*
     FROM {PRODUCT_INFO_TABLE} pi
     INNER JOIN 
     ( 
-        SELECT 
-            UNNEST(similar_product_ids) AS product_id
-        FROM {SIMILAR_ITEMS_TABLE}
-        WHERE product_id={product_id}
+        SELECT T.similar_product_id AS product_id, index 
+        FROM {SIMILAR_ITEMS_TABLE} si,
+            unnest(similar_product_ids) WITH ORDINALITY AS T (similar_product_id, index)
+        WHERE si.product_id={product_id} 
+        ORDER BY index
+        LIMIT 20
     ) si
     ON si.product_id = pi.product_id
     WHERE pi.is_active = true
