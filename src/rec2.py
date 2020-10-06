@@ -82,13 +82,13 @@ def _get_batch_query(user_id, FILTER):
     return f"""
     CREATE TEMP TABLE personalized_products AS (
         {_get_personalized_products_query(user_id, FILTER)} 
-    );
+    ) ON COMMIT DROP;
     CREATE TEMP TABLE top_products AS (
         {_get_random_products_query(True, FILTER, 5)}
-    );
+    ) ON COMMIT DROP;
     CREATE TEMP TABLE random_products AS (
         {_get_random_products_query(False, FILTER, 30)}
-    );
+    ) ON COMMIT DROP;
 
     UPDATE personalized_products
         SET product_tags = array_append(product_tags, 'personalized_product');
@@ -113,10 +113,11 @@ def get_batch(conn, user_id, args):
         FILTER = "AND " + FILTER
     query = _get_batch_query(user_id, FILTER)
     ## Run Query
-    with conn.cursor() as cur:
-        cur_execute(cur, query)
-        columns = get_columns(cur)
-        values = cur.fetchall()
+    with conn:
+        with conn.cursor() as cur:
+            cur_execute(cur, query)
+            columns = get_columns(cur)
+            values = cur.fetchall()
     data = []
     for value in values:
         ctov = get_labeled_values(columns, value)
