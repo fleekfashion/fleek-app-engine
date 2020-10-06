@@ -80,15 +80,15 @@ def _get_random_products_query(top_products_only, FILTER, limit):
 
 def _get_batch_query(user_id, FILTER):
     return f"""
-    CREATE TEMP TABLE personalized_products AS (
+    CREATE TEMP TABLE personalized_products ON COMMIT DROP AS (
         {_get_personalized_products_query(user_id, FILTER)} 
-    ) ON COMMIT DROP;
-    CREATE TEMP TABLE top_products AS (
+    ); 
+    CREATE TEMP TABLE top_products ON COMMIT DROP AS (
         {_get_random_products_query(True, FILTER, 5)}
-    ) ON COMMIT DROP;
-    CREATE TEMP TABLE random_products AS (
+    ); 
+    CREATE TEMP TABLE random_products ON COMMIT DROP AS (
         {_get_random_products_query(False, FILTER, 30)}
-    ) ON COMMIT DROP;
+    ); 
 
     UPDATE personalized_products
         SET product_tags = array_append(product_tags, 'personalized_product');
