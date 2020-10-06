@@ -100,7 +100,6 @@ def get_similar_items(conn, product_id):
     LIMIT 10;
     """
 
-    print(query)
 
     ## Run Query
     with conn.cursor() as cur:

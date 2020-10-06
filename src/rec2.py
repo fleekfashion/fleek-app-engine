@@ -112,7 +112,6 @@ def get_batch(conn, user_id, args):
     if len(FILTER) > 0:
         FILTER = "AND " + FILTER
     query = _get_batch_query(user_id, FILTER)
-    print(query)
     ## Run Query
     with conn.cursor() as cur:
         cur_execute(cur, query)
