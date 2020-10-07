@@ -93,11 +93,11 @@ def get_similar_items(conn, product_id):
             unnest(similar_product_ids) WITH ORDINALITY AS T (similar_product_id, index)
         WHERE si.product_id={product_id} 
         ORDER BY index
-        LIMIT 20
+        LIMIT 50
     ) si
     ON si.product_id = pi.product_id
     WHERE pi.is_active = true
-    LIMIT 10;
+    ORDER BY si.index
     """
 
 
