@@ -1,7 +1,7 @@
 from src.utils.psycop_utils import cur_execute
 from src.utils import hashers
 
-USER_EVENTS_TABLE = "user_events" 
+USER_EVENTS_TABLE = "prod.user_events" 
 
 def upload_event(conn, args):
     args["method"] = args.get('method', '')
