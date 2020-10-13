@@ -123,3 +123,34 @@ def get_batch(conn, user_id, args):
         ctov = get_labeled_values(columns, value)
         data.append(ctov)
     return data 
+
+def get_similar_items(conn, product_id):
+    query = f"""
+    SELECT pi.*
+    FROM {PRODUCT_INFO_TABLE} pi
+    INNER JOIN 
+    ( 
+        SELECT T.similar_product_id AS product_id, index 
+        FROM {SIMILAR_ITEMS_TABLE} si,
+            unnest(similar_product_ids) WITH ORDINALITY AS T (similar_product_id, index)
+        WHERE si.product_id={product_id} 
+        ORDER BY index
+        LIMIT 50
+    ) si
+    ON si.product_id = pi.product_id
+    WHERE pi.is_active = true
+    ORDER BY si.index
+    """
+
+
+    ## Run Query
+    with conn.cursor() as cur:
+        cur_execute(cur, query)
+        columns = get_columns(cur)
+        values = cur.fetchall()
+    data = []
+    for value in values:
+        ctov = get_labeled_values(columns, value)
+        data.append(ctov)
+    return data 
+

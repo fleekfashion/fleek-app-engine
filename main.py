@@ -28,7 +28,7 @@ from flask_cors import cross_origin
 from six.moves import http_client
 
 from src.utils import hashers
-from src.rec import get_batch, get_similar_items
+from src.rec import get_batch
 from src import rec2
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
@@ -68,7 +68,7 @@ def getUserProductBatchv2():
 def getSimilarItems():
     args = request.args
     product_id= args.get("product_id", -1)
-    data = get_similar_items(conn, product_id)
+    data = rec2.get_similar_items(conn, product_id)
     return jsonify(data)
 
 @app.route('/getSingleProductInfo', methods=['GET'])
