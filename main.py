@@ -29,6 +29,7 @@ from six.moves import http_client
 
 from src.utils import hashers
 from src.rec import get_batch
+from src import rec2
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 
@@ -50,6 +51,24 @@ def getUserProductBatch():
     if user_id != -1:
         user_id = hashers.apple_id_to_user_id_hash(user_id)
     data = get_batch(conn, user_id, request.args)
+    return jsonify(data)
+
+@app.route('/')
+@app.route('/getUserProductBatchv2', methods=['GET'])
+def getUserProductBatchv2():
+    args = request.args
+    user_id = args.get("user_id", -1)
+    if user_id != -1:
+        user_id = hashers.apple_id_to_user_id_hash(user_id)
+    data = rec2.get_batch(conn, user_id, request.args)
+    return jsonify(data)
+
+@app.route('/')
+@app.route('/getSimilarItems', methods=['GET'])
+def getSimilarItems():
+    args = request.args
+    product_id= args.get("product_id", -1)
+    data = rec2.get_similar_items(conn, product_id)
     return jsonify(data)
 
 @app.route('/getSingleProductInfo', methods=['GET'])
