@@ -1,9 +1,10 @@
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
+PROJECT = 'prod'
 
 def get_single_product_info(conn, product_id):
     query = f"""
     SELECT *
-    FROM product_info
+    FROM {PROJECT}.product_info
     WHERE product_id={product_id}
     LIMIT 1
     """
