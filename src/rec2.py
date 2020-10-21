@@ -130,9 +130,8 @@ def get_similar_items(conn, product_id):
     FROM {PRODUCT_INFO_TABLE} pi
     INNER JOIN 
     ( 
-        SELECT T.similar_product_id AS product_id, index 
-        FROM {SIMILAR_ITEMS_TABLE} si,
-            unnest(similar_product_ids) WITH ORDINALITY AS T (similar_product_id, index)
+        SELECT similar_product_id AS product_id, index 
+        FROM {SIMILAR_ITEMS_TABLE} si
         WHERE si.product_id={product_id} 
         ORDER BY index
         LIMIT 50
