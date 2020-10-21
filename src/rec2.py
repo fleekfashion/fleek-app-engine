@@ -18,7 +18,7 @@ OUR_IDS = set(
 PROJECT = "staging"
 PRODUCT_INFO_TABLE = f"{PROJECT}.product_info"
 TOP_PRODUCTS_TABLE = f"{PROJECT}.product_info"
-SIMILAR_ITEMS_TABLE = f"{PROJECT}.similar_products"
+SIMILAR_ITEMS_TABLE = f"{PROJECT}.similar_products_v2"
 PRODUCT_RECS_TABLE = f"{PROJECT}.user_product_recommendations"
 
 
