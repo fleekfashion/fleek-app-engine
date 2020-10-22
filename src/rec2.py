@@ -18,7 +18,7 @@ OUR_IDS = set(
 PROJECT = "staging"
 PRODUCT_INFO_TABLE = f"{PROJECT}.product_info"
 TOP_PRODUCTS_TABLE = f"{PROJECT}.product_info"
-SIMILAR_ITEMS_TABLE = f"{PROJECT}.similar_products"
+SIMILAR_ITEMS_TABLE = f"{PROJECT}.similar_products_v2"
 PRODUCT_RECS_TABLE = f"{PROJECT}.user_product_recommendations"
 
 
@@ -130,9 +130,8 @@ def get_similar_items(conn, product_id):
     FROM {PRODUCT_INFO_TABLE} pi
     INNER JOIN 
     ( 
-        SELECT T.similar_product_id AS product_id, index 
-        FROM {SIMILAR_ITEMS_TABLE} si,
-            unnest(similar_product_ids) WITH ORDINALITY AS T (similar_product_id, index)
+        SELECT similar_product_id AS product_id, index 
+        FROM {SIMILAR_ITEMS_TABLE} si
         WHERE si.product_id={product_id} 
         ORDER BY index
         LIMIT 50
