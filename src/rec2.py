@@ -125,7 +125,7 @@ def _get_user_batch_query(user_id, FILTER):
     UPDATE random_products
         SET product_tags = array_append(product_tags, 'random_product');
 
-    SELECT * 
+    SELECT DISTINCT ON (product_id) * 
     FROM (
         SELECT * FROM personalized_products
             UNION
