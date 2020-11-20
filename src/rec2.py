@@ -17,7 +17,7 @@ OUR_IDS = set(
 
 PROJECT = "staging"
 PRODUCT_INFO_TABLE = f"{PROJECT}.product_info"
-TOP_PRODUCTS_TABLE = f"{PROJECT}.product_info"
+TOP_PRODUCTS_TABLE = f"{PROJECT}.top_products"
 SIMILAR_ITEMS_TABLE = f"{PROJECT}.similar_products_v2"
 PRODUCT_RECS_TABLE = f"{PROJECT}.user_product_recommendations"
 
@@ -56,7 +56,7 @@ def _build_filter(args):
     return FILTER
 
 
-def _get_personalized_products_query(user_id, FILTER):
+def _get_personalized_products_query(user_id, FILTER, limit):
     return f"""
     SELECT pi.*
     FROM {PRODUCT_RECS_TABLE} pr
@@ -64,30 +64,62 @@ def _get_personalized_products_query(user_id, FILTER):
       ON pr.product_id = pi.product_id
     WHERE user_id={user_id} {FILTER}
     ORDER BY pr.index
-    LIMIT 20
+    LIMIT {limit} 
     """
 
-def _get_random_products_query(top_products_only, FILTER, limit): 
-    table = TOP_PRODUCTS_TABLE if top_products_only else PRODUCT_INFO_TABLE
+def _get_random_products_query(FILTER, limit): 
     return f"""
     SELECT 
       *
-    FROM {table}
+    FROM {PRODUCT_INFO_TABLE}
     WHERE true=true {FILTER}
     ORDER BY RANDOM()
     LIMIT {limit} 
     """
 
-def _get_batch_query(user_id, FILTER):
+def _get_top_products_query(FILTER, limit):
     return f"""
-    CREATE TEMP TABLE personalized_products ON COMMIT DROP AS (
-        {_get_personalized_products_query(user_id, FILTER)} 
-    ); 
+    SELECT pi.*
+    FROM {PRODUCT_INFO_TABLE} pi
+    INNER JOIN {TOP_PRODUCTS_TABLE} top_p 
+      ON top_p.product_id = pi.product_id
+    WHERE {FILTER}
+    ORDER BY RANDOM()
+    LIMIT {limit}
+    """
+
+def _get_new_user_batch_query(FILTER):
+    return f"""
     CREATE TEMP TABLE top_products ON COMMIT DROP AS (
-        {_get_random_products_query(True, FILTER, 5)}
+        {_get_top_products_query(FILTER, 30)}
     ); 
     CREATE TEMP TABLE random_products ON COMMIT DROP AS (
-        {_get_random_products_query(False, FILTER, 30)}
+        {_get_random_products_query(FILTER, 10)}
+    ); 
+
+    UPDATE random_products
+        SET product_tags = array_append(product_tags, 'random_product');
+
+    SELECT DISTINCT ON (product_id) * 
+    FROM (
+        SELECT * FROM top_products 
+            UNION ALL
+        SELECT * FROM random_products  
+        LIMIT 40
+    ) p
+    ORDER BY RANDOM();
+    """
+
+def _get_user_batch_query(user_id, FILTER):
+    return f"""
+    CREATE TEMP TABLE personalized_products ON COMMIT DROP AS (
+        {_get_personalized_products_query(user_id, FILTER, 20)} 
+    ); 
+    CREATE TEMP TABLE top_products ON COMMIT DROP AS (
+        {_get_top_products_query(FILTER, 5)}
+    ); 
+    CREATE TEMP TABLE random_products ON COMMIT DROP AS (
+        {_get_random_products_query(FILTER, 30)}
     ); 
 
     UPDATE personalized_products
@@ -95,7 +127,7 @@ def _get_batch_query(user_id, FILTER):
     UPDATE random_products
         SET product_tags = array_append(product_tags, 'random_product');
 
-    SELECT * 
+    SELECT DISTINCT ON (product_id) * 
     FROM (
         SELECT * FROM personalized_products
             UNION ALL
@@ -111,7 +143,10 @@ def get_batch(conn, user_id, args):
     FILTER = _build_filter(args)
     if len(FILTER) > 0:
         FILTER = "AND " + FILTER
-    query = _get_batch_query(user_id, FILTER)
+
+    query = _get_user_batch_query(user_id, FILTER) if user_id > 0 \
+            else _get_new_user_batch_query(FILTER)
+
     ## Run Query
     with conn:
         with conn.cursor() as cur:
