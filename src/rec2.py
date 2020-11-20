@@ -50,9 +50,7 @@ def _build_filter(args):
     for k, v in args.items():
         f = _arg_to_filter(k, v)
         if len(f) != 0:
-            if len(FILTER) != 0:
-                FILTER += "\nAND "
-            FILTER += f
+            FILTER += "\nAND " + f
     return FILTER
 
 
@@ -62,7 +60,7 @@ def _get_personalized_products_query(user_id, FILTER, limit):
     FROM {PRODUCT_RECS_TABLE} pr
     INNER JOIN {PRODUCT_INFO_TABLE} pi 
       ON pr.product_id = pi.product_id
-    WHERE user_id={user_id} {FILTER}
+    WHERE user_id={user_id} AND {FILTER}
     ORDER BY pr.index
     LIMIT {limit} 
     """
@@ -72,7 +70,7 @@ def _get_random_products_query(FILTER, limit):
     SELECT 
       *
     FROM {PRODUCT_INFO_TABLE}
-    WHERE true=true {FILTER}
+    WHERE {FILTER}
     ORDER BY RANDOM()
     LIMIT {limit} 
     """
@@ -100,10 +98,10 @@ def _get_new_user_batch_query(FILTER):
     UPDATE random_products
         SET product_tags = array_append(product_tags, 'random_product');
 
-    SELECT DISTINCT ON (product_id) * 
+    SELECT * 
     FROM (
         SELECT * FROM top_products 
-            UNION ALL
+            UNION
         SELECT * FROM random_products  
         LIMIT 40
     ) p
@@ -127,12 +125,12 @@ def _get_user_batch_query(user_id, FILTER):
     UPDATE random_products
         SET product_tags = array_append(product_tags, 'random_product');
 
-    SELECT DISTINCT ON (product_id) * 
+    SELECT * 
     FROM (
         SELECT * FROM personalized_products
-            UNION ALL
+            UNION
         SELECT * FROM top_products 
-            UNION ALL
+            UNION
         SELECT * FROM random_products  
         LIMIT 40
     ) p
@@ -141,9 +139,6 @@ def _get_user_batch_query(user_id, FILTER):
 
 def get_batch(conn, user_id, args):
     FILTER = _build_filter(args)
-    if len(FILTER) > 0:
-        FILTER = "AND " + FILTER
-
     query = _get_user_batch_query(user_id, FILTER) if user_id > 0 \
             else _get_new_user_batch_query(FILTER)
 
