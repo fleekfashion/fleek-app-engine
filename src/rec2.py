@@ -9,7 +9,7 @@ DELIMITER = ",_,"
 OUR_IDS = set(
         [
         1338143769388061356, # Naman
-        1596069326878625953, # Kian 
+        1596069326878625953, # Kian
         182814591431031699, # Cyp
         1117741357120322720 # Kelly
     ]
@@ -113,11 +113,11 @@ def _get_user_batch_query(user_id, FILTER):
     CREATE TEMP TABLE personalized_products ON COMMIT DROP AS (
         {_get_personalized_products_query(user_id, FILTER, 20)} 
     ); 
-    CREATE TEMP TABLE top_products ON COMMIT DROP AS (
-        {_get_top_products_query(FILTER, 5)}
-    ); 
     CREATE TEMP TABLE random_products ON COMMIT DROP AS (
         {_get_random_products_query(FILTER, 30)}
+    ); 
+    CREATE TEMP TABLE top_products ON COMMIT DROP AS (
+        {_get_top_products_query(FILTER, 5)}
     ); 
 
     UPDATE personalized_products
@@ -137,9 +137,18 @@ def _get_user_batch_query(user_id, FILTER):
     ORDER BY RANDOM();
     """
 
+def _user_has_recs(conn, user_id):
+    ## Run Query
+    query = f"SELECT * FROM {PRODUCT_RECS_TABLE} WHERE user_id={user_id} LIMIT 1;"
+    with conn:
+        with conn.cursor() as cur:
+            cur_execute(cur, query)
+            c = cur.rowcount
+    return c > 0
+
 def get_batch(conn, user_id, args):
     FILTER = _build_filter(args)
-    query = _get_user_batch_query(user_id, FILTER) if user_id > 0 \
+    query = _get_user_batch_query(user_id, FILTER) if _user_has_recs(conn, user_id)\
             else _get_new_user_batch_query(FILTER)
 
     ## Run Query
@@ -152,7 +161,7 @@ def get_batch(conn, user_id, args):
     for value in values:
         ctov = get_labeled_values(columns, value)
         data.append(ctov)
-    return data 
+    return data
 
 def get_similar_items(conn, product_id):
     query = f"""
@@ -170,8 +179,6 @@ def get_similar_items(conn, product_id):
     WHERE pi.is_active = true
     ORDER BY si.index
     """
-
-
     ## Run Query
     with conn.cursor() as cur:
         cur_execute(cur, query)
@@ -181,5 +188,4 @@ def get_similar_items(conn, product_id):
     for value in values:
         ctov = get_labeled_values(columns, value)
         data.append(ctov)
-    return data 
-
+    return data
