@@ -25,6 +25,7 @@ import psycopg2
 
 from flask import Flask, jsonify, request
 from flask_cors import cross_origin
+import meilisearch
 from six.moves import http_client
 
 from src.utils import hashers
@@ -42,6 +43,8 @@ DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 
+c = meilisearch.Client('http://161.35.113.38/', PASSWORD)
+index = c.get_index("prod_products")
 
 @app.route('/')
 @app.route('/getUserProductBatch', methods=['GET'])
@@ -88,11 +91,20 @@ def pushUserEvent():
     res = upload_event(conn, data)
     return jsonify({'event is': res})
 
-@app.route('/repeat', methods=['POST'])
-def repeat():
-    """Simple echo service."""
-    message = request.get_json().get('message', '')
-    return jsonify({'message': "nahhh"})
+@app.route('/getProductSearchBatch', methods=['GET'])
+def getProductSearchBatch():
+    args = request.args
+    searchString = args.get("searchString", "")
+
+    valid_args = ["offset", "limit"]
+    opt_params = {}
+    for arg in valid_args:
+        if arg in args.keys():
+            opt_params[arg] = args.get(arg)
+    
+    res = index.search(query=searchString, opt_params=opt_params)
+    print(res)
+    return jsonify(res)
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
