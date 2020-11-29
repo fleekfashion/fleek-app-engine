@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import psycopg2
+import meilisearch
 
 from flask import Flask, jsonify, request
 from flask_cors import cross_origin
@@ -42,6 +43,8 @@ DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 
+index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
+        .get_index("prod_products")
 
 @app.route('/')
 @app.route('/getUserProductBatch', methods=['GET'])
@@ -61,6 +64,17 @@ def getUserProductBatchv2():
     if user_id != -1:
         user_id = hashers.apple_id_to_user_id_hash(user_id)
     data = rec2.get_batch(conn, user_id, request.args)
+    return jsonify(data)
+
+@app.route('/')
+@app.route('/getProductSearchBatch', methods=['GET'])
+def getProductSearchBatch():
+    searchString = request.args['searchString']
+
+    query_args = {}
+    query_args['limit'] = int(request.args.get('limit', 20))
+    query_args['offset'] = int(request.args.get('offset', 0))
+    data = index.search(query=searchString, opt_params=query_args) 
     return jsonify(data)
 
 @app.route('/')
