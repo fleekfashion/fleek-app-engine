@@ -160,6 +160,10 @@ def get_batch(conn, user_id, args):
     data = []
     for value in values:
         ctov = get_labeled_values(columns, value)
+
+        ## TEMP HACK to remove dangerous additional images
+        if ctov['advertiser_name'] in ['boohoo.com', 'NastyGal', 'Madewell US']:
+            ctov['product_additional_image_urls'] = []
         data.append(ctov)
     return data
 
