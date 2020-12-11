@@ -44,9 +44,6 @@ PASSWORD = "fleek-app-prod1"
 DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
-index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
-        .get_index("prod_products")
-
 ac_index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
         .get_index("test_ac")
 index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
