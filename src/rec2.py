@@ -31,7 +31,7 @@ def _arg_to_filter(arg, value):
         names = value+DELIMITER+"INVALID_NAME"
         advertiser_names = tuple(names.split(DELIMITER))
         return f"advertiser_name in {advertiser_names}"
-    elif arg == "product_tag":
+    elif arg == "product_tag" or arg == "product_labels":
         # TODO This is a hack. When there is only one item,
         # the tuple adds an unneccessary comma.
         tags = value.split(DELIMITER)
@@ -163,7 +163,10 @@ def get_batch(conn, user_id, args):
         data.append(ctov)
     return data
 
-def get_similar_items(conn, product_id):
+def get_similar_items(conn, product_id, args):
+    offset = int(args.get("offset", 0))
+    limit = int(args.get("limit", 50))
+    FILTER = _build_filter(args)
     query = f"""
     SELECT pi.*
     FROM {PRODUCT_INFO_TABLE} pi
@@ -172,11 +175,12 @@ def get_similar_items(conn, product_id):
         SELECT similar_product_id AS product_id, index 
         FROM {SIMILAR_ITEMS_TABLE} si
         WHERE si.product_id={product_id} 
+            AND index >= {offset}
+            AND index <= ({offset} + {limit})
         ORDER BY index
-        LIMIT 50
     ) si
     ON si.product_id = pi.product_id
-    WHERE pi.is_active = true
+    WHERE {FILTER} 
     ORDER BY si.index
     """
     ## Run Query

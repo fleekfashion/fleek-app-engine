@@ -68,7 +68,7 @@ def getUserProductBatchv2():
 def getSimilarItems():
     args = request.args
     product_id= args.get("product_id", -1)
-    data = rec2.get_similar_items(conn, product_id)
+    data = rec2.get_similar_items(conn, product_id, args)
     return jsonify(data)
 
 @app.route('/getSingleProductInfo', methods=['GET'])
