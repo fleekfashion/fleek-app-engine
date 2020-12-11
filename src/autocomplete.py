@@ -9,7 +9,7 @@ def searchSuggestions(args: dict, index: Index):
             "attributesToHighlight": ["advertiser_names"]
     }
     def _process_doc(doc: dict):
-        advertisers = doc["_formatted"]["advertiser_names"].split("~~")
+        advertisers = doc["_formatted"]["advertiser_names"].split(",_,")
         advertisers = filter(lambda x: "<em>" in x, advertisers)
         advertisers = map(lambda x: x.replace("<em>", "").replace("</em>", ""),
                 advertisers)
