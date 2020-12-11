@@ -31,6 +31,8 @@ from six.moves import http_client
 from src.utils import hashers
 from src.rec import get_batch
 from src import rec2
+from src.productSearch import productSearch
+from src.autocomplete import searchSuggestions
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 
@@ -42,11 +44,12 @@ PASSWORD = "fleek-app-prod1"
 DBNAME = "ktest"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
-
 index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
         .get_index("prod_products")
 
-@app.route('/')
+ac_index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
+        .get_index("test_ac")
+
 @app.route('/getUserProductBatch', methods=['GET'])
 def getUserProductBatch():
     args = request.args
@@ -56,7 +59,6 @@ def getUserProductBatch():
     data = get_batch(conn, user_id, request.args)
     return jsonify(data)
 
-@app.route('/')
 @app.route('/getUserProductBatchv2', methods=['GET'])
 def getUserProductBatchv2():
     args = request.args
@@ -66,18 +68,16 @@ def getUserProductBatchv2():
     data = rec2.get_batch(conn, user_id, request.args)
     return jsonify(data)
 
-@app.route('/')
 @app.route('/getProductSearchBatch', methods=['GET'])
 def getProductSearchBatch():
-    searchString = request.args['searchString']
-
-    query_args = {}
-    query_args['limit'] = int(request.args.get('limit', 20))
-    query_args['offset'] = int(request.args.get('offset', 0))
-    data = index.search(query=searchString, opt_params=query_args) 
+    data = productSearch(request.args, index)
     return jsonify(data)
 
-@app.route('/')
+@app.route('/getSearchSuggestions', methods=['GET'])
+def getSearchSuggestions():
+    data = searchSuggestions(request.args, ac_index)
+    return jsonify(data)
+
 @app.route('/getSimilarItems', methods=['GET'])
 def getSimilarItems():
     args = request.args
