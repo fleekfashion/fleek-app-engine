@@ -49,6 +49,8 @@ index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
 
 ac_index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
         .get_index("test_ac")
+index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
+        .get_index("prod_products")
 
 @app.route('/getUserProductBatch', methods=['GET'])
 def getUserProductBatch():
