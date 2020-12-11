@@ -16,6 +16,7 @@ psycopg2-binary = "*"
 pyhash = "*"
 Flask-Cors = "==3.0.8"
 PyYAML = "==5.3.1"
+pylint = "*"
 
 [requires]
 python_version = "3.7"
