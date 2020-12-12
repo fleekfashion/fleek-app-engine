@@ -6,7 +6,6 @@ def _build_facet_filters(
         product_labels: list,
         ) -> list:
     f = []
-    print(advertiser_names)
     if advertiser_names:
         f.append([ f"advertiser_name:{name}"
                 for name in advertiser_names ])
@@ -53,6 +52,5 @@ def productSearch(args, index: Index) -> list:
         min_price=min_price
         )
     )
-    print(query_args)
     data = index.search(query=searchString, opt_params=query_args)
     return data
