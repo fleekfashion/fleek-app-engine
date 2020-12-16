@@ -17,6 +17,7 @@ pyhash = "*"
 Flask-Cors = "==3.0.8"
 PyYAML = "==5.3.1"
 pylint = "*"
+fuzzywuzzy = {extras = ["speedup"],version = "*"}
 
 [requires]
 python_version = "3.7"

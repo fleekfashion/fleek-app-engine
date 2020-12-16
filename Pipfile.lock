@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "1d030b3f1e9960a7ebe55978fb59c8bcac9601fb60a6eeeab3cbb56fbb39048a"
+            "sha256": "a5d8a4122fec97388dd5493b832079a39b471817c3ea110ab8df6357aa5005b6"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -66,6 +66,17 @@
             ],
             "index": "pypi",
             "version": "==3.0.8"
+        },
+        "fuzzywuzzy": {
+            "extras": [
+                "speedup"
+            ],
+            "hashes": [
+                "sha256:45016e92264780e58972dca1b3d939ac864b78437422beecebb3095f8efd00e8",
+                "sha256:928244b28db720d1e0ee7587acf660ea49d7e4c632569cad4f1cd7e68a5f0993"
+            ],
+            "index": "pypi",
+            "version": "==0.18.0"
         },
         "google-auth": {
             "hashes": [
@@ -270,6 +281,12 @@
             ],
             "index": "pypi",
             "version": "==2.6.0"
+        },
+        "python-levenshtein": {
+            "hashes": [
+                "sha256:033a11de5e3d19ea25c9302d11224e1a1898fe5abd23c61c7c360c25195e3eb1"
+            ],
+            "version": "==0.12.0"
         },
         "pyyaml": {
             "hashes": [
