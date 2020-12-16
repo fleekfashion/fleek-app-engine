@@ -33,10 +33,10 @@ def _parse_highlighted_field(field, strict=False, first=False, minlen=None):
     return res
 
 def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
-    x = queryString.lower().split(" ")
+    x = queryString.split(" ")
     substrs = []
     substrs.extend(x)
-    if len(x) > 1:
+    if len(substrs) > 1:
         for i in range(len(x) - 1):
             substrs.append(" ".join(x[i:i+2]))
     res = process.extractOne(advertiser_name.lower(), substrs, scorer=fuzz.ratio)[0]
