@@ -15,7 +15,7 @@ def _parse_highlighted_field(field, strict=False, first=False, minlen=None):
         success = _weak_filter(x)
         if success:
             ind = x.replace(START, "").find(END)
-            success = (ind+1 >= minlen) or _strong_filter(x)
+            success = (ind >= minlen) or _strong_filter(x)
         return success         
 
     ## Set correct filter and apply
