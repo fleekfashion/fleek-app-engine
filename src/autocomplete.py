@@ -1,6 +1,7 @@
 from meilisearch.index import Index
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
+import re
 import json
 
 START = "<em>"
@@ -39,8 +40,16 @@ def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
     if len(substrs) > 1:
         for i in range(len(x) - 1):
             substrs.append(" ".join(x[i:i+2]))
-    res = process.extractOne(advertiser_name.lower(), substrs, scorer=fuzz.ratio)[0]
-    return queryString.replace(res, "").replace("  ", " ").lstrip()
+
+    ## Get scores
+    ## Tiebreaker -> longest string
+    res = process.extract(advertiser_name.lower(), substrs, scorer=fuzz.WRatio, limit=5)
+    res = sorted(res, key=lambda x: (x[1], len(x[0])), reverse=True)[0][0]
+
+
+    return re.sub(f"\\b{res}\\b", "", queryString) \
+            .replace("  ", " ") \
+            .lstrip()
 
 
 def searchSuggestions(args: dict, index: Index):
