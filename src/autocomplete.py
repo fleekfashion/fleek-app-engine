@@ -46,7 +46,6 @@ def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
     res = process.extract(advertiser_name.lower(), substrs, scorer=fuzz.WRatio, limit=5)
     res = sorted(res, key=lambda x: (x[1], len(x[0])), reverse=True)[0][0]
 
-
     return re.sub(f"\\b{res}\\b", "", queryString) \
             .replace("  ", " ") \
             .lstrip()
@@ -59,7 +58,7 @@ def searchSuggestions(args: dict, index: Index):
         doc.pop("colors")
         return doc
 
-    searchString  = args['searchString']
+    searchString  = args['searchString'].rstrip()
     query_args = {
             "limit": int(args.get('limit', 6)),
             "offset": int(args.get('offset', 0)),
