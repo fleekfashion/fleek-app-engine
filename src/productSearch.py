@@ -35,7 +35,7 @@ def build_filters(
     return filters
 
 def productSearch(args, index: Index) -> list:
-    searchString  = args['searchString'].rstrip()
+    searchString  = args['searchString'].rstrip().lstrip()
     advertiser_names = args.getlist("advertiser_names")
     product_labels = args.getlist("product_labels")
     max_price = args.get("max_price", 10000)
