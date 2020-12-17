@@ -53,7 +53,6 @@ def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
 
 def searchSuggestions(args: dict, index: Index):
     def _process_doc(doc: dict):
-        doc.pop("_formatted")
         doc.pop("advertiser_names")
         doc.pop("colors")
         return doc
@@ -62,13 +61,14 @@ def searchSuggestions(args: dict, index: Index):
     query_args = {
             "limit": int(args.get('limit', 6)),
             "offset": int(args.get('offset', 0)),
-            "attributesToHighlight": ["advertiser_names", "colors"]
+            "attributesToHighlight": ["*"]
     }
     data = index.search(query=searchString, opt_params=query_args)
     hits = data['hits']
+    hits = list(map(lambda x: x['_formatted'], hits))
     if len(hits) == 0:
         return data
-    first_hit = hits[0]['_formatted']
+    first_hit = hits[0]
 
     advertiser_names = _parse_highlighted_field(first_hit['advertiser_names'])
     advertiser_names = { a: _rm_advertiser(searchString, a) for a in advertiser_names }
