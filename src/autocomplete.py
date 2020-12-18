@@ -7,7 +7,7 @@ import json
 START = "<em>"
 END = "</em>"
 
-def _parse_highlighted_field(field, strict=False, first=False, minlen=None):
+def _parse_highlighted_field(field, strict=False, first=False, minlen=None, rm_tag=True):
     def _weak_filter(x: str) -> bool:
         return START in x
     def _strong_filter(x: str) -> bool:
@@ -17,14 +17,14 @@ def _parse_highlighted_field(field, strict=False, first=False, minlen=None):
         if success:
             ind = x.replace(START, "").find(END)
             success = (ind >= minlen) or _strong_filter(x)
-        return success         
+        return success
 
     ## Set correct filter and apply
     f = _strong_filter if strict else ( _minlen_filter if minlen else _weak_filter)
     fields = field.split(",_,")
     fields = filter(f, fields)
     fields = map(
-            lambda x: x.replace(START, "").replace(END, ""),
+            lambda x: x.replace(START, "").replace(END, "") if rm_tag else x,
             fields)
 
     ## Return list or first item
@@ -75,7 +75,7 @@ def searchSuggestions(args: dict, index: Index):
 
     data.update({
         "advertiser_names": advertiser_names,
-        "color": _parse_highlighted_field(first_hit['colors'], minlen=3, first=True),
+        "color": _parse_highlighted_field(first_hit['colors'], minlen=3, first=True, rm_tag=False),
         "hits": list(map(_process_doc, hits))
     })
     return data
