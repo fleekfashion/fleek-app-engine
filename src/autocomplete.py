@@ -6,6 +6,8 @@ import json
 
 START = "<em>"
 END = "</em>"
+DISPLAY_FIELDS = ["product_label", "primary_attribute", "secondary_attribute", "attribute_descriptor"]
+
 
 def _parse_highlighted_field(field, strict=False, first=False, minlen=None, rm_tag=True):
     def _weak_filter(x: str) -> bool:
@@ -56,10 +58,15 @@ def searchSuggestions(args: dict, index: Index):
         doc.pop("advertiser_names")
         doc.pop("colors")
         return doc
+    def _contains_display_match(hit):
+        for f in DISPLAY_FIELDS:
+            if START in hit.get(f, ""):
+                return True
+        return False
 
     searchString  = args['searchString'].rstrip().lstrip()
     query_args = {
-            "limit": int(args.get('limit', 4)),
+            "limit": int(args.get('limit', 6)),
             "offset": int(args.get('offset', 0)),
             "attributesToHighlight": ["*"]
     }
@@ -76,6 +83,11 @@ def searchSuggestions(args: dict, index: Index):
     data.update({
         "advertiser_names": advertiser_names,
         "color": _parse_highlighted_field(first_hit['colors'], minlen=3, first=True, rm_tag=False),
-        "hits": list(map(_process_doc, hits))
+        "hits": list(
+            filter(
+                _contains_display_match,
+                map(_process_doc, hits)
+                )
+            )
     })
     return data
