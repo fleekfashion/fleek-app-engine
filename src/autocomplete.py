@@ -59,7 +59,7 @@ def searchSuggestions(args: dict, index: Index):
 
     searchString  = args['searchString'].rstrip().lstrip()
     query_args = {
-            "limit": int(args.get('limit', 6)),
+            "limit": int(args.get('limit', 4)),
             "offset": int(args.get('offset', 0)),
             "attributesToHighlight": ["*"]
     }
