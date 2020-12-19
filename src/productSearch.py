@@ -44,6 +44,12 @@ def productSearch(args, index: Index) -> list:
     query_args = {
             "offset": int(args.get('offset', 0)),
             "limit": int(args.get('limit', 10)),
+            "facetsDistribution": [
+                "product_labels",
+                "product_secondary_labels",
+                "product_tags",
+                "advertiser_name"
+                ]
     }
     query_args.update(build_filters(
         advertiser_names=advertiser_names,
