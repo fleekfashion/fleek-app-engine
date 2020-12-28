@@ -42,12 +42,15 @@ app = Flask(__name__)
 DATABASE_USER = "postgres"
 PASSWORD = "fleek-app-prod1"
 DBNAME = "ktest"
+PROJECT = "staging"
+SEARCH_URL = 'http://161.35.113.38/'
+SEARCH_PSWD = "fleek-app-prod1"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
-ac_index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
-        .get_index("test_ac")
-index = meilisearch.Client('http://161.35.113.38/', 'fleek-app-prod1') \
-        .get_index("prod_products")
+c = meilisearch.Client(SEARCH_URL, SEARCH_PSWD)
+ac_index = c.get_index(f"{PROJECT}_autocomplete")
+index = c.get_index(f"{PROJECT}_products")
+del c
 
 @app.route('/getUserProductBatch', methods=['GET'])
 def getUserProductBatch():
