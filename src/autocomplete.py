@@ -110,9 +110,8 @@ def searchSuggestions(args: dict, index: Index):
         searchPrefix = START + " ".join(searchString.split(" ")[:-1]) + END
         searchStringTail = searchString.split(" ")[-1]
         data = _load_meili_results(searchStringTail, args, index)
-        hits = seq(data['hits']) \
-                .map(lambda x: _set_field(x, 'secondary_attribute', searchPrefix)) \
-                .to_list()
-        processed_hits = _process_hits(hits, searchPrefix)
+        processed_hits = _process_hits(data['hits'], searchString)
+        processed_hits['hits'] = []
+        processed_hits['color'] = ""
     data.update(processed_hits)
     return data
