@@ -10,7 +10,7 @@ from meilisearch.index import Index
 
 START = "<em>"
 END = "</em>"
-DISPLAY_FIELDS = ["product_label", "primary_attribute", "secondary_attribute", "attribute_descriptor"]
+DISPLAY_FIELDS = ["product_label", "primary_attribute", "secondary_attribute", "attribute_descriptor", "colors"]
 
 
 def _parse_highlighted_field(field, strict=False, first=False, minlen=None, rm_tag=True):
@@ -89,8 +89,9 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
     return {
         "advertiser_names": _get_advertiser_names(hits[0]),
         "color": _parse_highlighted_field(hits[0]['colors'], minlen=3, first=True, rm_tag=False),
-        "hits": seq(hits).map(_process_doc) \
+        "hits": seq(hits) \
                         .filter(_contains_display_match) \
+                        .map(_process_doc) \
                         .to_list()
     }
 
@@ -105,8 +106,6 @@ def searchSuggestions(args: dict, index: Index):
         d = copy.copy(x)
         d[field] = value 
         return d
-
-    print(processed_hits)
     if seq(processed_hits.values()).for_all(lambda x: len(x) == 0):
         searchPrefix = START + " ".join(searchString.split(" ")[:-1]) + END
         searchStringTail = searchString.split(" ")[-1]
