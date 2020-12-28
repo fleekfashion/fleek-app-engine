@@ -1,8 +1,12 @@
-from meilisearch.index import Index
+import copy
+import json
+import re
+from typing import Dict, List, Any
+
+from functional import seq 
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
-import re
-import json
+from meilisearch.index import Index
 
 START = "<em>"
 END = "</em>"
@@ -32,7 +36,7 @@ def _parse_highlighted_field(field, strict=False, first=False, minlen=None, rm_t
     ## Return list or first item
     res = list(fields)
     if first:
-        res = None if len(res) == 0 else res[0]
+        res = "" if len(res) == 0 else res[0]
     return res
 
 def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
@@ -53,7 +57,17 @@ def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
             .lstrip()
 
 
-def searchSuggestions(args: dict, index: Index):
+def _load_meili_results(searchString: str, args: Dict[str, str], index: Index) -> Dict[Any, Any]:
+    query_args = {
+            "limit": int(args.get('limit', 6)),
+            "offset": int(args.get('offset', 0)),
+            "attributesToHighlight": ["*"]
+    }
+    data = index.search(query=searchString, opt_params=query_args)
+    data['hits'] = seq(data['hits']).map(lambda x: x['_formatted']).to_list()
+    return data
+
+def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, Any]:
     def _process_doc(doc: dict):
         doc.pop("advertiser_names")
         doc.pop("colors")
@@ -63,31 +77,43 @@ def searchSuggestions(args: dict, index: Index):
             if START in hit.get(f, ""):
                 return True
         return False
+    def _get_advertiser_names(hit: Dict[str, Any]) -> Dict[str, str]:
+        res = seq(_parse_highlighted_field(hit['advertiser_names'])) \
+            .map(lambda x: (x, _rm_advertiser(searchString, x))) \
+            .to_dict()
+        return res
 
-    searchString  = args['searchString'].rstrip().lstrip()
-    query_args = {
-            "limit": int(args.get('limit', 6)),
-            "offset": int(args.get('offset', 0)),
-            "attributesToHighlight": ["*"]
-    }
-    data = index.search(query=searchString, opt_params=query_args)
-    hits = data['hits']
-    hits = list(map(lambda x: x['_formatted'], hits))
     if len(hits) == 0:
-        return data
-    first_hit = hits[0]
+        return {"hits": []}
 
-    advertiser_names = _parse_highlighted_field(first_hit['advertiser_names'])
-    advertiser_names = { a: _rm_advertiser(searchString, a) for a in advertiser_names }
+    return {
+        "advertiser_names": _get_advertiser_names(hits[0]),
+        "color": _parse_highlighted_field(hits[0]['colors'], minlen=3, first=True, rm_tag=False),
+        "hits": seq(hits).map(_process_doc) \
+                        .filter(_contains_display_match) \
+                        .to_list()
+    }
 
-    data.update({
-        "advertiser_names": advertiser_names,
-        "color": _parse_highlighted_field(first_hit['colors'], minlen=3, first=True, rm_tag=False),
-        "hits": list(
-            filter(
-                _contains_display_match,
-                map(_process_doc, hits)
-                )
-            )
-    })
+
+def searchSuggestions(args: dict, index: Index):
+    searchString  = args['searchString'].rstrip().lstrip()
+    searchPrefix = None
+    data = _load_meili_results(searchString, args, index)
+    processed_hits = _process_hits(data['hits'], searchString)
+
+    def _set_field(x, field, value):
+        d = copy.copy(x)
+        d[field] = value 
+        return d
+
+    print(processed_hits)
+    if seq(processed_hits.values()).for_all(lambda x: len(x) == 0):
+        searchPrefix = START + " ".join(searchString.split(" ")[:-1]) + END
+        searchStringTail = searchString.split(" ")[-1]
+        data = _load_meili_results(searchStringTail, args, index)
+        hits = seq(data['hits']) \
+                .map(lambda x: _set_field(x, 'secondary_attribute', searchPrefix)) \
+                .to_list()
+        processed_hits = _process_hits(hits, searchPrefix)
+    data.update(processed_hits)
     return data
