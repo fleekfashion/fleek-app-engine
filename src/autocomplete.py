@@ -119,7 +119,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
         processed_hits['color'] = ""
 
     ## If you hit a super specific query, show alternative secondary_attributes
-    elif len(processed_hits['hits']) > 0:
+    elif len(processed_hits['hits']) == 1:
         first_hit = processed_hits['hits'][0]
         suggestion = first_hit['suggestion']
         if  _rm_tags(suggestion) == searchString:
@@ -134,5 +134,6 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
                 .filter(lambda x: len(x['secondary_attribute']) > 0) \
                 .to_list()
             processed_hits['hits'].extend(new_processed_hits['hits'])
+    processed_hits['hits'] = processed_hits['hits'][:args.get('limit', 6)]
     data.update(processed_hits)
     return data
