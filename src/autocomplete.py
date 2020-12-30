@@ -13,6 +13,9 @@ END = "</em>"
 DISPLAY_FIELDS = ["product_label", "primary_attribute", "secondary_attribute", "attribute_descriptor", "colors"]
 
 
+def _rm_tags(x):
+    return x.replace(START, "").replace(END, "")
+
 def _parse_highlighted_field(field, strict=False, first=False, minlen=None, rm_tag=True):
     def _weak_filter(x: str) -> bool:
         return START in x
@@ -30,7 +33,7 @@ def _parse_highlighted_field(field, strict=False, first=False, minlen=None, rm_t
     fields = field.split(",_,")
     fields = filter(f, fields)
     fields = map(
-            lambda x: x.replace(START, "").replace(END, "") if rm_tag else x,
+            lambda x: _rm_tags(x) if rm_tag else x,
             fields)
 
     ## Return list or first item
@@ -96,7 +99,7 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
     }
 
 
-def searchSuggestions(args: dict, index: Index):
+def searchSuggestions(args: dict, index: Index) -> Dict:
     searchString  = args['searchString'].rstrip().lstrip()
     searchPrefix = None
     data = _load_meili_results(searchString, args, index)
@@ -106,6 +109,7 @@ def searchSuggestions(args: dict, index: Index):
         d = copy.copy(x)
         d[field] = value 
         return d
+    ## If no search results returned
     if seq(processed_hits.values()).for_all(lambda x: len(x) == 0):
         searchPrefix = START + " ".join(searchString.split(" ")[:-1]) + END
         searchStringTail = searchString.split(" ")[-1]
@@ -113,5 +117,22 @@ def searchSuggestions(args: dict, index: Index):
         processed_hits = _process_hits(data['hits'], searchString)
         processed_hits['hits'] = []
         processed_hits['color'] = ""
+
+    ## If you hit a super specific query, show alternative secondary_attributes
+    elif len(processed_hits['hits']) > 0:
+        first_hit = processed_hits['hits'][0]
+        suggestion = first_hit['suggestion']
+        if  _rm_tags(suggestion) == searchString:
+            searchStringTail = searchString \
+                    .replace(_rm_tags(first_hit.get('secondary_attribute')), "") \
+                    .replace("  ", "") \
+                    .lstrip()
+            data = _load_meili_results(searchStringTail, args, index)
+            new_processed_hits = _process_hits(data['hits'], searchString)
+            new_processed_hits['hits'] = seq(new_processed_hits['hits']) \
+                .filter(lambda x: _rm_tags(x['suggestion']) != _rm_tags(suggestion)) \
+                .filter(lambda x: len(x['secondary_attribute']) > 0) \
+                .to_list()
+            processed_hits['hits'].extend(new_processed_hits['hits'])
     data.update(processed_hits)
     return data
