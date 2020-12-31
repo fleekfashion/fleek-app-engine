@@ -33,7 +33,7 @@ from src.rec import get_batch
 from src import rec2
 from src.productSearch import productSearch
 from src.autocomplete import searchSuggestions
-from src.trending import trendingSearches
+from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 
@@ -49,9 +49,10 @@ SEARCH_PSWD = "fleek-app-prod1"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 c = meilisearch.Client(SEARCH_URL, SEARCH_PSWD)
+index = c.get_index(f"{PROJECT}_products")
 ac_index = c.get_index(f"{PROJECT}_autocomplete")
 trending_index = c.get_index(f"{PROJECT}_trending_searches")
-index = c.get_index(f"{PROJECT}_products")
+label_index = c.get_index(f"{PROJECT}_labels")
 del c
 
 @app.route('/getUserProductBatch', methods=['GET'])
@@ -85,6 +86,11 @@ def getSearchSuggestions():
 @app.route('/getTrendingSearches', methods=['GET'])
 def getTrendingSearches():
     data = trendingSearches(request.args, trending_index)
+    return jsonify(data)
+
+@app.route('/getLabelSearches', methods=['GET'])
+def getLabelSearches():
+    data = labelSearches(request.args, label_index)
     return jsonify(data)
 
 @app.route('/getSimilarItems', methods=['GET'])

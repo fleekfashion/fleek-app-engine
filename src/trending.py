@@ -18,3 +18,8 @@ def trendingSearches(args: dict, index: Index) -> Dict:
     searchString  = ""
     data = _load_meili_results(searchString, args, index)
     return data
+
+def labelSearches(args: dict, index: Index) -> Dict:
+    searchString  = ""
+    data = _load_meili_results(searchString, args, index)
+    return data
