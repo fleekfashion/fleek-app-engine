@@ -33,6 +33,7 @@ from src.rec import get_batch
 from src import rec2
 from src.productSearch import productSearch
 from src.autocomplete import searchSuggestions
+from src.trending import trendingSearches
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 
@@ -49,6 +50,7 @@ conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 c = meilisearch.Client(SEARCH_URL, SEARCH_PSWD)
 ac_index = c.get_index(f"{PROJECT}_autocomplete")
+trending_index = c.get_index(f"{PROJECT}_trending_searches")
 index = c.get_index(f"{PROJECT}_products")
 del c
 
@@ -78,6 +80,11 @@ def getProductSearchBatch():
 @app.route('/getSearchSuggestions', methods=['GET'])
 def getSearchSuggestions():
     data = searchSuggestions(request.args, ac_index)
+    return jsonify(data)
+
+@app.route('/getTrendingSearches', methods=['GET'])
+def getTrendingSearches():
+    data = trendingSearches(request.args, trending_index)
     return jsonify(data)
 
 @app.route('/getSimilarItems', methods=['GET'])
