@@ -3,7 +3,7 @@ import json
 import re
 from typing import Dict, List, Any
 
-from functional import seq 
+from functional import seq
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
 from meilisearch.index import Index
@@ -114,15 +114,13 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
         return d
     ## If no search results returned
     if seq(processed_hits.values()).for_all(lambda x: len(x) == 0):
-        searchPrefix = START + " ".join(searchString.split(" ")[:-1]) + END
-        searchStringTail = searchString.split(" ")[-1]
-        data = _load_meili_results(searchStringTail, OFFSET, 1, index)
+        data = _load_meili_results("", OFFSET, 1, index)
         processed_hits = _process_hits(data['hits'], searchString)
         processed_hits['hits'] = []
         processed_hits['color'] = ""
 
     ## If you hit a super specific query, show alternative secondary_attributes
-    elif n_hits > 0 and n_hits < LIMIT:
+    elif n_hits > 0 and n_hits < 3:
         first_hit = processed_hits['hits'][0]
         all_suggestions = seq(
                     processed_hits['hits']
@@ -138,7 +136,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
                     .lstrip()
 
             ## Load new results
-            data2 = _load_meili_results(searchStringTail, OFFSET, 2*LIMIT, index)
+            data2 = _load_meili_results(searchStringTail, OFFSET, LIMIT, index)
             new_hits= seq(
                     _process_hits(data2['hits'], searchString)['hits']
                 ).filter(lambda x: _rm_tags(x['suggestion']) not in all_suggestions) \
