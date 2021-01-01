@@ -114,7 +114,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
         return d
     ## If no search results returned
     if seq(processed_hits.values()).for_all(lambda x: len(x) == 0):
-        data = _load_meili_results("", OFFSET, 1, index)
+        data = _load_meili_results(searchString.split()[-1], OFFSET, OFFSET+1, index)
         processed_hits = _process_hits(data['hits'], searchString)
         processed_hits['hits'] = []
         processed_hits['color'] = ""
