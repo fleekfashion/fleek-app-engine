@@ -20,6 +20,7 @@ Flask-Cors = "==3.0.8"
 PyYAML = "==5.3.1"
 fuzzywuzzy = {extras = ["speedup"],version = "*"}
 pyfunctional = "*"
+meilisearch = "*"
 
 [requires]
 python_version = "3.7"
