@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import psycopg2
+import meilisearch
 
 from flask import Flask, jsonify, request
 from flask_cors import cross_origin
@@ -30,6 +31,9 @@ from six.moves import http_client
 from src.utils import hashers
 from src.rec import get_batch
 from src import rec2
+from src.productSearch import productSearch
+from src.autocomplete import searchSuggestions
+from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 
@@ -39,11 +43,18 @@ app = Flask(__name__)
 DATABASE_USER = "postgres"
 PASSWORD = "fleek-app-prod1"
 DBNAME = "ktest"
+PROJECT = "staging"
+SEARCH_URL = 'http://161.35.113.38/'
+SEARCH_PSWD = "fleek-app-prod1"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
+c = meilisearch.Client(SEARCH_URL, SEARCH_PSWD)
+index = c.get_index(f"{PROJECT}_products")
+ac_index = c.get_index(f"{PROJECT}_autocomplete")
+trending_index = c.get_index(f"{PROJECT}_trending_searches")
+label_index = c.get_index(f"{PROJECT}_labels")
+del c
 
-
-@app.route('/')
 @app.route('/getUserProductBatch', methods=['GET'])
 def getUserProductBatch():
     args = request.args
@@ -53,7 +64,6 @@ def getUserProductBatch():
     data = get_batch(conn, user_id, request.args)
     return jsonify(data)
 
-@app.route('/')
 @app.route('/getUserProductBatchv2', methods=['GET'])
 def getUserProductBatchv2():
     args = request.args
@@ -63,7 +73,26 @@ def getUserProductBatchv2():
     data = rec2.get_batch(conn, user_id, request.args)
     return jsonify(data)
 
-@app.route('/')
+@app.route('/getProductSearchBatch', methods=['GET'])
+def getProductSearchBatch():
+    data = productSearch(request.args, index)
+    return jsonify(data)
+
+@app.route('/getSearchSuggestions', methods=['GET'])
+def getSearchSuggestions():
+    data = searchSuggestions(request.args, ac_index)
+    return jsonify(data)
+
+@app.route('/getTrendingSearches', methods=['GET'])
+def getTrendingSearches():
+    data = trendingSearches(request.args, trending_index)
+    return jsonify(data)
+
+@app.route('/getLabelSearches', methods=['GET'])
+def getLabelSearches():
+    data = labelSearches(request.args, label_index)
+    return jsonify(data)
+
 @app.route('/getSimilarItems', methods=['GET'])
 def getSimilarItems():
     args = request.args
