@@ -120,32 +120,36 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
         processed_hits['color'] = ""
 
     ## If you hit a super specific query, show alternative secondary_attributes
-    elif n_hits > 0 and n_hits < 3:
+    elif n_hits > 0:
         first_hit = processed_hits['hits'][0]
-        all_suggestions = seq(
-                    processed_hits['hits']
-                ).map(lambda x: x['suggestion']) \
-                .map(_rm_tags) \
-                .to_set()
-
         if  _rm_tags(first_hit['suggestion']) == searchString:
-            ## Remove the secondary attribute from string
-            searchStringTail = searchString \
-                    .replace(_rm_tags(first_hit.get('secondary_attribute')), "") \
-                    .replace("  ", "") \
-                    .lstrip()
+            valid_hits = seq(processed_hits['hits']) \
+                    .filter(lambda x: x['product_label'] == first_hit['product_label']) \
+                    .to_list()
+            if len(valid_hits) < 3:
+                all_suggestions = seq(
+                            processed_hits['hits']
+                        ).map(lambda x: x['suggestion']) \
+                        .map(_rm_tags) \
+                        .to_set()
+                ## Remove the secondary attribute from string
+                searchStringTail = searchString \
+                        .replace(_rm_tags(first_hit.get('secondary_attribute')), "") \
+                        .replace("  ", "") \
+                        .lstrip()
 
-            ## Load new results
-            data2 = _load_meili_results(searchStringTail, OFFSET, LIMIT, index)
-            new_hits= seq(
-                    _process_hits(data2['hits'], searchString)['hits']
-                ).filter(lambda x: _rm_tags(x['suggestion']) not in all_suggestions) \
-                .filter(lambda x: len(x['secondary_attribute']) > 0) \
-                .filter(lambda x: x['product_label'] == first_hit['product_label']) \
-                .take(LIMIT - n_hits)
+                ## Load new results
+                data2 = _load_meili_results(searchStringTail, OFFSET, LIMIT, index)
+                new_hits= seq(
+                        _process_hits(data2['hits'], searchString)['hits']
+                    ).filter(lambda x: _rm_tags(x['suggestion']) not in all_suggestions) \
+                    .filter(lambda x: len(x['secondary_attribute']) > 0) \
+                    .filter(lambda x: x['product_label'] == first_hit['product_label']) \
+                    .take(LIMIT - len(valid_hits))
+                valid_hits.extend(new_hits)
 
-            ## Append results to new hits
-            processed_hits['hits'].extend(new_hits)
+            ## replace original hits
+            processed_hits['hits'] = valid_hits
 
     processed_hits['hits'] = processed_hits['hits'][:LIMIT]
     data.update(processed_hits)
