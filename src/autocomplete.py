@@ -124,14 +124,13 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
     ## If you hit a super specific query, show alternative secondary_attributes
     elif n_hits > 0 and n_hits < LIMIT:
         first_hit = processed_hits['hits'][0]
-        suggestion = first_hit['suggestion']
         all_suggestions = seq(
                     processed_hits['hits']
                 ).map(lambda x: x['suggestion']) \
                 .map(_rm_tags) \
                 .to_set()
 
-        if  _rm_tags(suggestion) == searchString:
+        if  _rm_tags(first_hit['suggestion']) == searchString:
             ## Remove the secondary attribute from string
             searchStringTail = searchString \
                     .replace(_rm_tags(first_hit.get('secondary_attribute')), "") \
@@ -144,6 +143,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
                     _process_hits(data2['hits'], searchString)['hits']
                 ).filter(lambda x: _rm_tags(x['suggestion']) not in all_suggestions) \
                 .filter(lambda x: len(x['secondary_attribute']) > 0) \
+                .filter(lambda x: x['product_label'] == first_hit['product_label']) \
                 .take(LIMIT - n_hits)
 
             ## Append results to new hits
