@@ -60,10 +60,10 @@ def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
             .lstrip()
 
 
-def _load_meili_results(searchString: str, args: Dict[str, str], index: Index) -> Dict[Any, Any]:
+def _load_meili_results(searchString: str, offset: int, limit: int, index: Index) -> Dict[Any, Any]:
     query_args = {
-            "limit": int(args.get('limit', 6)),
-            "offset": int(args.get('offset', 0)),
+            "limit": limit,
+            "offset": offset, 
             "attributesToHighlight": ["*"]
     }
     data = index.search(query=searchString, opt_params=query_args)
@@ -102,10 +102,11 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
 def searchSuggestions(args: dict, index: Index) -> Dict:
     searchString  = args['searchString'].rstrip().lstrip()
     searchPrefix = None
-    data = _load_meili_results(searchString, args, index)
+    OFFSET = int(args.get('offset', 0))
+    LIMIT = int(args.get('limit', 6))
+    data = _load_meili_results(searchString, OFFSET, LIMIT, index)
     processed_hits = _process_hits(data['hits'], searchString)
     n_hits = len(processed_hits['hits'])
-    LIMIT = args.get('limit', 6)
 
     def _set_field(x, field, value):
         d = copy.copy(x)
@@ -115,7 +116,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
     if seq(processed_hits.values()).for_all(lambda x: len(x) == 0):
         searchPrefix = START + " ".join(searchString.split(" ")[:-1]) + END
         searchStringTail = searchString.split(" ")[-1]
-        data = _load_meili_results(searchStringTail, args, index)
+        data = _load_meili_results(searchStringTail, OFFSET, 1, index)
         processed_hits = _process_hits(data['hits'], searchString)
         processed_hits['hits'] = []
         processed_hits['color'] = ""
@@ -138,8 +139,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
                     .lstrip()
 
             ## Load new results
-            data2 = _load_meili_results(searchStringTail, args, index)
-            print(data2)
+            data2 = _load_meili_results(searchStringTail, OFFSET, 2*LIMIT, index)
             new_hits= seq(
                     _process_hits(data2['hits'], searchString)['hits']
                 ).filter(lambda x: _rm_tags(x['suggestion']) not in all_suggestions) \
