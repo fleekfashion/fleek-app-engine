@@ -122,9 +122,9 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
     ## If you hit a super specific query, show alternative secondary_attributes
     elif n_hits > 0:
         first_hit = processed_hits['hits'][0]
-        if  _rm_tags(first_hit['suggestion']) == searchString and len(first_hit['product_label']) > 0:
+        if  _rm_tags(first_hit['suggestion']) == searchString:
             valid_hits = seq(processed_hits['hits']) \
-                    .filter(lambda x: x['product_label'] == first_hit['product_label']) \
+                    .filter(lambda x: x['product_label'] == first_hit['product_label'] or len(first_hit['product_label']) == 0) \
                     .to_list()
             if len(valid_hits) < 3:
                 all_suggestions = seq(
