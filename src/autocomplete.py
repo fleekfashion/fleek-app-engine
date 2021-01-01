@@ -104,6 +104,8 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
     searchPrefix = None
     data = _load_meili_results(searchString, args, index)
     processed_hits = _process_hits(data['hits'], searchString)
+    n_hits = len(processed_hits['hits'])
+    LIMIT = args.get('limit', 6)
 
     def _set_field(x, field, value):
         d = copy.copy(x)
@@ -119,21 +121,34 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
         processed_hits['color'] = ""
 
     ## If you hit a super specific query, show alternative secondary_attributes
-    elif len(processed_hits['hits']) == 1:
+    elif n_hits > 0 and n_hits < LIMIT:
         first_hit = processed_hits['hits'][0]
         suggestion = first_hit['suggestion']
+        all_suggestions = seq(
+                    processed_hits['hits']
+                ).map(lambda x: x['suggestion']) \
+                .map(_rm_tags) \
+                .to_set()
+
         if  _rm_tags(suggestion) == searchString:
+            ## Remove the secondary attribute from string
             searchStringTail = searchString \
                     .replace(_rm_tags(first_hit.get('secondary_attribute')), "") \
                     .replace("  ", "") \
                     .lstrip()
-            data = _load_meili_results(searchStringTail, args, index)
-            new_processed_hits = _process_hits(data['hits'], searchString)
-            new_processed_hits['hits'] = seq(new_processed_hits['hits']) \
-                .filter(lambda x: _rm_tags(x['suggestion']) != _rm_tags(suggestion)) \
+
+            ## Load new results
+            data2 = _load_meili_results(searchStringTail, args, index)
+            print(data2)
+            new_hits= seq(
+                    _process_hits(data2['hits'], searchString)['hits']
+                ).filter(lambda x: _rm_tags(x['suggestion']) not in all_suggestions) \
                 .filter(lambda x: len(x['secondary_attribute']) > 0) \
-                .to_list()
-            processed_hits['hits'].extend(new_processed_hits['hits'])
-    processed_hits['hits'] = processed_hits['hits'][:args.get('limit', 6)]
+                .take(LIMIT - n_hits)
+
+            ## Append results to new hits
+            processed_hits['hits'].extend(new_hits)
+
+    processed_hits['hits'] = processed_hits['hits'][:LIMIT]
     data.update(processed_hits)
     return data
