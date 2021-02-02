@@ -36,6 +36,7 @@ from src.autocomplete import searchSuggestions
 from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
+from src.product_price_history import get_product_price_history
 
 app = Flask(__name__)
 
@@ -110,6 +111,12 @@ def getSingleProductInfo():
     else:
         data = get_single_product_info(conn, product_id)
     return jsonify(data)
+
+@app.route('/getProductPriceHistory', methods=['GET'])
+def getProductPriceHistory():
+    data = get_product_price_history(conn, request.args)
+    return jsonify(data)
+
 
 @app.route('/pushUserEvent', methods=['POST'])
 def pushUserEvent():
