@@ -1,7 +1,6 @@
 from src.utils.psycop_utils import cur_execute
 from src.utils import hashers
-
-USER_EVENTS_TABLE = "prod.user_events"
+from src.defs import postgres as p
 
 def upload_event(conn, args):
     ## Required
@@ -18,7 +17,7 @@ def upload_event(conn, args):
     args["searchString"] = args.get("searchString", None)
 
     query = f"""
-    INSERT INTO {USER_EVENTS_TABLE}
+    INSERT INTO {p.USER_EVENTS_TABLE.fullname}
         (user_id, product_id, event_timestamp, event, method, tags, advertiser_names, product_labels, searchString)
     VALUES
         ( %(user_id)s, %(product_id)s, %(event_timestamp)s, %(event)s, %(method)s,  %(tags)s, %(advertiser_names)s, %(product_labels)s, %(searchString)s);
