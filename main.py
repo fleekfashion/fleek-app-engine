@@ -28,6 +28,9 @@ from flask import Flask, jsonify, request
 from flask_cors import cross_origin
 from six.moves import http_client
 
+from sqlalchemy import create_engine, MetaData, Table
+
+from src.defs.postgres import DATABASE_USER, PASSWORD, DBNAME, PROJECT
 from src.utils import hashers
 from src.rec import get_batch
 from src import rec2
@@ -40,10 +43,6 @@ from src.single_product_info import get_single_product_info
 app = Flask(__name__)
 
 
-DATABASE_USER = "postgres"
-PASSWORD = "fleek-app-prod1"
-DBNAME = "ktest"
-PROJECT = "staging"
 SEARCH_URL = 'http://161.35.113.38/'
 SEARCH_PSWD = "fleek-app-prod1"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,

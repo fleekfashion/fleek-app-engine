@@ -1,4 +1,5 @@
 from random import shuffle
+from src.defs import postgres as p
 
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
 
@@ -14,13 +15,6 @@ OUR_IDS = set(
         1117741357120322720 # Kelly
     ]
 )
-
-PROJECT = "staging"
-PRODUCT_INFO_TABLE = f"{PROJECT}.product_info"
-TOP_PRODUCTS_TABLE = f"{PROJECT}.top_products"
-SIMILAR_ITEMS_TABLE = f"{PROJECT}.similar_products_v2"
-PRODUCT_RECS_TABLE = f"{PROJECT}.user_product_recommendations"
-
 
 def _arg_to_filter(arg, value):
     if arg == "min_price":
@@ -57,8 +51,8 @@ def _build_filter(args):
 def _get_personalized_products_query(user_id, FILTER, limit):
     return f"""
     SELECT pi.*
-    FROM {PRODUCT_RECS_TABLE} pr
-    INNER JOIN {PRODUCT_INFO_TABLE} pi 
+    FROM {p.PRODUCT_RECS_TABLE.fullname} pr
+    INNER JOIN {p.PRODUCT_INFO_TABLE.fullname} pi 
       ON pr.product_id = pi.product_id
     WHERE user_id={user_id} AND {FILTER}
     ORDER BY pr.index
@@ -69,7 +63,7 @@ def _get_random_products_query(FILTER, limit):
     return f"""
     SELECT 
       *
-    FROM {PRODUCT_INFO_TABLE}
+    FROM {p.PRODUCT_INFO_TABLE.fullname}
     WHERE {FILTER}
     ORDER BY RANDOM()
     LIMIT {limit} 
@@ -78,8 +72,8 @@ def _get_random_products_query(FILTER, limit):
 def _get_top_products_query(FILTER, limit):
     return f"""
     SELECT pi.*
-    FROM {PRODUCT_INFO_TABLE} pi
-    INNER JOIN {TOP_PRODUCTS_TABLE} top_p 
+    FROM {p.PRODUCT_INFO_TABLE.fullname} pi
+    INNER JOIN {p.TOP_PRODUCTS_TABLE.fullname} top_p 
       ON top_p.product_id = pi.product_id
     WHERE {FILTER}
     ORDER BY RANDOM()
@@ -139,7 +133,7 @@ def _get_user_batch_query(user_id, FILTER):
 
 def _user_has_recs(conn, user_id):
     ## Run Query
-    query = f"SELECT * FROM {PRODUCT_RECS_TABLE} WHERE user_id={user_id} LIMIT 1;"
+    query = f"SELECT * FROM {p.PRODUCT_RECS_TABLE.fullname} WHERE user_id={user_id} LIMIT 1;"
     with conn:
         with conn.cursor() as cur:
             cur_execute(cur, query)
@@ -166,11 +160,11 @@ def get_batch(conn, user_id, args):
 def get_similar_items(conn, product_id):
     query = f"""
     SELECT pi.*
-    FROM {PRODUCT_INFO_TABLE} pi
+    FROM {p.PRODUCT_INFO_TABLE.fullname} pi
     INNER JOIN 
     ( 
         SELECT similar_product_id AS product_id, index 
-        FROM {SIMILAR_ITEMS_TABLE} si
+        FROM {p.SIMILAR_ITEMS_TABLE.fullname} si
         WHERE si.product_id={product_id} 
         ORDER BY index
         LIMIT 50

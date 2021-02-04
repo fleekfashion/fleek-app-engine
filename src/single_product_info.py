@@ -1,10 +1,10 @@
+from src.defs import postgres as p
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
-PROJECT = 'prod'
 
 def get_single_product_info(conn, product_id):
     query = f"""
     SELECT *
-    FROM {PROJECT}.product_info
+    FROM {p.PRODUCT_INFO_TABLE.fullname} 
     WHERE product_id={product_id}
     LIMIT 1
     """
