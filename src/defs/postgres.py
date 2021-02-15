@@ -18,4 +18,6 @@ PRODUCT_RECS_TABLE = PostgreTable("user_product_recommendations", metadata, auto
 SIMILAR_ITEMS_TABLE = PostgreTable("similar_products_v2", metadata, autoload=True)
 TOP_PRODUCTS_TABLE = PostgreTable("top_products", metadata, autoload=True)
 USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
-
+USER_FAVES_TABLE = PostgreTable("user_faves", metadata, autoload=True)
+USER_BAG_TABLE = PostgreTable("user_bag", metadata, autoload=True)
+USER_TRASH_TABLE = PostgreTable("user_trash", metadata, autoload=True)
