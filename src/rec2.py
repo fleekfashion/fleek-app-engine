@@ -92,13 +92,22 @@ def _get_new_user_batch_query(FILTER):
     UPDATE random_products
         SET product_tags = array_append(product_tags, 'random_product');
 
-    SELECT * 
+    WITH psi AS (
+        SELECT product_id, array_agg(row_to_json(t)) AS sizes
+        FROM staging.staging_product_size_info t
+        GROUP BY product_id
+    )
+
+    SELECT pi.*,
+        psi.sizes
     FROM (
         SELECT * FROM top_products 
             UNION
         SELECT * FROM random_products  
         LIMIT 40
-    ) p
+    ) pi
+    LEFT JOIN psi
+    ON pi.product_id = psi.product_id
     ORDER BY RANDOM();
     """
 
@@ -119,7 +128,14 @@ def _get_user_batch_query(user_id, FILTER):
     UPDATE random_products
         SET product_tags = array_append(product_tags, 'random_product');
 
-    SELECT * 
+    WITH psi AS (
+        SELECT product_id, array_agg(row_to_json(t)) AS sizes
+        FROM {p.PRODUCT_SIZE_INFO_TABLE.fullname} t
+        GROUP BY product_id
+    )
+
+    SELECT pi.*,
+        psi.sizes 
     FROM (
         SELECT * FROM personalized_products
             UNION
@@ -127,7 +143,9 @@ def _get_user_batch_query(user_id, FILTER):
             UNION
         SELECT * FROM random_products  
         LIMIT 40
-    ) p
+    ) pi
+    LEFT JOIN psi
+    ON pi.product_id = psi.product_id
     ORDER BY RANDOM();
     """
 
