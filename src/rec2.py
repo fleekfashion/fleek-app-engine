@@ -122,15 +122,34 @@ def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int) -> str:
         {_get_random_products_query(FILTER, n_rand)}
     ),
     products AS (
-        SELECT * FROM top_products 
-            UNION
-        SELECT * FROM random_products  
+        SELECT * FROM (
+            SELECT * FROM top_products 
+                UNION
+            SELECT * FROM random_products  
+         ) t 
+         ORDER BY RANDOM()
+    ), psi AS (
+        SELECT 
+            product_id, 
+            array_agg(row_to_json(t)) AS sizes
+        FROM {p.PRODUCT_SIZE_INFO_TABLE.fullname} t
+        WHERE product_id IN (
+            SELECT product_id
+            FROM products
+        )
+        GROUP BY product_id
+    ), joined_products AS (
+        SELECT 
+            pi.*,
+            psi.sizes
+        FROM products pi 
+        LEFT JOIN psi 
+        ON pi.product_id = psi.product_id
     )
 
     SELECT *
-    FROM products 
+    FROM joined_products 
     ORDER BY RANDOM()
-    LIMIT 40
     """
 
 def _user_has_recs(conn, user_id: int) -> bool:

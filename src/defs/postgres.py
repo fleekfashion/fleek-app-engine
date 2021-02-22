@@ -16,6 +16,7 @@ ADVERTISER_PRODUCT_COUNT_TABLE = PostgreTable("advertiser_product_count", metada
 PRODUCT_INFO_TABLE = PostgreTable("product_info", metadata, autoload=True)
 PRODUCT_PRICE_HISTORY_TABLE = PostgreTable("product_price_history", metadata, autoload=True)
 PRODUCT_RECS_TABLE = PostgreTable("user_product_recommendations", metadata, autoload=True)
+PRODUCT_SIZE_INFO_TABLE = PostgreTable("product_size_info", metadata, autoload=True)
 SIMILAR_ITEMS_TABLE = PostgreTable("similar_products_v2", metadata, autoload=True)
 TOP_PRODUCTS_TABLE = PostgreTable("top_products", metadata, autoload=True)
 USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
