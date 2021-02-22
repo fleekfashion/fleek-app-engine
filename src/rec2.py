@@ -16,16 +16,16 @@ OUR_IDS = set(
     ]
 )
 
-def _arg_to_filter(arg, value):
+def _arg_to_filter(arg: str, value) -> str:
     if arg == "min_price":
         return f"product_sale_price > {value}"
-    elif arg == "max_price":
+    if arg == "max_price":
         return f"product_sale_price < {value}"
-    elif arg == "advertiser_name":
+    if arg == "advertiser_name":
         names = value+DELIMITER+"INVALID_NAME"
         advertiser_names = tuple(names.split(DELIMITER))
         return f"advertiser_name in {advertiser_names}"
-    elif arg == "product_tag":
+    if arg == "product_tag":
         # TODO This is a hack. When there is only one item,
         # the tuple adds an unneccessary comma.
         tags = value.split(DELIMITER)
@@ -33,13 +33,11 @@ def _arg_to_filter(arg, value):
         tags = ", ".join(tags)
         labels = f"ARRAY[{tags}]"
         return f"product_labels && {labels}"
-    elif arg == "on_sale":
-        if value:
+    if arg == "on_sale" and value:
             return "product_sale_price < product_price - 2"
-    else:
-        return ""
+    return ""
 
-def _build_filter(args):
+def _build_filter(args: dict) -> str:
     FILTER = "is_active"
     for k, v in args.items():
         f = _arg_to_filter(k, v)
@@ -48,7 +46,7 @@ def _build_filter(args):
     return FILTER
 
 
-def _get_personalized_products_query(user_id, FILTER, limit):
+def _get_personalized_products_query(user_id: int, FILTER: str, limit: int) -> str:
     return f"""
     SELECT pi.*
     FROM {p.PRODUCT_RECS_TABLE.fullname} pr
@@ -60,18 +58,35 @@ def _get_personalized_products_query(user_id, FILTER, limit):
     """
 
 def _get_random_products_query(FILTER, limit): 
-    return f"""
+    columns = p.PRODUCT_INFO_TABLE.get_columns()\
+        .map(
+            lambda x: f"pi.{x}"
+        ).map(
+            lambda x: x if 'product_tags' not in x
+                else "array_append(product_tags, 'random_product') as product_tags"
+        ).make_string(", ")
+    query = f"""
     SELECT 
-      *
-    FROM {p.PRODUCT_INFO_TABLE.fullname}
+      {columns}
+    FROM {p.PRODUCT_INFO_TABLE.fullname} pi
+    TABLESAMPLE BERNOULLI (10)
     WHERE {FILTER}
-    ORDER BY RANDOM()
     LIMIT {limit} 
     """
+    return query
 
-def _get_top_products_query(FILTER, limit):
-    return f"""
-    SELECT pi.*
+def _get_top_products_query(FILTER: str, limit: int) -> str:
+    columns = p.PRODUCT_INFO_TABLE.get_columns()\
+        .map(
+            lambda x: f"pi.{x}"
+        ).map(
+            lambda x: x if 'product_tags' not in x
+                else "array_append(product_tags, 'top_product') as product_tags"
+        ).make_string(", ")
+
+    query = f"""
+    SELECT 
+      {columns}
     FROM {p.PRODUCT_INFO_TABLE.fullname} pi
     INNER JOIN {p.TOP_PRODUCTS_TABLE.fullname} top_p 
       ON top_p.product_id = pi.product_id
@@ -79,59 +94,31 @@ def _get_top_products_query(FILTER, limit):
     ORDER BY RANDOM()
     LIMIT {limit}
     """
+    return query
 
-def _get_new_user_batch_query(FILTER):
+def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int) -> str:
     return f"""
-    CREATE TEMP TABLE top_products ON COMMIT DROP AS (
-        {_get_top_products_query(FILTER, 30)}
-    ); 
-    CREATE TEMP TABLE random_products ON COMMIT DROP AS (
-        {_get_random_products_query(FILTER, 10)}
-    ); 
-
-    UPDATE random_products
-        SET product_tags = array_append(product_tags, 'random_product');
-
-    SELECT * 
-    FROM (
-        SELECT * FROM top_products 
-            UNION
-        SELECT * FROM random_products  
-        LIMIT 40
-    ) p
-    ORDER BY RANDOM();
+    WITH top_products AS (
+        {_get_top_products_query(FILTER, n_top)}
+    ),
+    random_products AS (
+        {_get_random_products_query(FILTER, n_rand)}
+    ),
+    products AS (
+        SELECT * 
+        FROM (
+            SELECT * FROM top_products 
+                UNION
+            SELECT * FROM random_products  
+            LIMIT 40
+        ) p
+        ORDER BY RANDOM()
+        )
+    SELECT *
+    FROM products
     """
 
-def _get_user_batch_query(user_id, FILTER):
-    return f"""
-    CREATE TEMP TABLE personalized_products ON COMMIT DROP AS (
-        {_get_personalized_products_query(user_id, FILTER, 20)} 
-    ); 
-    CREATE TEMP TABLE random_products ON COMMIT DROP AS (
-        {_get_random_products_query(FILTER, 30)}
-    ); 
-    CREATE TEMP TABLE top_products ON COMMIT DROP AS (
-        {_get_top_products_query(FILTER, 5)}
-    ); 
-
-    UPDATE personalized_products
-        SET product_tags = array_append(product_tags, 'personalized_product');
-    UPDATE random_products
-        SET product_tags = array_append(product_tags, 'random_product');
-
-    SELECT * 
-    FROM (
-        SELECT * FROM personalized_products
-            UNION
-        SELECT * FROM top_products 
-            UNION
-        SELECT * FROM random_products  
-        LIMIT 40
-    ) p
-    ORDER BY RANDOM();
-    """
-
-def _user_has_recs(conn, user_id):
+def _user_has_recs(conn, user_id: int) -> bool:
     ## Run Query
     query = f"SELECT * FROM {p.PRODUCT_RECS_TABLE.fullname} WHERE user_id={user_id} LIMIT 1;"
     with conn:
@@ -140,10 +127,12 @@ def _user_has_recs(conn, user_id):
             c = cur.rowcount
     return c > 0
 
-def get_batch(conn, user_id, args):
+def get_batch(conn, user_id: int, args: dict) -> list:
     FILTER = _build_filter(args)
-    query = _get_user_batch_query(user_id, FILTER) if _user_has_recs(conn, user_id)\
-            else _get_new_user_batch_query(FILTER)
+    n_top = 30 if _user_has_recs(conn, user_id) else 15
+    n_rand = 40 - n_top
+    query = _get_user_batch_query(FILTER, n_top, n_rand)
+    print(query)
 
     ## Run Query
     with conn:
@@ -157,7 +146,7 @@ def get_batch(conn, user_id, args):
         data.append(ctov)
     return data
 
-def get_similar_items(conn, product_id):
+def get_similar_items(conn, product_id: int) -> list:
     query = f"""
     SELECT pi.*
     FROM {p.PRODUCT_INFO_TABLE.fullname} pi
