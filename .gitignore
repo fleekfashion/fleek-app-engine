@@ -143,6 +143,3 @@ cython_debug/
 
 # cloud_sql_proxy
 cloud_sql_proxy
-
-# VSCode 
-.vscode/
