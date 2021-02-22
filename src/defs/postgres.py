@@ -12,6 +12,7 @@ conn_str = f"postgres://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
 engine = create_engine(conn_str)
 metadata = MetaData(engine, schema=PROJECT)
 
+ADVERTISER_PRODUCT_COUNT_TABLE = PostgreTable("advertiser_product_count", metadata, autoload=True)
 PRODUCT_INFO_TABLE = PostgreTable("product_info", metadata, autoload=True)
 PRODUCT_PRICE_HISTORY_TABLE = PostgreTable("product_price_history", metadata, autoload=True)
 PRODUCT_RECS_TABLE = PostgreTable("user_product_recommendations", metadata, autoload=True)

@@ -46,6 +46,22 @@ def _build_filter(args: dict) -> str:
     return FILTER
 
 
+
+def _normalize_products_by_brand(table: str, limit: int):
+    query = f"""
+    SELECT * 
+    FROM (
+        SELECT t.*,
+            random()*log(ac.n_products) as normalized_rank
+        FROM {table} t
+        INNER JOIN {p.ADVERTISER_PRODUCT_COUNT_TABLE.fullname} ac
+        ON t.advertiser_name=ac.advertiser_name
+    ) t2
+    ORDER BY normalized_rank
+    LIMIT {limit}
+    """
+    return query
+
 def _get_personalized_products_query(user_id: int, FILTER: str, limit: int) -> str:
     return f"""
     SELECT pi.*
@@ -64,16 +80,17 @@ def _get_random_products_query(FILTER, limit):
         ).map(
             lambda x: x if 'product_tags' not in x
                 else "array_append(product_tags, 'random_product') as product_tags"
-        ).make_string(", ")
+        ).make_string(",\n")
     query = f"""
-    SELECT 
-      {columns}
-    FROM {p.PRODUCT_INFO_TABLE.fullname} pi
-    TABLESAMPLE BERNOULLI (10)
-    WHERE {FILTER}
-    LIMIT {limit} 
+    (
+        SELECT 
+          {columns}
+        FROM {p.PRODUCT_INFO_TABLE.fullname} pi
+        TABLESAMPLE BERNOULLI (10)
+        WHERE {FILTER}
+    )
     """
-    return query
+    return _normalize_products_by_brand(query, limit=limit)
 
 def _get_top_products_query(FILTER: str, limit: int) -> str:
     columns = p.PRODUCT_INFO_TABLE.get_columns()\
@@ -82,19 +99,19 @@ def _get_top_products_query(FILTER: str, limit: int) -> str:
         ).map(
             lambda x: x if 'product_tags' not in x
                 else "array_append(product_tags, 'top_product') as product_tags"
-        ).make_string(", ")
+        ).make_string(",\n")
 
     query = f"""
-    SELECT 
-      {columns}
-    FROM {p.PRODUCT_INFO_TABLE.fullname} pi
-    INNER JOIN {p.TOP_PRODUCTS_TABLE.fullname} top_p 
-      ON top_p.product_id = pi.product_id
-    WHERE {FILTER}
-    ORDER BY RANDOM()
-    LIMIT {limit}
+    (
+        SELECT 
+          {columns}
+        FROM {p.PRODUCT_INFO_TABLE.fullname} pi
+        INNER JOIN {p.TOP_PRODUCTS_TABLE.fullname} top_p 
+          ON top_p.product_id = pi.product_id
+        WHERE {FILTER}
+    )
     """
-    return query
+    return _normalize_products_by_brand(query, limit=limit)
 
 def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int) -> str:
     return f"""
@@ -105,17 +122,15 @@ def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int) -> str:
         {_get_random_products_query(FILTER, n_rand)}
     ),
     products AS (
-        SELECT * 
-        FROM (
-            SELECT * FROM top_products 
-                UNION
-            SELECT * FROM random_products  
-            LIMIT 40
-        ) p
-        ORDER BY RANDOM()
-        )
+        SELECT * FROM top_products 
+            UNION
+        SELECT * FROM random_products  
+    )
+
     SELECT *
-    FROM products
+    FROM products 
+    ORDER BY RANDOM()
+    LIMIT 40
     """
 
 def _user_has_recs(conn, user_id: int) -> bool:
