@@ -181,20 +181,43 @@ def get_batch(conn, user_id: int, args: dict) -> list:
 
 def get_similar_items(conn, product_id: int) -> list:
     query = f"""
-    SELECT pi.*
-    FROM {p.PRODUCT_INFO_TABLE.fullname} pi
-    INNER JOIN 
-    ( 
-        SELECT similar_product_id AS product_id, index 
-        FROM {p.SIMILAR_ITEMS_TABLE.fullname} si
-        WHERE si.product_id={product_id} 
-        ORDER BY index
-        LIMIT 50
-    ) si
-    ON si.product_id = pi.product_id
-    WHERE pi.is_active = true
-    ORDER BY si.index
+    WITH similar_products AS (
+        SELECT pi.*
+        FROM {p.PRODUCT_INFO_TABLE.fullname} pi
+        INNER JOIN 
+        ( 
+            SELECT similar_product_id AS product_id, index 
+            FROM {p.SIMILAR_ITEMS_TABLE.fullname} si
+            WHERE si.product_id={product_id} 
+            ORDER BY index
+            LIMIT 50
+        ) si
+        ON si.product_id = pi.product_id
+        WHERE pi.is_active = true
+        ORDER BY si.index
+    ), psi AS (
+        SELECT 
+            product_id, 
+            array_agg(row_to_json(t)) AS sizes
+        FROM {p.PRODUCT_SIZE_INFO_TABLE.fullname} t
+        WHERE product_id IN (
+            SELECT product_id
+            FROM similar_products
+        )
+        GROUP BY product_id
+    ), joined_products AS (
+        SELECT 
+            pi.*,
+            psi.sizes
+        FROM similar_products pi 
+        LEFT JOIN psi 
+        ON pi.product_id = psi.product_id
+    )
+
+    SELECT *
+    FROM joined_products;
     """
+    print(query)
     ## Run Query
     with conn.cursor() as cur:
         cur_execute(cur, query)
