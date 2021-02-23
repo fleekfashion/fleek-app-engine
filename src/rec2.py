@@ -166,7 +166,6 @@ def get_batch(conn, user_id: int, args: dict) -> list:
     n_top = 30 if _user_has_recs(conn, user_id) else 15
     n_rand = 40 - n_top
     query = _get_user_batch_query(FILTER, n_top, n_rand)
-    print(query)
 
     ## Run Query
     with conn:
