@@ -26,3 +26,48 @@ def upload_event(conn, args):
     with conn.cursor() as cur:
         cur_execute(cur, query, conn=conn, params=args)
     return True
+
+def upload_user_fave(conn, args):
+    new_args = {}
+
+    ## Required
+    new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id'])
+    new_args['product_id'] = args['product_id']
+    new_args['event_timestamp'] = args['event_timestamp']
+
+    query = p.USER_FAVES_TABLE.insert().values(**new_args)
+    print(query)
+
+    conn = p.engine.connect()
+    conn.execute(query)
+    return True
+
+def upload_user_trash(conn, args):
+    new_args = {}
+
+    ## Required
+    new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id'])
+    new_args['product_id'] = args['product_id']
+    new_args['event_timestamp'] = args['event_timestamp']
+
+    query = p.USER_TRASHES_TABLE.insert().values(**new_args)
+    print(query)
+
+    conn = p.engine.connect()
+    conn.execute(query)
+    return True
+
+def upload_user_bag(conn, args):
+    new_args = {}
+
+    ## Required
+    new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id'])
+    new_args['product_id'] = args['product_id']
+    new_args['event_timestamp'] = args['event_timestamp']
+
+    query = p.USER_BAGS_TABLE.insert().values(**new_args)
+    print(query)
+
+    conn = p.engine.connect()
+    conn.execute(query)
+    return True

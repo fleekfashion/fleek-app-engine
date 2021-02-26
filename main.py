@@ -37,7 +37,7 @@ from src import rec2
 from src.productSearch import productSearch
 from src.autocomplete import searchSuggestions
 from src.trending import trendingSearches, labelSearches
-from src.event_upload import upload_event
+from src.event_upload import upload_event, upload_user_fave, upload_user_trash, upload_user_bag
 from src.single_product_info import get_single_product_info
 from src.product_price_history import get_product_price_history
 
@@ -121,6 +121,24 @@ def getProductPriceHistory():
 def pushUserEvent():
     data = request.get_json(force=True)
     res = upload_event(conn, data)
+    return jsonify({'event is': res})
+
+@app.route('/pushUserFave', methods=['POST'])
+def pushUserFave():
+    data = request.get_json(force=True)
+    res = upload_user_fave(conn, data)
+    return jsonify({'event is': res})
+
+@app.route('/pushUserTrash', methods=['POST'])
+def pushUserTrash():
+    data = request.get_json(force=True)
+    res = upload_user_trash(conn, data)
+    return jsonify({'event is': res})
+
+@app.route('/pushUserBag', methods=['POST'])
+def pushUserBag():
+    data = request.get_json(force=True)
+    res = upload_user_bag(conn, data)
     return jsonify({'event is': res})
 
 @app.route('/repeat', methods=['POST'])
