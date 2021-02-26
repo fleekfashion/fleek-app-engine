@@ -27,9 +27,9 @@ def upload_event(conn, args):
     for key, value in items:
         if value is None:
             new_args.pop(key)
+    print(new_args)
 
     query = p.USER_EVENTS_TABLE.insert().values(**new_args)
-    print(query)
 
     conn = p.engine.connect()
     conn.execute(query)
