@@ -147,6 +147,10 @@ def repeat():
     message = request.get_json().get('message', '')
     return jsonify({'message': "nahhh"})
 
+@app.route('/getStaticSizeOptions', methods=['GET'])
+def getStaticSizeOptions():
+    return jsonify({'sizes': ["xxs", "xs", "xs/s", "s","s/m", "m", "m/l", "l", "xl", "xxl", "2xl"]})
+
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
     # application on Google App Engine. See entrypoint in app.yaml.
