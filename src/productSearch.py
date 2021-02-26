@@ -1,8 +1,21 @@
 import typing as t
+import re
 
 from meilisearch.index import Index
 from functional import seq
 import json
+
+HIDDEN_LABEL_FIELDS = {
+    "jeans": "pants",
+    "sweatpants": "pants",
+    "graphic tee": "shirt",
+    "t-shirt": "shirt",
+    "blouse": "shirt",
+    "cardigan": "sweater",
+    "leggings": "pants",
+    "bikini": "swimwear",
+    "romper": "jumpsuit"
+}
 
 def _build_facet_filters(
         advertiser_names: t.Optional[t.List[str]],
@@ -45,6 +58,18 @@ def build_filters(
 
 
 def process_facets_distributions(searchString: str, facets_distr: dict, product_label_filter_applied: bool) -> t.List[t.Dict[str, str]]:
+    def _build_suggestion(searchString: str, name: str, filter_type: str) -> str:
+        suggestion = name
+        if filter_type == "product_labels":
+            suggestion = f"{searchString} {name}"
+        elif filter_type == "product_secondary_labels":
+            suggestion = f"{name} {searchString}"
+            if name in HIDDEN_LABEL_FIELDS.keys():
+                suggestion = suggestion.replace(HIDDEN_LABEL_FIELDS[name], "")
+        suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
+        return suggestion
+            
+
     res = []
     for key, value in facets_distr.items():
         if key == "advertiser_name":
@@ -55,7 +80,7 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
         for name, nbHits in value.items():
             res.append(
                 {
-                    "suggestion": f"{searchString} {name}",
+                    "suggestion": _build_suggestion(searchString, name, key),
                     "filter_type": key,
                     "nbHits": nbHits,
                     "filter": name
@@ -75,7 +100,6 @@ def productSearch(args, index: Index) -> list:
     max_price = args.get("max_price", 10000)
     min_price = args.get("min_price", 0)
 
-    print("wowsa")
     query_args = {
             "offset": int(args.get('offset', 0)),
             "limit": int(args.get('limit', 10)),
