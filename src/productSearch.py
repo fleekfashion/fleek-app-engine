@@ -1,10 +1,12 @@
+import typing as t
 from meilisearch.index import Index
 import json
 
 def _build_facet_filters(
-        advertiser_names: list,
-        product_labels: list,
-        ) -> list:
+        advertiser_names: t.Optional[t.List[str]],
+        product_labels: t.Optional[t.List[str]],
+        product_secondary_labels: t.Optional[t.List[str]],
+        ) -> t.Optional[t.List[t.List[str]]]:
     f = []
     if advertiser_names:
         f.append([ f"advertiser_name:{name}"
@@ -12,8 +14,11 @@ def _build_facet_filters(
     if product_labels:
         f.append([ f"product_labels:{label}"
                 for label in product_labels])
+    if product_secondary_labels:
+        f.append([ f"product_secondary_labels:{label}"
+                for label in product_secondary_labels])
     if len(f) == 0:
-        f = None
+        return None
     return f
 
 def _build_value_filters(
@@ -23,13 +28,14 @@ def _build_value_filters(
     return f"product_sale_price >= {min_price} AND product_sale_price <= {max_price}"
 
 def build_filters(
-        advertiser_names: list,
-        product_labels: list,
+        advertiser_names: t.Optional[t.List[str]],
+        product_labels: t.Optional[t.List[str]],
+        product_secondary_labels: t.Optional[t.List[str]],
         min_price: int,
         max_price: int,
     ) -> dict:
     filters = {
-        "facetFilters": _build_facet_filters(advertiser_names, product_labels),
+        "facetFilters": _build_facet_filters(advertiser_names, product_labels, product_secondary_labels),
         "filters": _build_value_filters(min_price, max_price)
     }
     return filters
@@ -38,6 +44,7 @@ def productSearch(args, index: Index) -> list:
     searchString  = args['searchString'].rstrip().lstrip()
     advertiser_names = args.getlist("advertiser_names")
     product_labels = args.getlist("product_labels")
+    product_secondary_labels = args.getlist("product_secondary_labels")
     max_price = args.get("max_price", 10000)
     min_price = args.get("min_price", 0)
 
@@ -54,6 +61,7 @@ def productSearch(args, index: Index) -> list:
     query_args.update(build_filters(
         advertiser_names=advertiser_names,
         product_labels=product_labels,
+        product_secondary_labels=product_secondary_labels,
         max_price=max_price,
         min_price=min_price
         )
