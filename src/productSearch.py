@@ -57,7 +57,8 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
                 {
                     "suggestion": f"{searchString} {name}",
                     "filter_type": key,
-                    "nbHits": nbHits
+                    "nbHits": nbHits,
+                    "filter": name
                 }
             )
     processed_res = seq(sorted(res, key=lambda x: x['nbHits'], reverse=True)) \
