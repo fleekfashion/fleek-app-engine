@@ -88,6 +88,7 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
             )
     processed_res = seq(sorted(res, key=lambda x: x['nbHits'], reverse=True)) \
         .filter(lambda x: x['nbHits'] > 3) \
+        .filter(lambda x: x['filter'] not in searchString) \
         .take(10) \
         .to_list()
     return processed_res
