@@ -63,9 +63,11 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
         if filter_type == "product_labels":
             suggestion = f"{searchString} {name}"
         elif filter_type == "product_secondary_labels":
-            suggestion = f"{name} {searchString}"
             if name in HIDDEN_LABEL_FIELDS.keys():
-                suggestion = suggestion.replace(HIDDEN_LABEL_FIELDS[name], "")
+                bad_label = HIDDEN_LABEL_FIELDS[name]
+                searchString = re.sub(f"\\b{bad_label}\\b",'', searchString).rstrip().lstrip()
+                print(searchString)
+            suggestion = f"{name} {searchString}"
         suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
         return suggestion
             
