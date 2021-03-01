@@ -217,7 +217,6 @@ def get_similar_items(conn, product_id: int) -> list:
     SELECT *
     FROM joined_products;
     """
-    print(query)
     ## Run Query
     with conn.cursor() as cur:
         cur_execute(cur, query)
