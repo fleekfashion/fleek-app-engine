@@ -77,6 +77,8 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
             continue
         if key == "product_labels" and product_label_filter_applied:
             continue
+        if key == "product_tags":
+            continue
 
         for name, nbHits in value.items():
             res.append(
