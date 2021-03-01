@@ -124,35 +124,35 @@ def pushUserEvent():
     res = upload_event(conn, data)
     return jsonify({'event is': res})
 
-@app.route('/pushUserFave', methods=['POST'])
-def pushUserFave():
+@app.route('/uploadUserFave', methods=['POST'])
+def uploadUserFave():
     data = request.get_json(force=True)
     res = upload_user_fave(conn, data)
-    return jsonify({'event is': res})
+    return jsonify({'success': res})
 
-@app.route('/pushUserTrash', methods=['POST'])
-def pushUserTrash():
+@app.route('/uploadUserTrash', methods=['POST'])
+def uploadUserTrash():
     data = request.get_json(force=True)
     res = upload_user_trash(conn, data)
-    return jsonify({'event is': res})
+    return jsonify({'success': res})
 
-@app.route('/pushUserBag', methods=['POST'])
-def pushUserBag():
+@app.route('/uploadUserBag', methods=['POST'])
+def uploadUserBag():
     data = request.get_json(force=True)
     res = upload_user_bag(conn, data)
-    return jsonify({'event is': res})
+    return jsonify({'success': res})
 
 @app.route('/removeUserFave', methods=['POST'])
 def removeUserFave():
     data = request.get_json(force=True)
     res = remove_user_fave(conn, data)
-    return jsonify({'event is': res})
+    return jsonify({'success': res})
 
 @app.route('/removeUserBag', methods=['POST'])
 def removeUserBag():
     data = request.get_json(force=True)
     res = remove_user_bag(conn, data)
-    return jsonify({'event is': res})
+    return jsonify({'success': res})
 
 @app.route('/repeat', methods=['POST'])
 def repeat():
