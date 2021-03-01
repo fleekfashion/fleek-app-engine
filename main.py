@@ -38,6 +38,7 @@ from src.productSearch import productSearch
 from src.autocomplete import searchSuggestions
 from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event, upload_user_fave, upload_user_trash, upload_user_bag
+from src.event_remove import remove_user_fave, remove_user_bag
 from src.single_product_info import get_single_product_info
 from src.product_price_history import get_product_price_history
 
@@ -139,6 +140,18 @@ def pushUserTrash():
 def pushUserBag():
     data = request.get_json(force=True)
     res = upload_user_bag(conn, data)
+    return jsonify({'event is': res})
+
+@app.route('/removeUserFave', methods=['POST'])
+def removeUserFave():
+    data = request.get_json(force=True)
+    res = remove_user_fave(conn, data)
+    return jsonify({'event is': res})
+
+@app.route('/removeUserBag', methods=['POST'])
+def removeUserBag():
+    data = request.get_json(force=True)
+    res = remove_user_bag(conn, data)
     return jsonify({'event is': res})
 
 @app.route('/repeat', methods=['POST'])
