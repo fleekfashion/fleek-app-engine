@@ -66,7 +66,6 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
             if name in HIDDEN_LABEL_FIELDS.keys():
                 bad_label = HIDDEN_LABEL_FIELDS[name]
                 searchString = re.sub(f"\\b{bad_label}\\b",'', searchString).rstrip().lstrip()
-                print(searchString)
             suggestion = f"{name} {searchString}"
         suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
         return suggestion
