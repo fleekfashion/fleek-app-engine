@@ -138,9 +138,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
     first_hit = processed_hits['hits'][0] if n_hits > 0 else {}
     first_hit_label = first_hit.get('product_label')
 
-    valid_hits = seq(processed_hits['hits']) \
-        .filter(lambda x: x['product_label'] == first_hit['product_label'] or len(first_hit['product_label']) == 0) \
-        .to_list()
+    valid_hits = processed_hits['hits']
 
     all_suggestions = seq(
                 processed_hits['hits']
