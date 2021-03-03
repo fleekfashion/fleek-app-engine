@@ -132,8 +132,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
 
     all_suggestions = seq(
                 processed_hits['hits']
-            ).map(lambda x: x['suggestion']) \
-            .map(_rm_tags) \
+            ).map(lambda x: x['suggestion_hash']) \
             .to_set()
 
     if len(valid_hits) < 3:
@@ -142,11 +141,12 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
                 .map(_rm_tags) \
                 .make_string(" ") \
 
+        print(all_suggestions)
         ## Load new results
         data2 = _load_meili_results(searchStringTail, OFFSET, LIMIT, index)
         new_hits= seq(
                 _process_hits(data2['hits'], searchString)['hits']
-            ).filter(lambda x: _rm_tags(x['suggestion']) not in all_suggestions) \
+            ).filter(lambda x: x['suggestion_hash'] not in all_suggestions) \
             .filter(lambda x: x['product_label'] == first_hit_label or first_hit_label is None)\
             .take(LIMIT - len(valid_hits))
         valid_hits.extend(new_hits)
