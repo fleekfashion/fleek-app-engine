@@ -1,7 +1,9 @@
+from __future__ import annotations
 import copy
 import json
 import re
 from typing import Dict, List, Any
+from dataclasses import dataclass
 
 from functional import seq
 from fuzzywuzzy import process
@@ -16,8 +18,24 @@ DISPLAY_FIELDS = ["product_label", "primary_attribute", "secondary_attribute", "
 def _rm_tags(x):
     return x.replace(START, "").replace(END, "")
 
+def _has_tags(x):
+    return START in x or END in x
+
 def _handle_spaces(x):
     return re.sub('\s+',' ', x).rstrip().lstrip()
+
+class SuggestionWord:
+    def __init__(self, text: str, pos: int):
+        self.text = text
+        self.pos = pos 
+        self.is_bold = _has_tags(text)
+
+    def __gt__(self, word: SuggestionWord) -> bool:
+        return (self.is_bold, self.pos)  > (word.is_bold, self.pos)
+    
+    def __str__(self):
+        return self.text
+
 
 def _parse_highlighted_field(field, strict=False, first=False, minlen=None, rm_tag=True):
     def _weak_filter(x: str) -> bool:
@@ -141,13 +159,23 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
                 .map(_rm_tags) \
                 .make_string(" ") \
 
-        print(all_suggestions)
+        def _process_alt_suggestion(x):
+            suggestion = seq(x['suggestion'].split(" ")) \
+                .zip_with_index() \
+                .map(
+                    lambda s_pos: SuggestionWord(text=s_pos[0], pos=s_pos[1])
+                ).sorted() \
+                .make_string(" ")
+            return {**x, 'suggestion': suggestion}
+
         ## Load new results
         data2 = _load_meili_results(searchStringTail, OFFSET, LIMIT, index)
         new_hits= seq(
                 _process_hits(data2['hits'], searchString)['hits']
             ).filter(lambda x: x['suggestion_hash'] not in all_suggestions) \
-            .filter(lambda x: x['product_label'] == first_hit_label or first_hit_label is None)\
+            .filter(lambda x: _rm_tags(x['suggestion']) != searchStringTail) \
+            .filter(lambda x: x['product_label'] == first_hit_label or first_hit_label is None) \
+            .map(_process_alt_suggestion) \
             .take(LIMIT - len(valid_hits))
         valid_hits.extend(new_hits)
 
