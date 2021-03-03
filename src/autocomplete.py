@@ -145,7 +145,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
             ).map(lambda x: x['suggestion_hash']) \
             .to_set()
 
-    if len(valid_hits) < 3:
+    if len(valid_hits) < 3 and _rm_tags(first_hit.get('suggestion', '')) == searchString:
         ## Remove the secondary attribute from string
         searchStringTail = seq(searchString.split(" ")[1:]) \
                 .map(_rm_tags) \
