@@ -96,11 +96,6 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
         doc.pop("advertiser_names")
         doc.pop("colors")
         return doc
-    def _contains_display_match(hit):
-        for f in DISPLAY_FIELDS:
-            if START in hit.get(f, ""):
-                return True
-        return False
     def _get_advertiser_names(hit: Dict[str, Any]) -> Dict[str, str]:
         res = seq(_parse_highlighted_field(hit['advertiser_names'])) \
             .map(lambda x: (x, _rm_advertiser(searchString, x))) \
@@ -114,7 +109,6 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
         "advertiser_names": _get_advertiser_names(hits[0]),
         "color": _parse_highlighted_field(hits[0]['colors'], minlen=3, first=True, rm_tag=False),
         "hits": seq(hits) \
-                        .filter(_contains_display_match) \
                         .map(_process_doc) \
                         .to_list()
     }
