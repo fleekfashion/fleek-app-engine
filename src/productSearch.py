@@ -74,8 +74,9 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
         elif filter_type == "product_secondary_labels":
             if name in HIDDEN_LABEL_FIELDS.keys():
                 bad_label = HIDDEN_LABEL_FIELDS[name]
-                searchString = re.sub(f"\\b{bad_label}\\b",'', searchString).rstrip().lstrip()
-            suggestion = f"{name} {searchString}"
+                suggestion = re.sub(f"\\b{bad_label}\\b", name, searchString).rstrip().lstrip()
+            else:
+                suggestion = f"{name} {searchString}"
         elif filter_type == "internal_color":
             suggestion = f"{name} {searchString}"
         suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
