@@ -19,5 +19,7 @@ PRODUCT_RECS_TABLE = PostgreTable("user_product_recommendations", metadata, auto
 PRODUCT_SIZE_INFO_TABLE = PostgreTable("product_size_info", metadata, autoload=True)
 SIMILAR_ITEMS_TABLE = PostgreTable("similar_products_v2", metadata, autoload=True)
 TOP_PRODUCTS_TABLE = PostgreTable("top_products", metadata, autoload=True)
-USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
 
+USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
+USER_FAVED_BRANDS_TABLE = PostgreTable("user_faved_brands", metadata, autoload=True)
+USER_MUTED_BRANDS_TABLE = PostgreTable("user_muted_brands", metadata, autoload=True)
