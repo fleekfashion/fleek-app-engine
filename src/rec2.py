@@ -39,23 +39,41 @@ def _arg_to_filter(arg: str, value) -> str:
 
 def _build_filter(args: dict) -> str:
     FILTER = "is_active"
+
     for k, v in args.items():
         f = _arg_to_filter(k, v)
         if len(f) != 0:
             FILTER += "\nAND " + f
+
+    if "advertiser_name" not in args.keys():
+        FILTER += f"""
+    AND advertiser_name NOT IN (
+        SELECT advertiser_name FROM {p.USER_MUTED_BRANDS_TABLE.fullname}
+    )
+    """
     return FILTER
 
 
 
-def _normalize_products_by_brand(table: str, limit: int):
+def _normalize_products_by_brand(table: str, limit: int, user_id: int):
     query = f"""
     SELECT * 
     FROM (
+        WITH faved_advertisers_scaling AS (
+            SELECT
+                advertiser_name,
+                .5 as scaling_factor
+            FROM 
+                {p.USER_FAVED_BRANDS_TABLE}
+            WHERE user_id = {user_id}
+        )
         SELECT t.*,
-            random()*sqrt(ac.n_products)*cbrt(ac.n_products) as normalized_rank
+            random()*sqrt(ac.n_products)*cbrt(ac.n_products)*COALESCE(ad_scale.scaling_factor, 1) as normalized_rank
         FROM {table} t
         INNER JOIN {p.ADVERTISER_PRODUCT_COUNT_TABLE.fullname} ac
-        ON t.advertiser_name=ac.advertiser_name
+            ON t.advertiser_name=ac.advertiser_name
+        LEFT JOIN faved_advertisers_scaling ad_scale
+            ON t.advertiser_name = ad_scale.advertiser_name
     ) t2
     ORDER BY normalized_rank
     LIMIT {limit}
@@ -73,7 +91,7 @@ def _get_personalized_products_query(user_id: int, FILTER: str, limit: int) -> s
     LIMIT {limit} 
     """
 
-def _get_random_products_query(FILTER, limit): 
+def _get_random_products_query(FILTER: str, limit: int, user_id: int): 
     columns = p.PRODUCT_INFO_TABLE.get_columns()\
         .map(
             lambda x: f"pi.{x}"
@@ -90,9 +108,9 @@ def _get_random_products_query(FILTER, limit):
         WHERE {FILTER}
     )
     """
-    return _normalize_products_by_brand(query, limit=limit)
+    return _normalize_products_by_brand(query, limit=limit, user_id=user_id)
 
-def _get_top_products_query(FILTER: str, limit: int) -> str:
+def _get_top_products_query(FILTER: str, limit: int, user_id: int) -> str:
     columns = p.PRODUCT_INFO_TABLE.get_columns()\
         .map(
             lambda x: f"pi.{x}"
@@ -111,15 +129,15 @@ def _get_top_products_query(FILTER: str, limit: int) -> str:
         WHERE {FILTER}
     )
     """
-    return _normalize_products_by_brand(query, limit=limit)
+    return _normalize_products_by_brand(query, limit=limit, user_id=user_id)
 
-def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int) -> str:
+def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int, user_id: int) -> str:
     return f"""
     WITH top_products AS (
-        {_get_top_products_query(FILTER, n_top)}
+        {_get_top_products_query(FILTER, n_top, user_id)}
     ),
     random_products AS (
-        {_get_random_products_query(FILTER, n_rand)}
+        {_get_random_products_query(FILTER, n_rand, user_id)}
     ),
     products AS (
         SELECT * FROM (
@@ -165,7 +183,7 @@ def get_batch(conn, user_id: int, args: dict) -> list:
     FILTER = _build_filter(args)
     n_top = 30 if _user_has_recs(conn, user_id) else 15
     n_rand = 40 - n_top
-    query = _get_user_batch_query(FILTER, n_top, n_rand)
+    query = _get_user_batch_query(FILTER, n_top, n_rand, user_id)
 
     ## Run Query
     with conn:
