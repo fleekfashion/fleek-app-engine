@@ -21,6 +21,7 @@ def _build_facet_filters(
         advertiser_names: t.Optional[t.List[str]],
         product_labels: t.Optional[t.List[str]],
         product_secondary_labels: t.Optional[t.List[str]],
+        internal_colors: t.Optional[t.List[str]],
         ) -> t.Optional[t.List[t.List[str]]]:
     f = []
     if advertiser_names:
@@ -32,6 +33,9 @@ def _build_facet_filters(
     if product_secondary_labels:
         f.append([ f"product_secondary_labels:{label}"
                 for label in product_secondary_labels])
+    if internal_colors:
+        f.append([ f"internal_colors:{color}"
+                for color in internal_colors])
     if len(f) == 0:
         return None
     return f
@@ -46,11 +50,16 @@ def build_filters(
         advertiser_names: t.Optional[t.List[str]],
         product_labels: t.Optional[t.List[str]],
         product_secondary_labels: t.Optional[t.List[str]],
+        internal_colors: t.Optional[t.List[str]],
         min_price: int,
         max_price: int,
     ) -> dict:
     filters = {
-        "facetFilters": _build_facet_filters(advertiser_names, product_labels, product_secondary_labels),
+        "facetFilters": _build_facet_filters(
+            advertiser_names, 
+            product_labels, 
+            product_secondary_labels, 
+            internal_colors),
         "filters": _build_value_filters(min_price, max_price)
     }
     return filters
@@ -59,13 +68,15 @@ def build_filters(
 
 def process_facets_distributions(searchString: str, facets_distr: dict, product_label_filter_applied: bool) -> t.List[t.Dict[str, str]]:
     def _build_suggestion(searchString: str, name: str, filter_type: str) -> str:
-        suggestion = name
+        suggestion = ""
         if filter_type == "product_labels":
             suggestion = f"{searchString} {name}"
         elif filter_type == "product_secondary_labels":
             if name in HIDDEN_LABEL_FIELDS.keys():
                 bad_label = HIDDEN_LABEL_FIELDS[name]
                 searchString = re.sub(f"\\b{bad_label}\\b",'', searchString).rstrip().lstrip()
+            suggestion = f"{name} {searchString}"
+        elif filter_type == "internal_color":
             suggestion = f"{name} {searchString}"
         suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
         return suggestion
@@ -101,6 +112,7 @@ def productSearch(args, index: Index) -> list:
     advertiser_names = args.getlist("advertiser_names")
     product_labels = args.getlist("product_labels")
     product_secondary_labels = args.getlist("product_secondary_labels")
+    internal_colors = args.getlist("internal_colors")
     max_price = args.get("max_price", 10000)
     min_price = args.get("min_price", 0)
 
@@ -111,13 +123,15 @@ def productSearch(args, index: Index) -> list:
                 "product_labels",
                 "product_secondary_labels",
                 "product_tags",
-                "advertiser_name"
+                "advertiser_name",
+                "internal_color"
                 ]
     }
     query_args.update(build_filters(
         advertiser_names=advertiser_names,
         product_labels=product_labels,
         product_secondary_labels=product_secondary_labels,
+        internal_colors=internal_colors,
         max_price=max_price,
         min_price=min_price
         )
