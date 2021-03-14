@@ -40,6 +40,7 @@ from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 from src.product_price_history import get_product_price_history
+import src.user_brand_actions as uba
 
 app = Flask(__name__)
 
@@ -122,6 +123,31 @@ def pushUserEvent():
     data = request.get_json(force=True)
     res = upload_event(conn, data)
     return jsonify({'event is': res})
+
+
+@app.route('/writeUserFavedBrand', methods=['POST'])
+def writeUserFavedBrand():
+    data = request.get_json(force=True)
+    res = uba.write_user_faved_brand(data)
+    return jsonify({'success': res})
+
+@app.route('/writeUserMutedBrand', methods=['POST'])
+def writeUserMutedBrand():
+    data = request.get_json(force=True)
+    res = uba.write_user_muted_brand(data)
+    return jsonify({'success': res})
+
+@app.route('/removeUserFavedBrand', methods=['POST'])
+def removeUserFavedBrand():
+    data = request.get_json(force=True)
+    res = uba.rm_user_faved_brand(data)
+    return jsonify({'success': res})
+
+@app.route('/removeUserMutedBrand', methods=['POST'])
+def removeUserMutedBrand():
+    data = request.get_json(force=True)
+    res = uba.rm_user_muted_brand(data)
+    return jsonify({'success': res})
 
 @app.route('/repeat', methods=['POST'])
 def repeat():
