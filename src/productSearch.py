@@ -68,7 +68,7 @@ def build_filters(
 
 def process_facets_distributions(searchString: str, facets_distr: dict, product_label_filter_applied: bool) -> t.List[t.Dict[str, str]]:
     def _build_suggestion(searchString: str, name: str, filter_type: str) -> str:
-        suggestion = name
+        suggestion = ""
         if filter_type == "product_labels":
             suggestion = f"{searchString} {name}"
         elif filter_type == "product_secondary_labels":
@@ -76,7 +76,7 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
                 bad_label = HIDDEN_LABEL_FIELDS[name]
                 searchString = re.sub(f"\\b{bad_label}\\b",'', searchString).rstrip().lstrip()
             suggestion = f"{name} {searchString}"
-        if filter_type == "internal_colors":
+        elif filter_type == "internal_color":
             suggestion = f"{name} {searchString}"
         suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
         return suggestion
