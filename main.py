@@ -40,7 +40,7 @@ from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 from src.product_price_history import get_product_price_history
-from src.user_product_actions import write_user_product_fave, write_user_product_bag, remove_user_product_fave, remove_user_product_bag
+from src.user_product_actions import write_user_product_fave, write_user_product_bag, write_user_product_seen, remove_user_product_fave, remove_user_product_bag
 
 app = Flask(__name__)
 
@@ -134,6 +134,12 @@ def uploadUserFave():
 def uploadUserBag():
     data = request.get_json(force=True)
     res = write_user_product_bag(data)
+    return jsonify({'success': res})
+
+@app.route('/writeUserProductSeen', methods=['POST'])
+def uploadUserSeen():
+    data = request.get_json(force=True)
+    res = write_user_product_seen(data)
     return jsonify({'success': res})
 
 @app.route('/removeUserProductFave', methods=['POST'])

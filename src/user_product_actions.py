@@ -36,11 +36,31 @@ def _remove_product_event_helper(table: p.PostgreTable, args: dict) -> bool:
     conn.execute(query)
     return True
 
+def _add_product_seen_helper(args: dict) -> bool:
+    new_args = {}
+
+    ## Required
+    new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id'])
+    new_args['product_id'] = args['product_id']
+    new_args['event_timestamp'] = args['event_timestamp']
+
+    ## Create insert statement
+    query = insert(p.USER_PRODUCT_SEENS_TABLE).values(**new_args).on_conflict_do_nothing()
+
+    ## Execute
+    conn = p.engine.connect()
+    conn.execute(query)
+    return True
+
+
 def write_user_product_fave(args: dict) -> bool:
     return _add_product_event_helper(p.USER_PRODUCT_FAVES_TABLE, args)
 
 def write_user_product_bag(args: dict) -> bool:
     return _add_product_event_helper(p.USER_PRODUCT_BAGS_TABLE, args)
+
+def write_user_product_seen(args: dict) -> bool:
+    return _add_product_seen_helper(args)
 
 def remove_user_product_fave(args: dict) -> bool:
     return _remove_product_event_helper(p.USER_PRODUCT_FAVES_TABLE, args)
