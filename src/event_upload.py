@@ -1,8 +1,6 @@
 import json
-from src.utils.psycop_utils import cur_execute
 from src.utils import hashers
 from src.defs import postgres as p
-
 
 def upload_event(conn, args):
     new_args = {}
