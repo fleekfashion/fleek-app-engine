@@ -3,13 +3,19 @@ from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import insert
 
-def _add_product_event_helper(table: p.PostgreTable, args: dict) -> bool:
+def _parse_product_event_args_helper(args: dict) -> dict:
     new_args = {}
 
     ## Required
     new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id'])
     new_args['product_id'] = args['product_id']
     new_args['event_timestamp'] = args['event_timestamp']
+
+    return new_args
+
+def _add_product_event_helper(table: p.PostgreTable, args: dict) -> bool:
+    ## Parse args
+    new_args = _parse_product_event_args_helper(args)
 
     ## Create insert statements
     product_event_insert_stmt = insert(table).values(**new_args).on_conflict_do_nothing()
@@ -37,12 +43,8 @@ def _remove_product_event_helper(table: p.PostgreTable, args: dict) -> bool:
     return True
 
 def _add_product_seen_helper(args: dict) -> bool:
-    new_args = {}
-
-    ## Required
-    new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id'])
-    new_args['product_id'] = args['product_id']
-    new_args['event_timestamp'] = args['event_timestamp']
+    ## Parse args
+    new_args = _parse_product_event_args_helper(args)
 
     ## Create insert statement
     query = insert(p.USER_PRODUCT_SEENS_TABLE).values(**new_args).on_conflict_do_nothing()

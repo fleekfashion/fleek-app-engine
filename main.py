@@ -125,31 +125,31 @@ def pushUserEvent():
     return jsonify({'event is': res})
 
 @app.route('/writeUserProductFave', methods=['POST'])
-def uploadUserFave():
+def writeUserProductFave():
     data = request.get_json(force=True)
     res = write_user_product_fave(data)
     return jsonify({'success': res})
 
 @app.route('/writeUserProductBag', methods=['POST'])
-def uploadUserBag():
+def writeUserProductBag():
     data = request.get_json(force=True)
     res = write_user_product_bag(data)
     return jsonify({'success': res})
 
-@app.route('/writeUserProductSeen', methods=['POST'])
-def uploadUserSeen():
+@app.route('/writeUserProductTrash', methods=['POST'])
+def writeUserProductTrash():
     data = request.get_json(force=True)
     res = write_user_product_seen(data)
     return jsonify({'success': res})
 
 @app.route('/removeUserProductFave', methods=['POST'])
-def removeUserFave():
+def removeUserProductFave():
     data = request.get_json(force=True)
     res = remove_user_product_fave(data)
     return jsonify({'success': res})
 
 @app.route('/removeUserProductBag', methods=['POST'])
-def removeUserBag():
+def removeUserProductBag():
     data = request.get_json(force=True)
     res = remove_user_product_bag(data)
     return jsonify({'success': res})
