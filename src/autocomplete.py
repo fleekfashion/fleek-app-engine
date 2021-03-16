@@ -1,12 +1,15 @@
+from __future__ import annotations
 import copy
 import json
 import re
 from typing import Dict, List, Any
+from dataclasses import dataclass
 
 from functional import seq
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
 from meilisearch.index import Index
+from src.defs.utils import HIDDEN_LABEL_FIELDS
 
 START = "<em>"
 END = "</em>"
@@ -15,6 +18,23 @@ DISPLAY_FIELDS = ["product_label", "primary_attribute", "secondary_attribute", "
 
 def _rm_tags(x):
     return x.replace(START, "").replace(END, "")
+
+def _has_tags(x):
+    return START in x or END in x
+
+def _handle_spaces(x):
+    return re.sub('\s+',' ', x).rstrip().lstrip()
+
+class SuggestionWord:
+    def __init__(self, text: str, pos: int, is_label: bool):
+        self.text = text
+        self.pos = pos
+        self.is_label = is_label 
+        self.is_bold = _has_tags(text)
+
+    def __str__(self):
+        return self.text
+
 
 def _parse_highlighted_field(field, strict=False, first=False, minlen=None, rm_tag=True):
     def _weak_filter(x: str) -> bool:
@@ -75,16 +95,25 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
         doc.pop("advertiser_names")
         doc.pop("colors")
         return doc
-    def _contains_display_match(hit):
-        for f in DISPLAY_FIELDS:
-            if START in hit.get(f, ""):
-                return True
-        return False
+
+    def _process_suggestion(x):
+        suggestion = seq([
+            SuggestionWord(
+                text=word,
+                pos=pos,
+                is_label=word==x['product_label'] or word in HIDDEN_LABEL_FIELDS.keys()
+            )
+            for pos, word in enumerate(x['suggestion'].split())
+            ]).sorted(key=lambda x: (x.is_label, x.is_bold, x.pos)) \
+            .make_string(" ")
+        return {**x, 'suggestion': suggestion}
+
     def _get_advertiser_names(hit: Dict[str, Any]) -> Dict[str, str]:
         res = seq(_parse_highlighted_field(hit['advertiser_names'])) \
             .map(lambda x: (x, _rm_advertiser(searchString, x))) \
             .to_dict()
         return res
+
 
     if len(hits) == 0:
         return {"hits": []}
@@ -93,8 +122,8 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
         "advertiser_names": _get_advertiser_names(hits[0]),
         "color": _parse_highlighted_field(hits[0]['colors'], minlen=3, first=True, rm_tag=False),
         "hits": seq(hits) \
-                        .filter(_contains_display_match) \
                         .map(_process_doc) \
+                        .map(_process_suggestion) \
                         .to_list()
     }
 
@@ -110,7 +139,7 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
 
     def _set_field(x, field, value):
         d = copy.copy(x)
-        d[field] = value 
+        d[field] = value
         return d
     ## If no search results returned
     if seq(processed_hits.values()).for_all(lambda x: len(x) == 0):
@@ -120,36 +149,35 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
         processed_hits['color'] = ""
 
     ## If you hit a super specific query, show alternative secondary_attributes
-    elif n_hits > 0:
-        first_hit = processed_hits['hits'][0]
-        if  _rm_tags(first_hit['suggestion']) == searchString:
-            valid_hits = seq(processed_hits['hits']) \
-                    .filter(lambda x: x['product_label'] == first_hit['product_label'] or len(first_hit['product_label']) == 0) \
-                    .to_list()
-            if len(valid_hits) < 3:
-                all_suggestions = seq(
-                            processed_hits['hits']
-                        ).map(lambda x: x['suggestion']) \
-                        .map(_rm_tags) \
-                        .to_set()
-                ## Remove the secondary attribute from string
-                searchStringTail = searchString \
-                        .replace(_rm_tags(first_hit.get('secondary_attribute')), "") \
-                        .replace("  ", "") \
-                        .lstrip()
+    first_hit = processed_hits['hits'][0] if n_hits > 0 else {}
+    first_hit_label = first_hit.get('product_label')
 
-                ## Load new results
-                data2 = _load_meili_results(searchStringTail, OFFSET, LIMIT, index)
-                new_hits= seq(
-                        _process_hits(data2['hits'], searchString)['hits']
-                    ).filter(lambda x: _rm_tags(x['suggestion']) not in all_suggestions) \
-                    .filter(lambda x: len(x['secondary_attribute']) > 0) \
-                    .filter(lambda x: x['product_label'] == first_hit['product_label']) \
-                    .take(LIMIT - len(valid_hits))
-                valid_hits.extend(new_hits)
+    valid_hits = processed_hits['hits']
 
-            ## replace original hits
-            processed_hits['hits'] = valid_hits
+    all_suggestions = seq(
+                processed_hits['hits']
+            ).map(lambda x: x['suggestion_hash']) \
+            .to_set()
+
+    if len(valid_hits) < 3 and _rm_tags(first_hit.get('suggestion', '')) == searchString:
+        ## Remove the secondary attribute from string
+        searchStringTail = seq(searchString.split(" ")[1:]) \
+                .map(_rm_tags) \
+                .make_string(" ") \
+
+
+        ## Load new results
+        data2 = _load_meili_results(searchStringTail, OFFSET, LIMIT, index)
+        new_hits= seq(
+                _process_hits(data2['hits'], searchString)['hits']
+            ).filter(lambda x: x['suggestion_hash'] not in all_suggestions) \
+            .filter(lambda x: _rm_tags(x['suggestion']) != searchStringTail) \
+            .filter(lambda x: x['product_label'] == first_hit_label or first_hit_label is None) \
+            .take(LIMIT - len(valid_hits))
+        valid_hits.extend(new_hits)
+
+    ## replace original hits
+    processed_hits['hits'] = valid_hits
 
     processed_hits['hits'] = processed_hits['hits'][:LIMIT]
     data.update(processed_hits)

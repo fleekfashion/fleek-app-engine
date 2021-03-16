@@ -15,7 +15,7 @@ def upload_event(conn, args):
     new_args["tags"] = args.get("tags", [])
     new_args["advertiser_names"] = args.get("advertiser_names", None)
     new_args["product_labels"] = args.get("product_labels", None)
-    new_args["searchString"] = args.get("searchString", None)
+    new_args["searchstring"] = args.get("searchString", None)
 
     ## parse unstructured json data into string
     json_data = args.get("json_data", None)
@@ -23,11 +23,13 @@ def upload_event(conn, args):
 
     items = list(new_args.items())
     for key, value in items:
-        if value is None:
+        if value is None: 
             new_args.pop(key)
+    print(new_args)
+
+    print(new_args)
 
     query = p.USER_EVENTS_TABLE.insert().values(**new_args)
-    print(query)
 
     conn = p.engine.connect()
     conn.execute(query)
