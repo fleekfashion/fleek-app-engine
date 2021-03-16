@@ -4,18 +4,8 @@ import re
 from meilisearch.index import Index
 from functional import seq
 import json
+from src.defs.utils import HIDDEN_LABEL_FIELDS
 
-HIDDEN_LABEL_FIELDS = {
-    "jeans": "pants",
-    "sweatpants": "pants",
-    "graphic tee": "shirt",
-    "t-shirt": "shirt",
-    "blouse": "shirt",
-    "cardigan": "sweater",
-    "leggings": "pants",
-    "bikini": "swimwear",
-    "romper": "jumpsuit"
-}
 
 def _build_facet_filters(
         advertiser_names: t.Optional[t.List[str]],
