@@ -173,7 +173,6 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
             ).filter(lambda x: x['suggestion_hash'] not in all_suggestions) \
             .filter(lambda x: _rm_tags(x['suggestion']) != searchStringTail) \
             .filter(lambda x: x['product_label'] == first_hit_label or first_hit_label is None) \
-            .map(_process_alt_suggestion) \
             .take(LIMIT - len(valid_hits))
         valid_hits.extend(new_hits)
 
