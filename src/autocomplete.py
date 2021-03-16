@@ -9,6 +9,7 @@ from functional import seq
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
 from meilisearch.index import Index
+from src.defs.utils import HIDDEN_LABEL_FIELDS
 
 START = "<em>"
 END = "</em>"
@@ -25,14 +26,12 @@ def _handle_spaces(x):
     return re.sub('\s+',' ', x).rstrip().lstrip()
 
 class SuggestionWord:
-    def __init__(self, text: str, pos: int):
+    def __init__(self, text: str, pos: int, is_label: bool):
         self.text = text
-        self.pos = pos 
+        self.pos = pos
+        self.is_label = is_label 
         self.is_bold = _has_tags(text)
 
-    def __gt__(self, word: SuggestionWord) -> bool:
-        return (self.is_bold, self.pos)  > (word.is_bold, self.pos)
-    
     def __str__(self):
         return self.text
 
@@ -96,11 +95,25 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
         doc.pop("advertiser_names")
         doc.pop("colors")
         return doc
+
+    def _process_suggestion(x):
+        suggestion = seq([
+            SuggestionWord(
+                text=word,
+                pos=pos,
+                is_label=word==x['product_label'] or word in HIDDEN_LABEL_FIELDS.keys()
+            )
+            for pos, word in enumerate(x['suggestion'].split())
+            ]).sorted(key=lambda x: (x.is_label, x.is_bold, x.pos)) \
+            .make_string(" ")
+        return {**x, 'suggestion': suggestion}
+
     def _get_advertiser_names(hit: Dict[str, Any]) -> Dict[str, str]:
         res = seq(_parse_highlighted_field(hit['advertiser_names'])) \
             .map(lambda x: (x, _rm_advertiser(searchString, x))) \
             .to_dict()
         return res
+
 
     if len(hits) == 0:
         return {"hits": []}
@@ -110,6 +123,7 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
         "color": _parse_highlighted_field(hits[0]['colors'], minlen=3, first=True, rm_tag=False),
         "hits": seq(hits) \
                         .map(_process_doc) \
+                        .map(_process_suggestion) \
                         .to_list()
     }
 
@@ -151,14 +165,6 @@ def searchSuggestions(args: dict, index: Index) -> Dict:
                 .map(_rm_tags) \
                 .make_string(" ") \
 
-        def _process_alt_suggestion(x):
-            suggestion = seq(x['suggestion'].split(" ")) \
-                .zip_with_index() \
-                .map(
-                    lambda s_pos: SuggestionWord(text=s_pos[0], pos=s_pos[1])
-                ).sorted() \
-                .make_string(" ")
-            return {**x, 'suggestion': suggestion}
 
         ## Load new results
         data2 = _load_meili_results(searchStringTail, OFFSET, LIMIT, index)
