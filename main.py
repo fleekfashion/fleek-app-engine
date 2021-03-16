@@ -37,10 +37,10 @@ from src import rec2
 from src.productSearch import productSearch
 from src.autocomplete import searchSuggestions
 from src.trending import trendingSearches, labelSearches
-from src.event_upload import upload_event, upload_user_fave, upload_user_trash, upload_user_bag
-from src.event_remove import remove_user_fave, remove_user_bag
+from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 from src.product_price_history import get_product_price_history
+from src.user_product_actions import write_user_product_fave, write_user_product_bag, remove_user_product_fave, remove_user_product_bag
 
 app = Flask(__name__)
 
@@ -124,34 +124,28 @@ def pushUserEvent():
     res = upload_event(conn, data)
     return jsonify({'event is': res})
 
-@app.route('/uploadUserFave', methods=['POST'])
+@app.route('/writeUserProductFave', methods=['POST'])
 def uploadUserFave():
     data = request.get_json(force=True)
-    res = upload_user_fave(conn, data)
+    res = write_user_product_fave(data)
     return jsonify({'success': res})
 
-@app.route('/uploadUserTrash', methods=['POST'])
-def uploadUserTrash():
-    data = request.get_json(force=True)
-    res = upload_user_trash(conn, data)
-    return jsonify({'success': res})
-
-@app.route('/uploadUserBag', methods=['POST'])
+@app.route('/writeUserProductBag', methods=['POST'])
 def uploadUserBag():
     data = request.get_json(force=True)
-    res = upload_user_bag(conn, data)
+    res = write_user_product_bag(data)
     return jsonify({'success': res})
 
-@app.route('/removeUserFave', methods=['POST'])
+@app.route('/removeUserProductFave', methods=['POST'])
 def removeUserFave():
     data = request.get_json(force=True)
-    res = remove_user_fave(conn, data)
+    res = remove_user_product_fave(data)
     return jsonify({'success': res})
 
-@app.route('/removeUserBag', methods=['POST'])
+@app.route('/removeUserProductBag', methods=['POST'])
 def removeUserBag():
     data = request.get_json(force=True)
-    res = remove_user_bag(conn, data)
+    res = remove_user_product_bag(data)
     return jsonify({'success': res})
 
 @app.route('/repeat', methods=['POST'])
