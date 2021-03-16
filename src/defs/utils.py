@@ -12,3 +12,13 @@ Table.get_schema = get_schema
 
 PostgreTable = Table
 
+HIDDEN_LABEL_FIELDS = {
+    "jeans": "pants",
+    "sweatpants": "pants",
+    "graphic tee": "shirt",
+    "t-shirt": "shirt",
+    "blouse": "shirt",
+    "leggings": "pants",
+    "bikini": "swimwear",
+    "romper": "jumpsuit"
+}
