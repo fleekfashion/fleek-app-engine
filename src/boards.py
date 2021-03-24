@@ -3,7 +3,7 @@ from src.defs import postgres as p
 import uuid
 from datetime import datetime as dt
 
-def createNewBoard(args: dict) -> dict:
+def create_new_board(args: dict) -> dict:
     new_args = {}
 
     ## Required
@@ -20,7 +20,7 @@ def createNewBoard(args: dict) -> dict:
     boardInfo = p.BoardInfo(**new_args)
 
     ## Commit insert
-    session = p.loadSession()
+    session = p.load_session()
     session.add(boardInfo)
     session.commit()
 

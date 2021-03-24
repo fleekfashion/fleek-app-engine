@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, MetaData
+from sqlalchemy.engine import Engine
 from src.defs.utils import PostgreTable
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.automap import automap_base
@@ -9,7 +10,7 @@ DBNAME = "ktest"
 PROJECT = 'staging'
 
 conn_str = f"postgres://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
-engine = create_engine(conn_str)
+engine: Engine = create_engine(conn_str)
 metadata = MetaData(engine, schema=PROJECT)
 board_metadata = MetaData(engine, schema=PROJECT)
 
@@ -40,7 +41,7 @@ Base = automap_base(metadata=board_metadata)
 Base.prepare()
 BoardInfo = Base.classes.board_info
 
-def loadSession():
+def load_session():
     Session = sessionmaker(bind=engine)
     session = Session()
     return session
