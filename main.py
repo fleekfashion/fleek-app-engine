@@ -37,6 +37,7 @@ from src.single_product_info import get_single_product_info
 from src.product_price_history import get_product_price_history
 import src.user_product_actions as upa
 import src.user_brand_actions as uba
+import src.boards as b
 
 app = Flask(__name__)
 
@@ -182,6 +183,12 @@ def repeat():
 @app.route('/getStaticSizeOptions', methods=['GET'])
 def getStaticSizeOptions():
     return jsonify({'sizes': ["xxs", "xs", "xs/s", "s","s/m", "m", "m/l", "l", "xl", "xxl", "2xl"]})
+
+@app.route('/createNewBoard', methods=['POST'])
+def createNewBoard():
+    data = request.get_json(force=True)
+    res = b.createNewBoard(data)
+    return jsonify(res)
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
