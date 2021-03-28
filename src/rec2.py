@@ -52,7 +52,7 @@ def _normalize_products_by_brand(table: str, limit: int):
     SELECT * 
     FROM (
         SELECT t.*,
-            random()*sqrt(ac.n_products)*cbrt(ac.n_products) as normalized_rank
+            random()*sqrt(ac.n_products)*cbrt(ac.n_products)*sqrt(sqrt(ac.n_products)) as normalized_rank
         FROM {table} t
         INNER JOIN {p.ADVERTISER_PRODUCT_COUNT_TABLE.fullname} ac
         ON t.advertiser_name=ac.advertiser_name
@@ -86,7 +86,7 @@ def _get_random_products_query(FILTER, limit):
         SELECT 
           {columns}
         FROM {p.PRODUCT_INFO_TABLE.fullname} pi
-        TABLESAMPLE BERNOULLI (10)
+        TABLESAMPLE BERNOULLI (3)
         WHERE {FILTER}
     )
     """
