@@ -146,3 +146,6 @@ cloud_sql_proxy
 
 # output
 output.txt
+
+# VSCode
+.vscode/
