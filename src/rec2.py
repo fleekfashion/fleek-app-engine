@@ -64,11 +64,15 @@ def _normalize_products_by_brand(table: str, limit: int, user_id: int):
                 advertiser_name,
                 .5 as scaling_factor
             FROM 
-                {p.USER_FAVED_BRANDS_TABLE}
+                {p.USER_FAVED_BRANDS_TABLE.fullname}
             WHERE user_id = {user_id}
         )
         SELECT t.*,
-            random()*sqrt(ac.n_products)*cbrt(ac.n_products)*COALESCE(ad_scale.scaling_factor, 1) as normalized_rank
+            random()*
+                sqrt(ac.n_products)*cbrt(ac.n_products)*
+                cbrt(sqrt(sqrt(ac.n_products)))*
+                COALESCE(ad_scale.scaling_factor, 1) 
+                as normalized_rank
         FROM {table} t
         INNER JOIN {p.ADVERTISER_PRODUCT_COUNT_TABLE.fullname} ac
             ON t.advertiser_name=ac.advertiser_name
