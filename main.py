@@ -148,6 +148,12 @@ def createNewBoard():
     res = b.create_new_board(data)
     return jsonify(res)
 
+@app.route('/writeProductToBoard', methods=['POST'])
+def writeProductToBoard():
+    data = request.get_json(force=True)
+    res = b.write_product_to_board(data)
+    return jsonify(res)
+
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
     # application on Google App Engine. See entrypoint in app.yaml.

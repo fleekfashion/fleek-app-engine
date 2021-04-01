@@ -9,7 +9,6 @@ def create_new_board(args: dict) -> dict:
     board_info_args = {}
     user_boards_args = {}
     board_type_args = {}
-    board_products_args_list = []
     
     board_id = uuid.uuid4().hex
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
@@ -40,19 +39,14 @@ def create_new_board(args: dict) -> dict:
     ## Optional fields
     board_info_args['description'] = args.get('description', None)
     board_info_args['artwork_url'] = args.get('artwork_url', None)
-    if args.get('product_ids', None) is not None:
-        product_ids = args['product_ids']
-        for product_id in product_ids:
-            board_product_args = {}
-            board_product_args['board_id'] = board_id
-            board_product_args['product_id'] = product_id
-            board_product_args['last_modified_timestamp'] = last_modified_timestamp
-            board_products_args_list.append(board_product_args)
 
     ## Construct SQLAlchemy Objects
     board_info = p.BoardInfo(**board_info_args)
     user_board = p.UserBoards(**user_boards_args)
-    board_products = [p.BoardProducts(**board_product_args) for board_product_args in board_products_args_list]
+    board_products = [
+        p.BoardProducts(board_id=board_id, product_id=product_id, last_modified_timestamp=last_modified_timestamp)
+        for product_id in args.get('product_ids', [])
+    ]
 
     ## Execute session transaction
     try:
@@ -65,3 +59,25 @@ def create_new_board(args: dict) -> dict:
         return {"success": False}
     
     return {"success": True, "board_id": board_id}
+
+def write_product_to_board(args: dict) -> dict:
+    board_product_args = {}
+
+    ## Required fields
+    board_product_args['board_id'] = args['board_id']
+    board_product_args['product_id'] = args['product_id']
+    board_product_args['last_modified_timestamp'] = int(dt.now().timestamp())
+
+    ## Construct SQLAlchemy Object
+    board_product = p.BoardProducts(**board_product_args)
+
+    ## Execute session transaction
+    try:
+        with session_scope() as session:
+            session.add(board_product)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+    
+    return {"success": True}
+
