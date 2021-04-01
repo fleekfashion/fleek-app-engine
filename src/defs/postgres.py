@@ -34,9 +34,4 @@ REJECTED_BOARDS_TABLE = PostgreTable("rejected_boards", board_metadata, autoload
 ## Map tables to objects
 Base = automap_base(metadata=board_metadata)
 Base.prepare()
-BoardInfo, UserBoards = Base.classes.board_info, Base.classes.user_boards
-
-def load_session():
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    return session
+BoardInfo, UserBoards, BoardType, BoardProducts = Base.classes.board_info, Base.classes.user_boards, Base.classes.board_type, Base.classes.board_products

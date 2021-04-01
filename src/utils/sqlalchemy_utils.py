@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-from src.defs.postgres import load_session
+from sqlalchemy.orm import sessionmaker
+from src.defs import postgres as p
 
 @contextmanager
 def session_scope():
@@ -10,6 +11,11 @@ def session_scope():
         session.commit()
     except:
         session.rollback()
-        raise
+        raise Exception('PostgreSQL query failed.')
     finally:
         session.close()
+
+def load_session():
+    Session = sessionmaker(bind=p.engine)
+    session = Session()
+    return session
