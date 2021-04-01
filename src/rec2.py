@@ -55,7 +55,8 @@ def _build_filter(args: dict) -> str:
 
 
 
-def _normalize_products_by_brand(table: str, limit: int, user_id: int):
+def _normalize_products_by_brand(table: str, limit: int, user_id: int, is_first_session: bool):
+    scaling_factor = .25 if is_first_session else .5
     query = f"""
     SELECT * 
     FROM (
@@ -95,7 +96,7 @@ def _get_personalized_products_query(user_id: int, FILTER: str, limit: int) -> s
     LIMIT {limit} 
     """
 
-def _get_random_products_query(FILTER: str, limit: int, user_id: int): 
+def _get_random_products_query(FILTER: str, limit: int, user_id: int, is_first_session: bool): 
     columns = p.PRODUCT_INFO_TABLE.get_columns()\
         .map(
             lambda x: f"pi.{x}"
@@ -112,9 +113,9 @@ def _get_random_products_query(FILTER: str, limit: int, user_id: int):
         WHERE {FILTER}
     )
     """
-    return _normalize_products_by_brand(query, limit=limit, user_id=user_id)
+    return _normalize_products_by_brand(query, limit=limit, user_id=user_id, is_first_session=is_first_session)
 
-def _get_top_products_query(FILTER: str, limit: int, user_id: int) -> str:
+def _get_top_products_query(FILTER: str, limit: int, user_id: int, is_first_session: bool ) -> str:
     columns = p.PRODUCT_INFO_TABLE.get_columns()\
         .map(
             lambda x: f"pi.{x}"
@@ -133,15 +134,15 @@ def _get_top_products_query(FILTER: str, limit: int, user_id: int) -> str:
         WHERE {FILTER}
     )
     """
-    return _normalize_products_by_brand(query, limit=limit, user_id=user_id)
+    return _normalize_products_by_brand(query, limit=limit, user_id=user_id, is_first_session=is_first_session)
 
-def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int, user_id: int) -> str:
+def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int, user_id: int, is_first_session: bool) -> str:
     return f"""
     WITH top_products AS (
-        {_get_top_products_query(FILTER, n_top, user_id)}
+        {_get_top_products_query(FILTER, n_top, user_id, is_first_session)}
     ),
     random_products AS (
-        {_get_random_products_query(FILTER, n_rand, user_id)}
+        {_get_random_products_query(FILTER, n_rand, user_id, is_first_session)}
     ),
     products AS (
         SELECT * FROM (
@@ -184,10 +185,12 @@ def _user_has_recs(conn, user_id: int) -> bool:
     return c > 0
 
 def get_batch(conn, user_id: int, args: dict) -> list:
+    user_has_recs = _user_has_recs(conn, user_id)
+    is_first_session = args.get('is_first_session', False) or not user_has_recs
     FILTER = _build_filter(args)
-    n_top = 30 if _user_has_recs(conn, user_id) else 15
+    n_top = 15 if user_has_recs else 30
     n_rand = 40 - n_top
-    query = _get_user_batch_query(FILTER, n_top, n_rand, user_id)
+    query = _get_user_batch_query(FILTER, n_top, n_rand, user_id, is_first_session)
 
     ## Run Query
     with conn:
