@@ -25,13 +25,13 @@ SIMILAR_ITEMS_TABLE = PostgreTable("similar_products_v2", metadata, autoload=Tru
 TOP_PRODUCTS_TABLE = PostgreTable("top_products", metadata, autoload=True)
 USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
 
-BOARD_INFO_TABLE = PostgreTable("board_info", board_metadata, autoload=True)
+BOARD_TABLE = PostgreTable("board", board_metadata, autoload=True)
 BOARD_TYPE_TABLE = PostgreTable("board_type", board_metadata, autoload=True)
-BOARD_PRODUCTS_TABLE = PostgreTable("board_products", board_metadata, autoload=True)
-USER_BOARDS_TABLE = PostgreTable("user_boards", board_metadata, autoload=True)
-REJECTED_BOARDS_TABLE = PostgreTable("rejected_boards", board_metadata, autoload=True)
+BOARD_PRODUCT_TABLE = PostgreTable("board_product", board_metadata, autoload=True)
+USER_BOARD_TABLE = PostgreTable("user_board", board_metadata, autoload=True)
+REJECTED_BOARD_TABLE = PostgreTable("rejected_board", board_metadata, autoload=True)
 
 ## Map tables to objects
 Base = automap_base(metadata=board_metadata)
 Base.prepare()
-BoardInfo, UserBoards, BoardType, BoardProducts = Base.classes.board_info, Base.classes.user_boards, Base.classes.board_type, Base.classes.board_products
+Board, UserBoard, BoardType, BoardProduct = Base.classes.board, Base.classes.user_board, Base.classes.board_type, Base.classes.board_product
