@@ -4,7 +4,7 @@ from functional import seq
 
 from src.defs.utils import PostgreTable
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.ext.automap import automap_base, name_for_collection_relationship
 
 DATABASE_USER = "postgres"
 PASSWORD = "fleek-app-prod1"
@@ -25,13 +25,20 @@ SIMILAR_ITEMS_TABLE = PostgreTable("similar_products_v2", metadata, autoload=Tru
 TOP_PRODUCTS_TABLE = PostgreTable("top_products", metadata, autoload=True)
 USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
 
-BOARD_TABLE = PostgreTable("board", board_metadata, autoload=True)
-BOARD_TYPE_TABLE = PostgreTable("board_type", board_metadata, autoload=True)
-BOARD_PRODUCT_TABLE = PostgreTable("board_product", board_metadata, autoload=True)
-USER_BOARD_TABLE = PostgreTable("user_board", board_metadata, autoload=True)
-REJECTED_BOARD_TABLE = PostgreTable("rejected_board", board_metadata, autoload=True)
+BOARD_TABLE = PostgreTable("board", metadata, autoload=True)
+BOARD_TYPE_TABLE = PostgreTable("board_type", metadata, autoload=True)
+BOARD_PRODUCT_TABLE = PostgreTable("board_product", metadata, autoload=True)
+USER_BOARD_TABLE = PostgreTable("user_board", metadata, autoload=True)
+REJECTED_BOARD_TABLE = PostgreTable("rejected_board", metadata, autoload=True)
+
+def _name_for_collection_relationship(base, local_cls, referred_cls, constraint):
+    if constraint.name:
+        return constraint.name.lower()
+    # if this didn't work, revert to the default behavior
+    return name_for_collection_relationship(base, local_cls, referred_cls, constraint)
 
 ## Map tables to objects
-Base = automap_base(metadata=board_metadata)
-Base.prepare()
+Base = automap_base(metadata=metadata)
+Base.prepare(name_for_collection_relationship=_name_for_collection_relationship)
+ProductInfo = Base.classes.product_info
 Board, UserBoard, BoardType, BoardProduct = Base.classes.board, Base.classes.user_board, Base.classes.board_type, Base.classes.board_product
