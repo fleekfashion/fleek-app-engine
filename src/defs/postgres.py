@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, MetaData
+from sqlalchemy.engine import Engine
 from functional import seq
 
 from src.defs.utils import PostgreTable
@@ -9,7 +10,7 @@ DBNAME = "ktest"
 PROJECT = 'staging'
 
 conn_str = f"postgres://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
-engine = create_engine(conn_str)
+engine: Engine = create_engine(conn_str)
 metadata = MetaData(engine, schema=PROJECT)
 
 ADVERTISER_PRODUCT_COUNT_TABLE = PostgreTable("advertiser_product_count", metadata, autoload=True)

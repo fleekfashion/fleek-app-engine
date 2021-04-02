@@ -109,7 +109,7 @@ def _get_random_products_query(FILTER: str, limit: int, user_id: int, is_first_s
         SELECT 
           {columns}
         FROM {p.PRODUCT_INFO_TABLE.fullname} pi
-        TABLESAMPLE BERNOULLI (10)
+        TABLESAMPLE BERNOULLI (3)
         WHERE {FILTER}
     )
     """

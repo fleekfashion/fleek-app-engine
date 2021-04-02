@@ -31,7 +31,7 @@ from six.moves import http_client
 from sqlalchemy import create_engine, MetaData, Table
 
 from src.defs.postgres import DATABASE_USER, PASSWORD, DBNAME, PROJECT
-from src.utils import hashers
+from src.utils import hashers, static
 from src.rec import get_batch
 from src import rec2
 from src.productSearch import productSearch
@@ -158,6 +158,14 @@ def repeat():
 @app.route('/getStaticSizeOptions', methods=['GET'])
 def getStaticSizeOptions():
     return jsonify({'sizes': ["xxs", "xs", "xs/s", "s","s/m", "m", "m/l", "l", "xl", "xxl", "2xl"]})
+
+@app.route('/getAdvertiserNames', methods=['GET'])
+def getAdvertiserNames():
+    return jsonify(static.get_advertiser_names())
+
+@app.route('/getAdvertiserCounts', methods=['GET'])
+def getAdvertiserCounts():
+    return jsonify(static.get_advertiser_counts())
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the

@@ -4,18 +4,8 @@ import re
 from meilisearch.index import Index
 from functional import seq
 import json
+from src.defs.utils import HIDDEN_LABEL_FIELDS
 
-HIDDEN_LABEL_FIELDS = {
-    "jeans": "pants",
-    "sweatpants": "pants",
-    "graphic tee": "shirt",
-    "t-shirt": "shirt",
-    "blouse": "shirt",
-    "cardigan": "sweater",
-    "leggings": "pants",
-    "bikini": "swimwear",
-    "romper": "jumpsuit"
-}
 
 def _build_facet_filters(
         advertiser_names: t.Optional[t.List[str]],
@@ -74,7 +64,8 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
         elif filter_type == "product_secondary_labels":
             if name in HIDDEN_LABEL_FIELDS.keys():
                 bad_label = HIDDEN_LABEL_FIELDS[name]
-                suggestion = re.sub(f"\\b{bad_label}\\b", name, searchString).rstrip().lstrip()
+                searchString = re.sub(f"\\b{bad_label}\\b", '', searchString).rstrip().lstrip()
+                suggestion = f"{searchString} {name}"
             else:
                 suggestion = f"{name} {searchString}"
         elif filter_type == "internal_color":
@@ -102,7 +93,7 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
                 }
             )
     processed_res = seq(sorted(res, key=lambda x: x['nbHits'], reverse=True)) \
-        .filter(lambda x: x['nbHits'] > 3) \
+        .filter(lambda x: x['nbHits'] > 5) \
         .filter(lambda x: x['filter'] not in searchString) \
         .take(10) \
         .to_list()
