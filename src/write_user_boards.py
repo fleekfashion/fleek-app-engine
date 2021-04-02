@@ -84,4 +84,3 @@ def write_product_to_board(args: dict) -> dict:
         return {"success": False}
     
     return {"success": True}
-

@@ -40,7 +40,8 @@ from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 from src.product_price_history import get_product_price_history
-import src.boards as b
+import src.write_user_boards as wub
+import src.read_user_boards as rub
 
 app = Flask(__name__)
 
@@ -145,13 +146,18 @@ def getAdvertiserCounts():
 @app.route('/createNewBoard', methods=['POST'])
 def createNewBoard():
     data = request.get_json(force=True)
-    res = b.create_new_board(data)
+    res = wub.create_new_board(data)
     return jsonify(res)
 
 @app.route('/writeProductToBoard', methods=['POST'])
 def writeProductToBoard():
     data = request.get_json(force=True)
-    res = b.write_product_to_board(data)
+    res = wub.write_product_to_board(data)
+    return jsonify(res)
+
+@app.route('/getBoardInfo', methods=['GET'])
+def getBoardInfo():
+    res = rub.getBoardInfo(request.args)
     return jsonify(res)
 
 if __name__ == '__main__':
