@@ -28,9 +28,11 @@ def _remove_user_brand_helper(table: p.PostgreTable, args: dict) -> bool:
     return True
 
 def write_user_faved_brand(args: dict) -> bool:
+    _remove_user_brand_helper(p.USER_MUTED_BRANDS_TABLE, args) ## TODO Hack convert this to 1 call
     return _add_brand_helper(p.USER_FAVED_BRANDS_TABLE, args)
 
 def write_user_muted_brand(args: dict) -> bool:
+    _remove_user_brand_helper(p.USER_FAVED_BRANDS_TABLE, args)
     return _add_brand_helper(p.USER_MUTED_BRANDS_TABLE, args)
 
 def rm_user_faved_brand(args: dict) -> bool:
