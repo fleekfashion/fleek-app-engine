@@ -40,5 +40,5 @@ def _name_for_collection_relationship(base, local_cls, referred_cls, constraint)
 ## Map tables to objects
 Base = automap_base(metadata=metadata)
 Base.prepare(name_for_collection_relationship=_name_for_collection_relationship)
-ProductInfo = Base.classes.product_info
+ProductInfo, ProductSizeInfo = Base.classes.product_info, Base.classes.product_size_info
 Board, UserBoard, BoardType, BoardProduct = Base.classes.board, Base.classes.user_board, Base.classes.board_type, Base.classes.board_product

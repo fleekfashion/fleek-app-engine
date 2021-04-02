@@ -25,14 +25,16 @@ def load_session() -> Session:
     return session
 
 def table_row_to_dict(row) -> dict:
-    row_copy = copy(row.__dict__)
-    row_copy.pop('_sa_instance_state')
+    try:
+        row_copy = copy(row.__dict__)
+        row_copy.pop('_sa_instance_state')
+    except:
+        row_copy = row._asdict()
     return row_copy
 
 def row_to_dict(row) -> dict:
-    print(len(row))
-    if isinstance(row,Iterable):
-        parsed_rows = [table_row_to_dict(row) for row in row]
+    try:
+        parsed_rows = [table_row_to_dict(r) for r in row]
         return dict(ChainMap(*parsed_rows))
-    else:
+    except:
         return table_row_to_dict(row)
