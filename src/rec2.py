@@ -2,10 +2,13 @@ from random import shuffle
 from src.defs import postgres as p
 
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
+from src.utils import user_info
+from src.utils import static 
 
-MIN_PRODUCTS = 30
-PROB = 50
 DELIMITER = ",_,"
+FIRST_SESSION_FAVE_PCT = .7
+FAVE_PCT= .5
+
 
 OUR_IDS = set(
         [
@@ -56,14 +59,22 @@ def _build_filter(args: dict) -> str:
 
 
 def _normalize_products_by_brand(table: str, limit: int, user_id: int, is_first_session: bool):
-    scaling_factor = .25 if is_first_session else .5
+    def _get_scaling_factor(pct):
+        n_advertisers = len(static.get_advertiser_names())
+        n_fave_brands = len(user_info.get_user_fave_brands(user_id))
+
+        boost_size = 2.0*pct*n_advertisers
+        avg_boost = boost_size/max(n_fave_brands, 3) ## protect against overdoing 1 brand
+        return 1.0/avg_boost
+
+    pct = FIRST_SESSION_FAVE_PCT if is_first_session else FAVE_PCT 
     query = f"""
     SELECT * 
     FROM (
         WITH faved_advertisers_scaling AS (
             SELECT
                 advertiser_name,
-                .5 as scaling_factor
+                {_get_scaling_factor(pct)} as scaling_factor
             FROM 
                 {p.USER_FAVED_BRANDS_TABLE.fullname}
             WHERE user_id = {user_id}
