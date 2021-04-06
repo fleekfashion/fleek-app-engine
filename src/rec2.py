@@ -6,8 +6,8 @@ from src.utils import user_info
 from src.utils import static 
 
 DELIMITER = ",_,"
-FIRST_SESSION_FAVE_PCT = .7
-FAVE_PCT= .5
+FIRST_SESSION_FAVE_PCT = .8
+FAVE_PCT= .55
 
 
 OUR_IDS = set(
