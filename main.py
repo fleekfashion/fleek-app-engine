@@ -31,7 +31,7 @@ from six.moves import http_client
 from sqlalchemy import create_engine, MetaData, Table
 
 from src.defs.postgres import DATABASE_USER, PASSWORD, DBNAME, PROJECT
-from src.utils import hashers, static
+from src.utils import hashers, static, user_info
 from src.rec import get_batch
 from src import rec2
 from src.productSearch import productSearch
@@ -166,6 +166,13 @@ def getAdvertiserNames():
 @app.route('/getAdvertiserCounts', methods=['GET'])
 def getAdvertiserCounts():
     return jsonify(static.get_advertiser_counts())
+
+@app.route('/getUserFavedBrands', methods=['GET'])
+def getUserFavedBrands():
+    return jsonify(
+        user_info.get_user_fave_brands(
+            hashers.apple_id_to_user_id_hash(request.args['user_id']))
+    )
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
