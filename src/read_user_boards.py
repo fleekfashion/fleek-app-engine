@@ -37,6 +37,8 @@ def getBoardInfo(args: dict) -> dict:
 
 def getBoardProductsBatch(args: dict) -> dict:
     board_id = args['board_id']
+    offset = args['offset']
+    limit = args['limit']
 
     session = load_session()
     products_query = session.query(p.ProductInfo) \
@@ -45,7 +47,7 @@ def getBoardProductsBatch(args: dict) -> dict:
                       .filter(p.BoardProduct.board_id == board_id) \
                       .order_by(p.BoardProduct.last_modified_timestamp.desc())
     products_with_sizes_query = _add_sizes_to_products(session,products_query)
-    products = products_with_sizes_query.all()
-    print(products[0]._asdict())
+    products_batch = products_with_sizes_query.limit(limit).offset(offset).all()
+    print(products_batch[0]._asdict())
 
-    return [row_to_dict(row) for row in products]
+    return [row_to_dict(row) for row in products_batch]
