@@ -9,7 +9,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy import func
 
 def join_product_sizes(session, query):
-    products_subquery = query.subquery()
+    products_subquery = query.subquery(reduce_columns=True)
     sizes_subquery = session.query(
         p.ProductSizeInfo.product_id,
         postgresql.array_agg(
@@ -29,7 +29,7 @@ def join_product_sizes(session, query):
                   .join(sizes_subquery, sizes_subquery.c.product_id == products_subquery.c.product_id, isouter=True)
 
 def join_product_info(session, product_id_query):
-    subquery = product_id_query.subquery()
+    subquery = product_id_query.subquery(reduce_columns=True)
     products_query = session.query(
             p.ProductInfo,
             subquery
