@@ -6,6 +6,8 @@ verify_ssl = true
 [dev-packages]
 mypy = "*"
 pylint = "*"
+appnope = "*"
+ipykernel = "*"
 
 [packages]
 flask = "==1.1.2"
@@ -23,7 +25,6 @@ pyfunctional = "*"
 meilisearch = "*"
 sqlalchemy = "==1.3.23"
 cachetools = "==4.2.1"
-ipykernel = "*"
 
 [requires]
 python_version = "3.7"
