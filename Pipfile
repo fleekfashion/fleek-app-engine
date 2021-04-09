@@ -6,6 +6,8 @@ verify_ssl = true
 [dev-packages]
 mypy = "*"
 pylint = "*"
+appnope = "*"
+ipykernel = "*"
 
 [packages]
 flask = "==1.1.2"
