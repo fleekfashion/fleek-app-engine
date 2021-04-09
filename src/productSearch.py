@@ -5,7 +5,12 @@ from meilisearch.index import Index
 from functional import seq
 import json
 from src.defs.utils import HIDDEN_LABEL_FIELDS
+from src.utils.user_info import get_user_fave_brands
+from src.utils.static import get_advertiser_counts
+from src.utils.hashers import apple_id_to_user_id_hash
 
+MIN_SEARCH_TAG_HITS = 5
+MAX_SEARCH_TAG_BRANDS = 2
 
 def _build_facet_filters(
         advertiser_names: t.Optional[t.List[str]],
@@ -56,7 +61,7 @@ def build_filters(
 
 
 
-def process_facets_distributions(searchString: str, facets_distr: dict, product_label_filter_applied: bool) -> t.List[t.Dict[str, str]]:
+def process_facets_distributions(searchString: str, facets_distr: dict, product_label_filter_applied: bool, advertiser_filter_applied: bool, user_id: t.Optional[int]) -> t.List[t.Dict[str, str]]:
     def _build_suggestion(searchString: str, name: str, filter_type: str) -> str:
         suggestion = ""
         if filter_type == "product_labels":
@@ -74,30 +79,57 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
         return suggestion
             
 
+    fave_brands = get_user_fave_brands(user_id) if user_id else []
+    advertiser_counts = get_advertiser_counts() 
+    print(fave_brands)
+
     res = []
+    advertiser_tags = {}
     for key, value in facets_distr.items():
         if key == "advertiser_name":
-            continue
-        if key == "product_labels" and product_label_filter_applied:
-            continue
-        if key == "product_tags":
-            continue
-
-        for name, nbHits in value.items():
-            res.append(
+            if advertiser_filter_applied:
+                continue
+            normalized_brands = sorted([ 
+                    (nbHits/advertiser_counts.get(name, 10**10), nbHits, name ) 
+                    for name, nbHits in value.items() 
+                    if nbHits > MIN_SEARCH_TAG_HITS and name in fave_brands
+            ])[:MAX_SEARCH_TAG_BRANDS]
+            tags = [
                 {
-                    "suggestion": _build_suggestion(searchString, name, key),
+                    "suggestion": searchString,
                     "filter_type": key,
-                    "nbHits": nbHits,
-                    "filter": name
+                    "nbHits": brand[1],
+                    "filter": brand[2] 
                 }
-            )
+                for brand in normalized_brands
+            ]
+            for i in range(len(tags)):
+                advertiser_tags[i] = tags[i]
+        elif key == "product_labels" and product_label_filter_applied:
+            continue
+        elif key == "product_tags":
+            continue
+        else:
+            for name, nbHits in value.items():
+                res.append(
+                    {
+                        "suggestion": _build_suggestion(searchString, name, key),
+                        "filter_type": key,
+                        "nbHits": nbHits,
+                        "filter": name
+                    }
+                )
     processed_res = seq(sorted(res, key=lambda x: x['nbHits'], reverse=True)) \
-        .filter(lambda x: x['nbHits'] > 5) \
+        .filter(lambda x: x['nbHits'] > MIN_SEARCH_TAG_HITS) \
         .filter(lambda x: x['filter'] not in searchString) \
         .take(10) \
         .to_list()
-    return processed_res
+    
+    def _get_item_as_list(key, d: dict):
+        return [d[key]] if key in d else []
+
+    final_res = processed_res[:2] + _get_item_as_list(0, advertiser_tags) + processed_res[2:6] + _get_item_as_list(0, advertiser_tags) + processed_res[6:]
+    return final_res 
 
 def productSearch(args, index: Index) -> list:
     searchString  = args['searchString'].rstrip().lstrip()
@@ -107,6 +139,7 @@ def productSearch(args, index: Index) -> list:
     internal_colors = args.getlist("internal_colors")
     max_price = args.get("max_price", 10000)
     min_price = args.get("min_price", 0)
+    user_id = apple_id_to_user_id_hash(args.get("user_id", None))
 
     query_args = {
             "offset": int(args.get('offset', 0)),
@@ -132,6 +165,8 @@ def productSearch(args, index: Index) -> list:
     data['search_tags'] = process_facets_distributions(
         searchString=searchString,
         facets_distr=data['facetsDistribution'], 
-        product_label_filter_applied=len(product_labels)>0
+        product_label_filter_applied=len(product_labels)>0,
+        advertiser_filter_applied=len(advertiser_names)>0,
+        user_id=user_id
     )
     return data
