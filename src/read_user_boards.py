@@ -62,3 +62,13 @@ def getBoardProductsBatch(args: dict) -> dict:
     return {
         "products": result
     }
+
+def getUserBoardsBatch(args: dict) -> dict:
+    user_id = args['user_id']
+    offset = args['offset']
+    limit = args['limit']
+
+    session = load_session()
+    user_board_ids_query = session.query(p.UserBoard) \
+                            .filter(p.UserBoard.user_id == user_id) \
+                            .order_by(p.UserBoard.last_modified_timestamp.desc())
