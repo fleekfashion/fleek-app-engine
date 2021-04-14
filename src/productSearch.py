@@ -1,5 +1,6 @@
 import typing as t
 import re
+import itertools
 
 from meilisearch.index import Index
 from functional import seq
@@ -9,6 +10,7 @@ from src.utils.user_info import get_user_fave_brands
 from src.utils.static import get_advertiser_counts
 from src.utils.hashers import apple_id_to_user_id_hash
 
+N_SEARCH_TAGS = 12
 MIN_SEARCH_TAG_HITS = 5
 MAX_SEARCH_TAG_BRANDS = 2
 
@@ -61,7 +63,14 @@ def build_filters(
 
 
 
-def process_facets_distributions(searchString: str, facets_distr: dict, product_label_filter_applied: bool, advertiser_filter_applied: bool, user_id: t.Optional[int]) -> t.List[t.Dict[str, str]]:
+def process_facets_distributions(
+        searchString: str, 
+        facets_distr: dict, 
+        product_label_filter_applied: bool, 
+        advertiser_filter_applied: bool, 
+        user_id: t.Optional[int]
+    ) -> t.List[t.Dict[str, str]]:
+
     def _build_suggestion(searchString: str, name: str, filter_type: str) -> str:
         suggestion = ""
         if filter_type == "product_labels":
@@ -77,59 +86,78 @@ def process_facets_distributions(searchString: str, facets_distr: dict, product_
             suggestion = f"{name} {searchString}"
         suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
         return suggestion
-            
 
-    fave_brands = get_user_fave_brands(user_id) if user_id else []
-    advertiser_counts = get_advertiser_counts() 
-    print(fave_brands)
+    def _build_advertiser_tags(brand_counts: t.Dict[str, int]) -> t.List[dict]:
+        fave_brands = get_user_fave_brands(user_id) if user_id else []
+        advertiser_counts = get_advertiser_counts() 
+        normalized_brands = sorted([ 
+                (name in fave_brands, nbHits/advertiser_counts.get(name, 10**10), nbHits, name ) 
+                for name, nbHits in brand_counts.items()
+                if nbHits > MIN_SEARCH_TAG_HITS
+        ], reverse=True)#[:MAX_SEARCH_TAG_BRANDS]
+        tags = [
+            {
+                "suggestion": searchString,
+                "filter_type": "advertiser_name",
+                "nbHits": brand[2],
+                "filter": brand[3]
+            }
+            for brand in normalized_brands
+        ]
+        return tags 
 
-    res = []
-    advertiser_tags = {}
+
+    def _default_process_tag(searchString: str, key: str, value: dict) -> t.List[dict]:
+            return [                     
+                {
+                    "suggestion": _build_suggestion(searchString, name, key),
+                    "filter_type": key,
+                    "nbHits": nbHits,
+                    "filter": name
+                }
+                for name, nbHits in value.items()
+            ]
+
+    general_tags = []
+    advertiser_tags = []
     for key, value in facets_distr.items():
         if key == "advertiser_name":
-            if advertiser_filter_applied:
+            if advertiser_filter_applied or user_id is None:
                 continue
-            normalized_brands = sorted([ 
-                    (nbHits/advertiser_counts.get(name, 10**10), nbHits, name ) 
-                    for name, nbHits in value.items() 
-                    if nbHits > MIN_SEARCH_TAG_HITS and name in fave_brands
-            ])[:MAX_SEARCH_TAG_BRANDS]
-            tags = [
-                {
-                    "suggestion": searchString,
-                    "filter_type": key,
-                    "nbHits": brand[1],
-                    "filter": brand[2] 
-                }
-                for brand in normalized_brands
-            ]
-            for i in range(len(tags)):
-                advertiser_tags[i] = tags[i]
+            advertiser_tags = _build_advertiser_tags(value)
         elif key == "product_labels" and product_label_filter_applied:
             continue
         elif key == "product_tags":
             continue
         else:
-            for name, nbHits in value.items():
-                res.append(
-                    {
-                        "suggestion": _build_suggestion(searchString, name, key),
-                        "filter_type": key,
-                        "nbHits": nbHits,
-                        "filter": name
-                    }
-                )
-    processed_res = seq(sorted(res, key=lambda x: x['nbHits'], reverse=True)) \
+            general_tags.extend(
+                _default_process_tag(searchString, key, value)
+            )
+    
+    def _build_final_tags(general_tags: t.List[dict], advertiser_tags: t.List[dict]) -> t.List[dict]:
+
+        N = N_SEARCH_TAGS // 3 ## 2 general tags + 1 advertiser name
+        final_tags = list(itertools.chain(
+            *[
+                general_tags[2*i:2*(i+1)] + advertiser_tags[i:i+1] 
+            for i in range(N)
+            ] 
+        ))
+
+        ## If room for more, add advertiser names until hit limit
+        final_tags.extend(
+            advertiser_tags[N:N + (N_SEARCH_TAGS - len(final_tags))] 
+        )
+        return final_tags
+
+
+    processed_tags = seq(sorted(general_tags, key=lambda x: x['nbHits'], reverse=True)) \
         .filter(lambda x: x['nbHits'] > MIN_SEARCH_TAG_HITS) \
         .filter(lambda x: x['filter'] not in searchString) \
-        .take(10) \
+        .take(N_SEARCH_TAGS) \
         .to_list()
-    
-    def _get_item_as_list(key, d: dict):
-        return [d[key]] if key in d else []
-
-    final_res = processed_res[:2] + _get_item_as_list(0, advertiser_tags) + processed_res[2:6] + _get_item_as_list(0, advertiser_tags) + processed_res[6:]
-    return final_res 
+    final_res = _build_final_tags(processed_tags, advertiser_tags)
+    return final_res
 
 def productSearch(args, index: Index) -> list:
     searchString  = args['searchString'].rstrip().lstrip()
