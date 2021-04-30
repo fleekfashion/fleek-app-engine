@@ -4,6 +4,7 @@ from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import func, select
 import sqlalchemy as sqa
+import itertools
 
 def join_product_sizes(session, query):
     products_subquery = query.subquery(reduce_columns=True)
@@ -90,34 +91,12 @@ def getUserBoardsBatch(args: dict) -> dict:
 
         join_product_info_query = join_product_info(session, join_board_product_subq).subquery()
 
+        product_cols = [(c.name, c) for c in join_product_info_query.c]
+        product_cols_json_agg = list(itertools.chain(*product_cols))
         group_by_board_subq = session.query(
                                     join_product_info_query.c.board_id,
                                     postgresql.array_agg(
-                                        func.json_build_object(
-                                            'product_id', join_product_info_query.c.product_id,
-                                            'product_name', join_product_info_query.c.product_name,
-                                            'product_description', join_product_info_query.c.product_description,
-                                            'product_labels', join_product_info_query.c.product_labels,
-                                            'product_tags', join_product_info_query.c.product_tags,
-                                            'product_price', join_product_info_query.c.product_price,
-                                            'product_sale_price', join_product_info_query.c.product_sale_price,
-                                            'product_image_url', join_product_info_query.c.product_image_url,
-                                            'product_additional_image_urls', join_product_info_query.c.product_additional_image_urls,
-                                            'product_purchase_url', join_product_info_query.c.product_purchase_url,
-                                            'product_brand', join_product_info_query.c.product_brand,
-                                            'advertiser_name', join_product_info_query.c.advertiser_name,
-                                            'n_views', join_product_info_query.c.n_views,
-                                            'n_likes', join_product_info_query.c.n_likes,
-                                            'n_add_to_cart', join_product_info_query.c.n_add_to_cart,
-                                            'n_conversions', join_product_info_query.c.n_conversions,
-                                            'is_active', join_product_info_query.c.is_active,
-                                            'execution_date', join_product_info_query.c.execution_date,
-                                            'size', join_product_info_query.c.size,
-                                            'color', join_product_info_query.c.color,
-                                            'product_secondary_labels', join_product_info_query.c.product_secondary_labels,
-                                            'internal_color', join_product_info_query.c.internal_color,
-                                            'sizes', join_product_info_query.c.sizes
-                                        )
+                                        func.json_build_object(product_cols_json_agg)
                                     ).label('products')
                                 ) \
                                 .group_by(join_product_info_query.c.board_id) \
