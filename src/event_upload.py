@@ -29,8 +29,6 @@ def upload_event(conn, args):
             new_args.pop(key)
     print(new_args)
 
-    print(new_args)
-
     query = p.USER_EVENTS_TABLE.insert().values(**new_args)
 
     conn = p.engine.connect()

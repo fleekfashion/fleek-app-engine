@@ -31,7 +31,7 @@ from six.moves import http_client
 from sqlalchemy import create_engine, MetaData, Table
 
 from src.defs.postgres import DATABASE_USER, PASSWORD, DBNAME, PROJECT
-from src.utils import hashers, static
+from src.utils import hashers, static, user_info
 from src.rec import get_batch
 from src import rec2
 from src.productSearch import productSearch
@@ -42,6 +42,7 @@ from src.single_product_info import get_single_product_info
 from src.product_price_history import get_product_price_history
 import src.write_user_boards as wub
 import src.read_user_boards as rub
+import src.user_brand_actions as uba
 
 app = Flask(__name__)
 
@@ -125,6 +126,31 @@ def pushUserEvent():
     res = upload_event(conn, data)
     return jsonify({'event is': res})
 
+
+@app.route('/writeUserFavedBrand', methods=['POST'])
+def writeUserFavedBrand():
+    data = request.get_json(force=True)
+    res = uba.write_user_faved_brand(data)
+    return jsonify({'success': res})
+
+@app.route('/writeUserMutedBrand', methods=['POST'])
+def writeUserMutedBrand():
+    data = request.get_json(force=True)
+    res = uba.write_user_muted_brand(data)
+    return jsonify({'success': res})
+
+@app.route('/removeUserFavedBrand', methods=['POST'])
+def removeUserFavedBrand():
+    data = request.get_json(force=True)
+    res = uba.rm_user_faved_brand(data)
+    return jsonify({'success': res})
+
+@app.route('/removeUserMutedBrand', methods=['POST'])
+def removeUserMutedBrand():
+    data = request.get_json(force=True)
+    res = uba.rm_user_muted_brand(data)
+    return jsonify({'success': res})
+
 @app.route('/repeat', methods=['POST'])
 def repeat():
     """Simple echo service."""
@@ -169,6 +195,13 @@ def getBoardProductsBatch():
 def getUserBoardsBatch():
     res = rub.getUserBoardsBatch(request.args)
     return jsonify(res)
+
+@app.route('/getUserFavedBrands', methods=['GET'])
+def getUserFavedBrands():
+    return jsonify(
+        user_info.get_user_fave_brands(
+            hashers.apple_id_to_user_id_hash(request.args['user_id']))
+    )
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the

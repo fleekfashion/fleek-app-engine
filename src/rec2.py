@@ -2,10 +2,13 @@ from random import shuffle
 from src.defs import postgres as p
 
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
+from src.utils import user_info
+from src.utils import static 
 
-MIN_PRODUCTS = 30
-PROB = 50
 DELIMITER = ",_,"
+FIRST_SESSION_FAVE_PCT = .9
+FAVE_PCT= .55
+
 
 OUR_IDS = set(
         [
@@ -39,23 +42,54 @@ def _arg_to_filter(arg: str, value) -> str:
 
 def _build_filter(args: dict) -> str:
     FILTER = "is_active"
+
     for k, v in args.items():
         f = _arg_to_filter(k, v)
         if len(f) != 0:
             FILTER += "\nAND " + f
+
+    if "advertiser_name" not in args.keys():
+        FILTER += f"""
+    AND advertiser_name NOT IN (
+        SELECT advertiser_name FROM {p.USER_MUTED_BRANDS_TABLE.fullname}
+    )
+    """
     return FILTER
 
 
 
-def _normalize_products_by_brand(table: str, limit: int):
+def _normalize_products_by_brand(table: str, limit: int, user_id: int, is_first_session: bool):
+    def _get_scaling_factor(pct):
+        n_advertisers = len(static.get_advertiser_names())
+        n_fave_brands = len(user_info.get_user_fave_brands(user_id))
+
+        boost_size = 2.0*pct*n_advertisers
+        avg_boost = boost_size/max(n_fave_brands, 4) ## protect against overdoing 1 brand
+        return 1.0/max(2, avg_boost)
+
+    pct = FIRST_SESSION_FAVE_PCT if is_first_session else FAVE_PCT
     query = f"""
     SELECT * 
     FROM (
+        WITH faved_advertisers_scaling AS (
+            SELECT
+                advertiser_name,
+                {_get_scaling_factor(pct)} as scaling_factor
+            FROM 
+                {p.USER_FAVED_BRANDS_TABLE.fullname}
+            WHERE user_id = {user_id}
+        )
         SELECT t.*,
-            random()*sqrt(ac.n_products)*cbrt(ac.n_products)*sqrt(sqrt(ac.n_products)) as normalized_rank
+            random()*
+                sqrt(ac.n_products)*cbrt(ac.n_products)*
+                cbrt(sqrt(sqrt(ac.n_products)))*
+                COALESCE(ad_scale.scaling_factor, 1) 
+                as normalized_rank
         FROM {table} t
         INNER JOIN {p.ADVERTISER_PRODUCT_COUNT_TABLE.fullname} ac
-        ON t.advertiser_name=ac.advertiser_name
+            ON t.advertiser_name=ac.advertiser_name
+        LEFT JOIN faved_advertisers_scaling ad_scale
+            ON t.advertiser_name = ad_scale.advertiser_name
     ) t2
     ORDER BY normalized_rank
     LIMIT {limit}
@@ -73,7 +107,7 @@ def _get_personalized_products_query(user_id: int, FILTER: str, limit: int) -> s
     LIMIT {limit} 
     """
 
-def _get_random_products_query(FILTER, limit): 
+def _get_random_products_query(FILTER: str, limit: int, user_id: int, is_first_session: bool): 
     columns = p.PRODUCT_INFO_TABLE.get_columns()\
         .map(
             lambda x: f"pi.{x}"
@@ -90,9 +124,9 @@ def _get_random_products_query(FILTER, limit):
         WHERE {FILTER}
     )
     """
-    return _normalize_products_by_brand(query, limit=limit)
+    return _normalize_products_by_brand(query, limit=limit, user_id=user_id, is_first_session=is_first_session)
 
-def _get_top_products_query(FILTER: str, limit: int) -> str:
+def _get_top_products_query(FILTER: str, limit: int, user_id: int, is_first_session: bool ) -> str:
     columns = p.PRODUCT_INFO_TABLE.get_columns()\
         .map(
             lambda x: f"pi.{x}"
@@ -111,15 +145,15 @@ def _get_top_products_query(FILTER: str, limit: int) -> str:
         WHERE {FILTER}
     )
     """
-    return _normalize_products_by_brand(query, limit=limit)
+    return _normalize_products_by_brand(query, limit=limit, user_id=user_id, is_first_session=is_first_session)
 
-def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int) -> str:
+def _get_user_batch_query(FILTER: str, n_top: int, n_rand: int, user_id: int, is_first_session: bool) -> str:
     return f"""
     WITH top_products AS (
-        {_get_top_products_query(FILTER, n_top)}
+        {_get_top_products_query(FILTER, n_top, user_id, is_first_session)}
     ),
     random_products AS (
-        {_get_random_products_query(FILTER, n_rand)}
+        {_get_random_products_query(FILTER, n_rand, user_id, is_first_session)}
     ),
     products AS (
         SELECT * FROM (
@@ -162,10 +196,12 @@ def _user_has_recs(conn, user_id: int) -> bool:
     return c > 0
 
 def get_batch(conn, user_id: int, args: dict) -> list:
+    user_has_recs = _user_has_recs(conn, user_id)
+    is_first_session = args.get('is_first_session', False) or not user_has_recs
     FILTER = _build_filter(args)
-    n_top = 30 if _user_has_recs(conn, user_id) else 15
+    n_top = 15 if user_has_recs else 30
     n_rand = 40 - n_top
-    query = _get_user_batch_query(FILTER, n_top, n_rand)
+    query = _get_user_batch_query(FILTER, n_top, n_rand, user_id, is_first_session)
 
     ## Run Query
     with conn:

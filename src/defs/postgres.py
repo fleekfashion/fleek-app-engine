@@ -14,7 +14,6 @@ PROJECT = 'staging'
 conn_str = f"postgres://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
 engine: Engine = create_engine(conn_str)
 metadata = MetaData(engine, schema=PROJECT)
-board_metadata = MetaData(engine, schema=PROJECT)
 
 ADVERTISER_PRODUCT_COUNT_TABLE = PostgreTable("advertiser_product_count", metadata, autoload=True)
 PRODUCT_INFO_TABLE = PostgreTable("product_info", metadata, autoload=True)
@@ -23,13 +22,16 @@ PRODUCT_RECS_TABLE = PostgreTable("user_product_recommendations", metadata, auto
 PRODUCT_SIZE_INFO_TABLE = PostgreTable("product_size_info", metadata, autoload=True)
 SIMILAR_ITEMS_TABLE = PostgreTable("similar_products_v2", metadata, autoload=True)
 TOP_PRODUCTS_TABLE = PostgreTable("top_products", metadata, autoload=True)
-USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
 
 BOARD_TABLE = PostgreTable("board", metadata, autoload=True)
 BOARD_TYPE_TABLE = PostgreTable("board_type", metadata, autoload=True)
 BOARD_PRODUCT_TABLE = PostgreTable("board_product", metadata, autoload=True)
 USER_BOARD_TABLE = PostgreTable("user_board", metadata, autoload=True)
 REJECTED_BOARD_TABLE = PostgreTable("rejected_board", metadata, autoload=True)
+
+USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
+USER_FAVED_BRANDS_TABLE = PostgreTable("user_faved_brands", metadata, autoload=True)
+USER_MUTED_BRANDS_TABLE = PostgreTable("user_muted_brands", metadata, autoload=True)
 
 def _name_for_collection_relationship(base, local_cls, referred_cls, constraint):
     if constraint.name:
@@ -40,5 +42,24 @@ def _name_for_collection_relationship(base, local_cls, referred_cls, constraint)
 ## Map tables to objects
 Base = automap_base(metadata=metadata)
 Base.prepare(name_for_collection_relationship=_name_for_collection_relationship)
-ProductInfo, ProductSizeInfo = Base.classes.product_info, Base.classes.product_size_info
-Board, UserBoard, BoardType, BoardProduct = Base.classes.board, Base.classes.user_board, Base.classes.board_type, Base.classes.board_product
+
+## Product Tables
+ProductInfo = Base.classes.product_info
+ProductPriceHistory = Base.classes.product_price_history
+ProductSizeInfo = Base.classes.product_size_info
+SimilarItems  = Base.classes.similar_products_v2
+TopProducts = Base.classes.top_products
+
+## Board Tables
+Board = Base.classes.board
+BoardProduct = Base.classes.board_product
+BoardType = Base.classes.board_type
+
+## User Tables
+UserBoard = Base.classes.user_board
+UserEvents = Base.classes.user_events
+UserFavedBrands = Base.classes.user_faved_brands
+UserMutedBrands = Base.classes.user_muted_brands
+
+## Misc
+AdvertiserProductCount = Base.classes.advertiser_product_count
