@@ -48,7 +48,6 @@ ProductInfo = Base.classes.product_info
 ProductPriceHistory = Base.classes.product_price_history
 ProductSizeInfo = Base.classes.product_size_info
 SimilarItems  = Base.classes.similar_products_v2
-TopProducts = Base.classes.top_products
 
 ## Board Tables
 Board = Base.classes.board
@@ -57,7 +56,6 @@ BoardType = Base.classes.board_type
 
 ## User Tables
 UserBoard = Base.classes.user_board
-UserEvents = Base.classes.user_events
 UserFavedBrands = Base.classes.user_faved_brands
 UserMutedBrands = Base.classes.user_muted_brands
 
