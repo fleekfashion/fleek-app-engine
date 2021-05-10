@@ -3,6 +3,8 @@ from sqlalchemy.engine import Engine
 from functional import seq
 
 from src.defs.utils import PostgreTable
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.automap import automap_base, name_for_collection_relationship
 
 DATABASE_USER = "postgres"
 PASSWORD = "fleek-app-prod1"
@@ -21,6 +23,41 @@ PRODUCT_SIZE_INFO_TABLE = PostgreTable("product_size_info", metadata, autoload=T
 SIMILAR_ITEMS_TABLE = PostgreTable("similar_products_v2", metadata, autoload=True)
 TOP_PRODUCTS_TABLE = PostgreTable("top_products", metadata, autoload=True)
 
+BOARD_TABLE = PostgreTable("board", metadata, autoload=True)
+BOARD_TYPE_TABLE = PostgreTable("board_type", metadata, autoload=True)
+BOARD_PRODUCT_TABLE = PostgreTable("board_product", metadata, autoload=True)
+USER_BOARD_TABLE = PostgreTable("user_board", metadata, autoload=True)
+REJECTED_BOARD_TABLE = PostgreTable("rejected_board", metadata, autoload=True)
+
 USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
 USER_FAVED_BRANDS_TABLE = PostgreTable("user_faved_brands", metadata, autoload=True)
 USER_MUTED_BRANDS_TABLE = PostgreTable("user_muted_brands", metadata, autoload=True)
+
+def _name_for_collection_relationship(base, local_cls, referred_cls, constraint):
+    if constraint.name:
+        return constraint.name.lower()
+    # if this didn't work, revert to the default behavior
+    return name_for_collection_relationship(base, local_cls, referred_cls, constraint)
+
+## Map tables to objects
+Base = automap_base(metadata=metadata)
+Base.prepare(name_for_collection_relationship=_name_for_collection_relationship)
+
+## Product Tables
+ProductInfo = Base.classes.product_info
+ProductPriceHistory = Base.classes.product_price_history
+ProductSizeInfo = Base.classes.product_size_info
+SimilarItems  = Base.classes.similar_products_v2
+
+## Board Tables
+Board = Base.classes.board
+BoardProduct = Base.classes.board_product
+BoardType = Base.classes.board_type
+
+## User Tables
+UserBoard = Base.classes.user_board
+UserFavedBrands = Base.classes.user_faved_brands
+UserMutedBrands = Base.classes.user_muted_brands
+
+## Misc
+AdvertiserProductCount = Base.classes.advertiser_product_count
