@@ -1,9 +1,14 @@
+import typing as t
 from random import shuffle
 from src.defs import postgres as p
 
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
 from src.utils import user_info
 from src.utils import static 
+
+import src.utils.query as query
+from src.utils.sqlalchemy_utils import row_to_dict, session_scope 
+
 
 DELIMITER = ",_,"
 FIRST_SESSION_FAVE_PCT = .9
@@ -263,3 +268,23 @@ def get_similar_items(conn, product_id: int) -> list:
         ctov = get_labeled_values(columns, value)
         data.append(ctov)
     return data
+
+
+def getProductSizeOptions(args: dict) -> dict:
+    product_id = args['product_id']
+
+    with session_scope() as session:
+        alternate_pids_subq = session.query(
+            p.ProductColorOptions.alternate_color_product_id.label('product_id')
+        ) \
+            .filter(p.ProductColorOptions.product_id == product_id) \
+            .subquery(reduce_columns=True)
+        
+        alternate_color_products = query.join_product_info(
+            session,
+            alternate_pids_subq
+        ).all()
+    products = [ row_to_dict(row)  for row in alternate_color_products ]
+    return {
+        'products': products
+    }

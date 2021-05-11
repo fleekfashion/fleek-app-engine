@@ -17,6 +17,7 @@ metadata = MetaData(engine, schema=PROJECT)
 
 ADVERTISER_PRODUCT_COUNT_TABLE = PostgreTable("advertiser_product_count", metadata, autoload=True)
 PRODUCT_INFO_TABLE = PostgreTable("product_info", metadata, autoload=True)
+PRODUCT_COLOR_OPTIONS_TABLE = PostgreTable("product_color_options", metadata, autoload=True)
 PRODUCT_PRICE_HISTORY_TABLE = PostgreTable("product_price_history", metadata, autoload=True)
 PRODUCT_RECS_TABLE = PostgreTable("user_product_recommendations", metadata, autoload=True)
 PRODUCT_SIZE_INFO_TABLE = PostgreTable("product_size_info", metadata, autoload=True)
@@ -45,6 +46,7 @@ Base.prepare(name_for_collection_relationship=_name_for_collection_relationship)
 
 ## Product Tables
 ProductInfo = Base.classes.product_info
+ProductColorOptions = Base.classes.product_color_options
 ProductPriceHistory = Base.classes.product_price_history
 ProductSizeInfo = Base.classes.product_size_info
 SimilarItems  = Base.classes.similar_products_v2
