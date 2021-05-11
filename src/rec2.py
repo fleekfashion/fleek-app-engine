@@ -6,7 +6,7 @@ from src.utils import user_info
 from src.utils import static 
 
 DELIMITER = ",_,"
-FIRST_SESSION_FAVE_PCT = .8
+FIRST_SESSION_FAVE_PCT = .9
 FAVE_PCT= .55
 
 
@@ -64,10 +64,10 @@ def _normalize_products_by_brand(table: str, limit: int, user_id: int, is_first_
         n_fave_brands = len(user_info.get_user_fave_brands(user_id))
 
         boost_size = 2.0*pct*n_advertisers
-        avg_boost = boost_size/max(n_fave_brands, 3) ## protect against overdoing 1 brand
-        return 1.0/avg_boost
+        avg_boost = boost_size/max(n_fave_brands, 4) ## protect against overdoing 1 brand
+        return 1.0/max(2, avg_boost)
 
-    pct = FIRST_SESSION_FAVE_PCT if is_first_session else FAVE_PCT 
+    pct = FIRST_SESSION_FAVE_PCT if is_first_session else FAVE_PCT
     query = f"""
     SELECT * 
     FROM (

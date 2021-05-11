@@ -40,6 +40,8 @@ from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
 from src.single_product_info import get_single_product_info
 from src.product_price_history import get_product_price_history
+import src.write_user_boards as wub
+import src.read_user_boards as rub
 import src.user_brand_actions as uba
 
 app = Flask(__name__)
@@ -166,6 +168,33 @@ def getAdvertiserNames():
 @app.route('/getAdvertiserCounts', methods=['GET'])
 def getAdvertiserCounts():
     return jsonify(static.get_advertiser_counts())
+
+@app.route('/createNewBoard', methods=['POST'])
+def createNewBoard():
+    data = request.get_json(force=True)
+    res = wub.create_new_board(data)
+    return jsonify(res)
+
+@app.route('/writeProductToBoard', methods=['POST'])
+def writeProductToBoard():
+    data = request.get_json(force=True)
+    res = wub.write_product_to_board(data)
+    return jsonify(res)
+
+@app.route('/getBoardInfo', methods=['GET'])
+def getBoardInfo():
+    res = rub.getBoardInfo(request.args)
+    return jsonify(res)
+
+@app.route('/getBoardProductsBatch', methods=['GET'])
+def getBoardProductsBatch():
+    res = rub.getBoardProductsBatch(request.args)
+    return jsonify(res)
+
+@app.route('/getUserBoardsBatch', methods=['GET'])
+def getUserBoardsBatch():
+    res = rub.getUserBoardsBatch(request.args)
+    return jsonify(res)
 
 @app.route('/getUserFavedBrands', methods=['GET'])
 def getUserFavedBrands():
