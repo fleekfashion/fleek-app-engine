@@ -270,7 +270,7 @@ def get_similar_items(conn, product_id: int) -> list:
     return data
 
 
-def getProductSizeOptions(args: dict) -> dict:
+def getProductColorOptions(args: dict) -> dict:
     product_id = args['product_id']
 
     with session_scope() as session:
