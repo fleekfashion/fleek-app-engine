@@ -94,7 +94,7 @@ def process_facets_distributions(
                 (name in fave_brands, nbHits/advertiser_counts.get(name, 10**10), nbHits, name ) 
                 for name, nbHits in brand_counts.items()
                 if nbHits > MIN_SEARCH_TAG_HITS
-        ], reverse=True)#[:MAX_SEARCH_TAG_BRANDS]
+        ], reverse=True)
         tags = [
             {
                 "suggestion": searchString,
