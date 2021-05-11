@@ -1,3 +1,5 @@
+import typing as t
+
 from src.utils.query import join_product_info
 from src.utils.sqlalchemy_utils import load_session, row_to_dict, session_scope, table_row_to_dict
 from src.utils import hashers
@@ -24,7 +26,8 @@ def getBoardProductsBatch(args: dict) -> dict:
     with session_scope() as session:
         board_pids_query = session.query(p.BoardProduct.product_id) \
                         .filter(p.BoardProduct.board_id == board_id) \
-                        .order_by(p.BoardProduct.last_modified_timestamp.desc())
+                        .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+                        .subquery(reduce_columns=True)
         products_batch = join_product_info(session, board_pids_query) \
                         .limit(limit) \
                         .offset(offset) \
@@ -59,7 +62,8 @@ def getUserBoardsBatch(args: dict) -> dict:
                                         .lateral()
 
         join_board_product_subq = session.query(user_board_ids_subq, board_product_lateral_subq) \
-                                            .join(board_product_lateral_subq, sqa.true())
+                                            .join(board_product_lateral_subq, sqa.true()) \
+                                            .subquery(reduce_columns=True)
 
         join_product_info_query = join_product_info(session, join_board_product_subq).subquery()
 
@@ -89,5 +93,7 @@ def getUserBoardsBatch(args: dict) -> dict:
 
         result = [row_to_dict(row) for row in join_board_info_and_products]
 
-    return result
+    return {
+            "boards": result
+        }
                             
