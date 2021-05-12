@@ -131,7 +131,7 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
     }
 
 
-@cachetools.func.ttl_cache(ttl=60*60, maxsize=2**10)
+@cachetools.func.ttl_cache(ttl=6*60*60, maxsize=2**12)
 def runSearch(searchString: str, offset: int, limit: int, index: Index) -> dict:
     data = _load_meili_results(searchString, offset, limit, index)
     processed_hits = _process_hits(data['hits'], searchString)
