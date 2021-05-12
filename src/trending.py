@@ -57,7 +57,6 @@ def update_image_urls(data: list, index: Index) -> List[dict]:
 def trendingSearches(args: dict, index: Index, product_index: Index) -> Dict:
     KEY = 'trending'
     if KEY in SUGGESTION_IMAGE_CACHE:
-        print('success')
         return SUGGESTION_IMAGE_CACHE[KEY] 
 
     query_args = {
@@ -74,7 +73,6 @@ def trendingSearches(args: dict, index: Index, product_index: Index) -> Dict:
 def labelSearches(args: dict, index: Index, product_index: Index) -> Dict:
     KEY = 'labels'
     if KEY in SUGGESTION_IMAGE_CACHE:
-        print('success')
         return SUGGESTION_IMAGE_CACHE[KEY] 
 
     query_args = {

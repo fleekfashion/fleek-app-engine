@@ -83,7 +83,6 @@ def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
 
 
 def _load_meili_results(searchString: str, offset: int, limit: int, index: Index) -> Dict[Any, Any]:
-    print('no-cache')
     query_args = {
             "limit": limit,
             "offset": offset, 
@@ -134,7 +133,7 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
     }
 
 
-@cachetools.func.ttl_cache(ttl=12*60*60, maxsize=2**12)
+@cachetools.func.ttl_cache(ttl=3*24*60*60, maxsize=2**12)
 def runSearch(searchString: str, offset: int, limit: int, index: Index) -> dict:
     data = _load_meili_results(searchString, offset, limit, index)
     processed_hits = _process_hits(data['hits'], searchString)
@@ -162,7 +161,10 @@ def runSearch(searchString: str, offset: int, limit: int, index: Index) -> dict:
             ).map(lambda x: x['suggestion_hash']) \
             .to_set()
 
-    if len(valid_hits) < 3 and _rm_tags(first_hit.get('suggestion', '')) == searchString:
+    if len(valid_hits) < 3 and \
+        len(processed_hits['advertiser_names']) < 1 and \
+        _rm_tags(first_hit.get('suggestion', '')) == searchString:
+
         ## Remove the secondary attribute from string
         searchStringTail = seq(searchString.split(" ")[1:]) \
                 .map(_rm_tags) \
