@@ -83,7 +83,6 @@ def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
 
 
 def _load_meili_results(searchString: str, offset: int, limit: int, index: Index) -> Dict[Any, Any]:
-    print('no-cache')
     query_args = {
             "limit": limit,
             "offset": offset, 
@@ -127,6 +126,7 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
         "hits": seq(hits) \
                         .map(_process_doc) \
                         .map(_process_suggestion) \
+                        .filter(lambda x: START in x['suggestion']) \
                         .to_list()
     }
 
@@ -143,6 +143,7 @@ def runSearch(searchString: str, offset: int, limit: int, index: Index) -> dict:
         return d
     ## If no search results returned
     if seq(processed_hits.values()).for_all(lambda x: len(x) == 0):
+        print('boom1')
         data = _load_meili_results(searchString.split()[-1], offset, offset+1, index)
         processed_hits = _process_hits(data['hits'], searchString)
         processed_hits['hits'] = []
@@ -159,7 +160,12 @@ def runSearch(searchString: str, offset: int, limit: int, index: Index) -> dict:
             ).map(lambda x: x['suggestion_hash']) \
             .to_set()
 
-    if len(valid_hits) < 3 and _rm_tags(first_hit.get('suggestion', '')) == searchString:
+    print(len(processed_hits['advertiser_names']))
+    if len(valid_hits) < 3 and \
+        len(processed_hits['advertiser_names']) < 1 and \
+        _rm_tags(first_hit.get('suggestion', '')) == searchString:
+
+        print('boom2')
         ## Remove the secondary attribute from string
         searchStringTail = seq(searchString.split(" ")[1:]) \
                 .map(_rm_tags) \
