@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import cachetools.func
 
-from functional import seq
+from functional import seq, pseq
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
 from meilisearch.index import Index
@@ -124,10 +124,13 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
     return {
         "advertiser_names": _get_advertiser_names(hits[0]),
         "color": _parse_highlighted_field(hits[0]['colors'], minlen=3, first=True, rm_tag=False),
-        "hits": seq(hits) \
-                        .map(_process_doc) \
-                        .map(_process_suggestion) \
-                        .to_list()
+        "hits": pseq(hits) \
+                    .map(_process_doc) \
+                    .map(_process_suggestion) \
+                    .filter(lambda x: 
+                        seq([*HIDDEN_LABEL_FIELDS, START]) \
+                            .exists(lambda y: y in x['suggestion'] )
+                    ).to_list()
     }
 
 
