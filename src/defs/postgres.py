@@ -11,7 +11,7 @@ PASSWORD = "fleek-app-prod1"
 DBNAME = "ktest"
 PROJECT = 'staging'
 
-conn_str = f"postgres://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
+conn_str = f"postgresql://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
 engine: Engine = create_engine(conn_str)
 metadata = MetaData(engine, schema=PROJECT)
 
