@@ -48,6 +48,7 @@ Base.prepare(name_for_collection_relationship=_name_for_collection_relationship)
 ProductInfo = Base.classes.product_info
 ProductColorOptions = Base.classes.product_color_options
 ProductPriceHistory = Base.classes.product_price_history
+ProductRecs = Base.classes.user_product_recommendations
 ProductSizeInfo = Base.classes.product_size_info
 SimilarItems  = Base.classes.similar_products_v2
 
