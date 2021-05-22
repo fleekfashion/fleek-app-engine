@@ -25,14 +25,13 @@ def _apply_filter(
 
     if key == "min_price":
         q = q.filter(subq.c.product_sale_price >= int(value))
-    if key == "max_price":
-        q = q.filter(subq.c.max_price <= int(value))
-    if key == "advertiser_name":
-        if len(value) > 0:
-            advertiser_names = value.split(DELIMITER)
-            q = q.filter(subq.c.advertiser_name.in_(literal(advertiser_names)))
-    if key == "on_sale" and value:
-        q.filter(subq.c.product_sale_price < subq.c.product_price)
+    elif key == "max_price":
+        q = q.filter(subq.c.product_sale_price <= int(value))
+    elif key == "advertiser_name" and len(str(value)) > 0:
+        advertiser_names = value.split(DELIMITER)
+        q = q.filter(subq.c.advertiser_name.in_(literal(advertiser_names)))
+    elif key == "on_sale" and value:
+        q = q.filter(subq.c.product_sale_price < subq.c.product_price)
     else:
         return products_subquery
     return q.cte(f"{key}_filter_applied")
@@ -45,12 +44,12 @@ def apply_filters(
     ) -> Query:
 
     subq = products_subquery
-    for key, value in args.values():
+    for key, value in args.items():
         subq = _apply_filter(session, subq, key, value)
     
     final_q = session.query(subq)
     if active_only:
-        final_q = final_q.filter(subq.is_active == True)
+        final_q = final_q.filter(subq.c.is_active == True)
     return final_q
 
 def join_product_color_info(session: Session, products_subquery: t.Union[Alias, CTE], product_id_field: str = 'product_id') -> Query:
