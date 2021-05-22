@@ -1,13 +1,57 @@
 import typing as t
 
+import sqlalchemy as s
 from sqlalchemy.orm.query import Query
-from sqlalchemy.sql.selectable import Alias, CTE
+from sqlalchemy.sql.selectable import Alias, CTE, Select
 from sqlalchemy import subquery 
 from sqlalchemy import Column
 from sqlalchemy.orm.session import Session
 from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import func
+from sqlalchemy.sql.expression import literal
+
+DELIMITER = ",_,"
+
+def _apply_filter(
+        session: Session,
+        products_subquery: t.Union[Alias, CTE], 
+        key: str,
+        value: t.Any,
+    ) -> Query:
+
+    q = session.query(products_subquery)
+    subq = products_subquery
+
+    if key == "min_price":
+        q = q.filter(subq.c.product_sale_price >= int(value))
+    if key == "max_price":
+        q = q.filter(subq.c.max_price <= int(value))
+    if key == "advertiser_name":
+        if len(value) > 0:
+            advertiser_names = value.split(DELIMITER)
+            q = q.filter(subq.c.advertiser_name.in_(literal(advertiser_names)))
+    if key == "on_sale" and value:
+        q.filter(subq.c.product_sale_price < subq.c.product_price)
+    else:
+        return products_subquery
+    return q.cte(f"{key}_filter_applied")
+
+def apply_filters(
+        session: Session,
+        products_subquery: t.Union[Alias, CTE],
+        args: dict,
+        active_only: bool
+    ) -> Query:
+
+    subq = products_subquery
+    for key, value in args.values():
+        subq = _apply_filter(session, subq, key, value)
+    
+    final_q = session.query(subq)
+    if active_only:
+        final_q = final_q.filter(subq.is_active == True)
+    return final_q
 
 def join_product_color_info(session: Session, products_subquery: t.Union[Alias, CTE], product_id_field: str = 'product_id') -> Query:
     join_field = products_subquery.c[product_id_field]
