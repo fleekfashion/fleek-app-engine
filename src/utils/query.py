@@ -15,7 +15,7 @@ def join_product_color_info(session: Session, products_subquery: t.Union[Alias, 
     ## Get the ids
     alt_color_ids = session.query(
         p.ProductColorOptions.product_id,
-        p.ProductColorOptions.alt_color_product_id,
+        p.ProductColorOptions.alternate_color_product_id,
     ).filter(
         p.ProductColorOptions.product_id.in_(session.query(join_field))
     ).cte('alt_color_ids_cte')
@@ -25,7 +25,7 @@ def join_product_color_info(session: Session, products_subquery: t.Union[Alias, 
         alt_color_ids.c.product_id,
         postgresql.array_agg(
             func.json_build_object(
-                'alt_color_product_id', alt_color_ids.c.alt_color_product_id,
+                'alternate_color_product_id', alt_color_ids.c.alternate_color_product_id,
                 'product_image_url', p.ProductInfo.product_image_url
             )
         ).label('product_color_options')
