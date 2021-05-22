@@ -88,12 +88,12 @@ def getSearchSuggestions():
 
 @app.route('/getTrendingSearches', methods=['GET'])
 def getTrendingSearches():
-    data = trendingSearches(request.args, trending_index)
+    data = trendingSearches(request.args, trending_index, index)
     return jsonify(data)
 
 @app.route('/getLabelSearches', methods=['GET'])
 def getLabelSearches():
-    data = labelSearches(request.args, label_index)
+    data = labelSearches(request.args, label_index, index)
     return jsonify(data)
 
 @app.route('/getSimilarItems', methods=['GET'])
