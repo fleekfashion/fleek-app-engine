@@ -8,10 +8,53 @@ from sqlalchemy import Column
 from sqlalchemy.orm.session import Session
 from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql
-from sqlalchemy import func
+from sqlalchemy import func as F
 from sqlalchemy.sql.expression import literal
 
+from src.utils import user_info
+from src.utils import static 
+
 DELIMITER = ",_,"
+
+def apply_ranking(
+        session: Session, 
+        products_subquery: t.Union[Alias, CTE], 
+        user_id: int, 
+        pct: float
+    ) -> Query:
+    def _get_scaling_factor(user_id: int, pct: float):
+        n_advertisers = len(static.get_advertiser_names())
+        n_fave_brands = len(user_info.get_user_fave_brands(user_id))
+        boost_size = 2.0*pct*n_advertisers
+        avg_boost = boost_size/max(n_fave_brands, 4) ## protect against overdoing 1 brand
+        return 1.0/max(2, avg_boost)
+
+    AC = p.AdvertiserProductCount
+    scaling_factor = _get_scaling_factor(user_id, pct)
+    
+    faved_brands = session.query(
+        p.UserFavedBrands.advertiser_name,
+        literal(scaling_factor).label('scaling_factor')
+    ).cte('fave_brands')
+
+    ranked_products = session.query(
+        products_subquery,
+        (F.random()*F.sqrt(AC.n_products) \
+            *F.cbrt(AC.n_products) \
+            *F.cbrt(F.sqrt(F.sqrt(AC.n_products))) \
+            *F.coalesce(faved_brands.c.scaling_factor, 1)
+        ).label('normalized_rank'),
+    ).join(
+        faved_brands,
+        products_subquery.c.advertiser_name == faved_brands.c.advertiser_name,
+        isouter=True
+    ).filter(products_subquery.c.advertiser_name == AC.advertiser_name) \
+    .cte('ranked_products')
+
+    final_q = session.query(ranked_products) \
+                  .order_by(ranked_products.c.normalized_rank)
+    return final_q
+
 
 def _apply_filter(
         session: Session,
@@ -67,7 +110,7 @@ def join_product_color_info(session: Session, products_subquery: t.Union[Alias, 
     alt_color_info = session.query(
         alt_color_ids.c.product_id,
         postgresql.array_agg(
-            func.json_build_object(
+            F.json_build_object(
                 'alternate_color_product_id', alt_color_ids.c.alternate_color_product_id,
                 'product_image_url', p.ProductInfo.product_image_url
             )
@@ -94,7 +137,7 @@ def join_product_sizes(session: Session, products_subquery: t.Union[Alias, CTE],
     sizes_subquery = session.query(
         p.ProductSizeInfo.product_id,
         postgresql.array_agg(
-            func.json_build_object(
+            F.json_build_object(
                 'size', p.ProductSizeInfo.size,
                 'product_purchase_url', p.ProductSizeInfo.product_purchase_url,
                 'in_stock', p.ProductSizeInfo.in_stock,
@@ -109,22 +152,15 @@ def join_product_sizes(session: Session, products_subquery: t.Union[Alias, CTE],
     return session.query(products_subquery, sizes_subquery.c.sizes) \
                   .join(sizes_subquery, sizes_subquery.c.product_id == join_field, isouter=True)
 
-def join_product_info(
+def join_external_product_info(
         session: Session, 
-        subquery: t.Union[Alias, CTE], 
+        products_subquery: t.Union[Alias, CTE], 
         product_id_field: str = 'product_id'
-) -> Query:
-    join_field = subquery.c[product_id_field]
-    products_query = session.query(
-            *[c for c in p.ProductInfo.__table__.c 
-                if c.name not in subquery.c ],
-            subquery
-        ).filter(join_field == p.ProductInfo.product_id) \
-        .cte('add_base_product_info_cte')
+    ) -> Query:
 
     color_info_products_subquery = join_product_color_info(
         session,
-        products_query,
+        products_subquery,
         product_id_field=product_id_field
     ).cte('products_add_color_info_cte')
 
@@ -133,5 +169,40 @@ def join_product_info(
         color_info_products_subquery,
         product_id_field=product_id_field
     )
+    return parsed_products_query
 
+def join_base_product_info(
+        session: Session, 
+        subquery: t.Union[Alias, CTE], 
+        product_id_field: str = 'product_id'
+    ) -> Query:
+    join_field = subquery.c[product_id_field]
+
+    ## Base Product Info
+    products_query = session.query(
+            *[c for c in p.ProductInfo.__table__.c 
+                if c.name not in subquery.c ],
+            subquery
+        ).filter(join_field == p.ProductInfo.product_id)
+    return products_query
+
+def join_product_info(
+        session: Session, 
+        subquery: t.Union[Alias, CTE], 
+        product_id_field: str = 'product_id'
+    ) -> Query:
+
+    ## Base product info
+    products_query = join_base_product_info(
+        session,
+        subquery,
+        product_id_field=product_id_field
+    ).cte('base_product_info')
+
+    ## All external Product Info
+    parsed_products_query = join_external_product_info(
+        session,
+        products_query,
+        product_id_field=product_id_field
+    )
     return parsed_products_query

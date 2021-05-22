@@ -51,6 +51,7 @@ ProductPriceHistory = Base.classes.product_price_history
 ProductRecs = Base.classes.user_product_recommendations
 ProductSizeInfo = Base.classes.product_size_info
 SimilarItems  = Base.classes.similar_products_v2
+TopProducts = Base.classes.top_products
 
 ## Board Tables
 Board = Base.classes.board
