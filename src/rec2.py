@@ -1,9 +1,16 @@
+import typing as t
 from random import shuffle
 from src.defs import postgres as p
 
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
 from src.utils import user_info
 from src.utils import static 
+
+import sqlalchemy as s
+from sqlalchemy.sql.expression import literal
+from sqlalchemy.sql import text
+import src.utils.query as qutils
+from src.utils.sqlalchemy_utils import row_to_dict, session_scope 
 
 DELIMITER = ",_,"
 FIRST_SESSION_FAVE_PCT = .9
@@ -263,3 +270,36 @@ def get_similar_items(conn, product_id: int) -> list:
         ctov = get_labeled_values(columns, value)
         data.append(ctov)
     return data
+
+
+def getProductColorOptions(args: dict) -> dict:
+    product_id = args['product_id']
+
+    with session_scope() as session:
+        ## Get alt colors
+        alt_pids = session.query(
+            p.ProductColorOptions.alternate_color_product_id.label('product_id')
+        ) \
+            .filter(p.ProductColorOptions.product_id == product_id)
+
+        ## Add current pid
+        all_pids = alt_pids.union(
+            session.query(
+                literal(product_id).label('product_id')
+            )
+        ).subquery(reduce_columns=True)
+
+        ## Get product info
+        pinfo_subq = qutils.join_product_info(
+            session,
+            all_pids
+        ).cte()
+
+        ## Order products
+        order_products = session.query(pinfo_subq) \
+            .order_by(pinfo_subq.c.color).all()
+
+    products = [ row_to_dict(row)  for row in order_products ]
+    return {
+        'products': products
+    }
