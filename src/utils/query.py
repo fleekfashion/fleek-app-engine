@@ -106,7 +106,7 @@ def _apply_filter(
         q = q.filter(subq.c.product_sale_price < subq.c.product_price)
     else:
         return products_subquery
-    return q.cte(f"{key}_filter_applied")
+    return q.cte(f"{key}_filter_applied" + gen_rand())
 
 def apply_filters(
         session: Session,
