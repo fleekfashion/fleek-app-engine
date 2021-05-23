@@ -50,9 +50,9 @@ def process_products(
 
     pct = FIRST_SESSION_FAVE_PCT if is_first_session else FAVE_PCT
     ranked_products = qutils.apply_ranking(session, filtered_products, user_id, pct) \
-        .limit(limit) \
+        .limit(limit)
 
-    return ranked_products 
+    return ranked_products
 
 def loadProducts(args: dict) -> list:
 
@@ -104,18 +104,3 @@ def loadProducts(args: dict) -> list:
         )
 
     return [ row_to_dict(row) for row in complete_products_query.all() ]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

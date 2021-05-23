@@ -63,8 +63,9 @@ def apply_ranking(
     
     faved_brands = session.query(
         p.UserFavedBrands.advertiser_name,
-        literal(scaling_factor).label('scaling_factor' )
-    ).cte('fave_brands' + gen_rand())
+        literal(scaling_factor).label('scaling_factor')
+    ).filter(p.UserFavedBrands.user_id == literal(user_id)) \
+    .cte('fave_brands' + gen_rand())
 
     ranked_products = session.query(
         products_subquery,
@@ -81,9 +82,8 @@ def apply_ranking(
     .cte('ranked_products' + gen_rand())
 
     final_q = session.query(ranked_products) \
-                  .order_by(ranked_products.c.normalized_rank)
+                  .order_by(ranked_products.c.normalized_rank.asc())
     return final_q
-
 
 def _apply_filter(
         session: Session,
