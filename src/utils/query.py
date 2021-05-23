@@ -140,7 +140,7 @@ def join_product_color_info(session: Session, products_subquery: t.Union[Alias, 
         alt_color_ids.c.product_id,
         postgresql.array_agg(
             F.json_build_object(
-                'alternate_color_product_id', alt_color_ids.c.alternate_color_product_id,
+                'product_id', alt_color_ids.c.alternate_color_product_id,
                 'product_image_url', p.ProductInfo.product_image_url
             )
         ).label('product_color_options')
