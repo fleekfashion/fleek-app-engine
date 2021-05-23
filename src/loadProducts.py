@@ -1,3 +1,4 @@
+import typing as t
 from random import shuffle
 from src.defs import postgres as p
 
@@ -6,6 +7,9 @@ from src.utils import user_info
 from src.utils import static 
 
 import sqlalchemy as s
+from sqlalchemy.orm.query import Query
+from sqlalchemy.sql.selectable import Alias, CTE, Select
+from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import literal
 from sqlalchemy.sql import text
 import src.utils.query as qutils
@@ -25,13 +29,38 @@ def _user_has_recs(user_id: int) -> bool:
         .count()
     return c > 0
 
+
+def process_products(
+    session: Session,
+    products_subquery: t.Union[Alias, CTE], 
+    user_id: int,
+    args: dict,
+    limit: int,
+    descr: str,
+    ) -> Query:
+
+    user_has_recs = _user_has_recs(user_id)
+    is_first_session = args.get('is_first_session', False) or not user_has_recs
+
+    filtered_products = qutils.apply_filters(
+        session,
+        products_subquery,
+        args,
+        active_only=True
+    ).cte(f'filtered_products_{descr}')
+
+    pct = FIRST_SESSION_FAVE_PCT if is_first_session else FAVE_PCT
+    ranked_products = qutils.apply_ranking(session, filtered_products, user_id, pct) \
+        .limit(limit) \
+
+    return ranked_products 
+
 def loadProducts(args: dict) -> list:
 
     user_id = args.get('user_id', -1)
     user_has_recs = _user_has_recs(user_id)
-    is_first_session = args.get('is_first_session', False) or not user_has_recs
-    n_top = 5 if user_has_recs else 25
-    n_rand = 40 - n_top
+    n_top = 5 if user_has_recs else 15
+    n_rand = 30 - n_top
 
     with session_scope() as session:
 
@@ -44,23 +73,35 @@ def loadProducts(args: dict) -> list:
             s.tablesample(p.ProductInfo, s.func.bernoulli(3))
         ).cte("sampled_products")
 
-        filtered_products = qutils.apply_filters(
+        final_top_products = process_products(
+            session,
+            top_products,
+            user_id,
+            args,
+            n_top,
+            "top_products"
+        ).cte('final_top_products')
+
+        final_random_products = process_products(
             session,
             sampled_products,
+            user_id,
             args,
-            active_only=True
-        ).cte('filtered_products')
+            n_top,
+            "random_products"
+        ).cte('final_random_products')
 
-        pct = FIRST_SESSION_FAVE_PCT if is_first_session else FAVE_PCT
-        ranked_random_products = qutils.apply_ranking(session, filtered_products, user_id, pct) \
-            .limit(n_rand) \
-            .cte('ranked_random_products')
-
+        all_products = qutils.union_by_names(
+            session,
+            final_top_products,
+            final_random_products
+        ).cte('all_products')
 
         complete_products_query = qutils.join_external_product_info(
             session,
-            ranked_random_products
+            all_products
         )
+
     return [ row_to_dict(row) for row in complete_products_query.all() ]
 
 

@@ -1,4 +1,5 @@
 import typing as t
+import random
 
 import sqlalchemy as s
 from sqlalchemy.orm.query import Query
@@ -9,18 +10,46 @@ from sqlalchemy.orm.session import Session
 from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import func as F
-from sqlalchemy.sql.expression import literal
+from sqlalchemy.sql.expression import literal, literal_column
 
 from src.utils import user_info
 from src.utils import static 
 
 DELIMITER = ",_,"
 
+def gen_rand() -> str:
+    return "_" + str(random.randint(1, 10**8))
+
+def sort_columns(
+        session: Session,
+        q: t.Union[Alias, CTE]
+    ) -> Query:
+    ordered_q = session.query(*[
+        c.label(c.name) for c in sorted(q.c, key=lambda x: x.name)
+    ])
+    return ordered_q
+
+    
+def union_by_names(
+        session: Session,
+        q1: t.Union[Alias, CTE], 
+        q2: t.Union[Alias, CTE],
+        union_all = False
+    ) -> Query:
+
+    ordered_q1 = sort_columns(session, q1)
+    ordered_q2 = sort_columns(session, q2)
+
+    res = ordered_q1.union_all(ordered_q2) if union_all \
+        else ordered_q1.union(ordered_q2)
+    return res
+
+        
 def apply_ranking(
         session: Session, 
         products_subquery: t.Union[Alias, CTE], 
         user_id: int, 
-        pct: float
+        pct: float,
     ) -> Query:
     def _get_scaling_factor(user_id: int, pct: float):
         n_advertisers = len(static.get_advertiser_names())
@@ -34,8 +63,8 @@ def apply_ranking(
     
     faved_brands = session.query(
         p.UserFavedBrands.advertiser_name,
-        literal(scaling_factor).label('scaling_factor')
-    ).cte('fave_brands')
+        literal(scaling_factor).label('scaling_factor' )
+    ).cte('fave_brands' + gen_rand())
 
     ranked_products = session.query(
         products_subquery,
@@ -49,7 +78,7 @@ def apply_ranking(
         products_subquery.c.advertiser_name == faved_brands.c.advertiser_name,
         isouter=True
     ).filter(products_subquery.c.advertiser_name == AC.advertiser_name) \
-    .cte('ranked_products')
+    .cte('ranked_products' + gen_rand())
 
     final_q = session.query(ranked_products) \
                   .order_by(ranked_products.c.normalized_rank)
@@ -104,7 +133,7 @@ def join_product_color_info(session: Session, products_subquery: t.Union[Alias, 
         p.ProductColorOptions.alternate_color_product_id,
     ).filter(
         p.ProductColorOptions.product_id.in_(session.query(join_field))
-    ).cte('alt_color_ids_cte')
+    ).cte('alt_color_ids_cte' + gen_rand())
 
     ## Get basic alt color info
     alt_color_info = session.query(
@@ -118,7 +147,7 @@ def join_product_color_info(session: Session, products_subquery: t.Union[Alias, 
     ).filter(alt_color_ids.c.product_id == p.ProductInfo.product_id) \
     .filter(p.ProductInfo.is_active == True) \
     .group_by(alt_color_ids.c.product_id) \
-    .cte('alt_color_info_cte')
+    .cte('alt_color_info_cte' + gen_rand())
     
     ## Join with original query
     final_query = session.query(
@@ -147,7 +176,7 @@ def join_product_sizes(session: Session, products_subquery: t.Union[Alias, CTE],
         p.ProductSizeInfo.product_id.in_(session.query(join_field))
     ) \
      .group_by(p.ProductSizeInfo.product_id) \
-     .cte('add_size_cte')
+     .cte('add_size_cte' + gen_rand())
 
     return session.query(products_subquery, sizes_subquery.c.sizes) \
                   .join(sizes_subquery, sizes_subquery.c.product_id == join_field, isouter=True)
@@ -162,7 +191,7 @@ def join_external_product_info(
         session,
         products_subquery,
         product_id_field=product_id_field
-    ).cte('products_add_color_info_cte')
+    ).cte('products_add_color_info_cte' + gen_rand())
 
     parsed_products_query = join_product_sizes(
         session, 
@@ -197,7 +226,7 @@ def join_product_info(
         session,
         subquery,
         product_id_field=product_id_field
-    ).cte('base_product_info')
+    ).cte('base_product_info' + gen_rand())
 
     ## All external Product Info
     parsed_products_query = join_external_product_info(
