@@ -297,6 +297,7 @@ def getProductColorOptions(args: dict) -> dict:
 
         ## Order products
         order_products = session.query(pinfo_subq) \
+            .filter(pinfo_subq.c.is_active == True) \
             .order_by(pinfo_subq.c.color).all()
 
     products = [ row_to_dict(row)  for row in order_products ]

@@ -43,6 +43,7 @@ from src.product_price_history import get_product_price_history
 import src.write_user_boards as wub
 import src.read_user_boards as rub
 import src.user_brand_actions as uba
+from src.loadProducts import loadProducts
 
 app = Flask(__name__)
 
@@ -69,11 +70,7 @@ def getUserProductBatch():
 
 @app.route('/getUserProductBatchv2', methods=['GET'])
 def getUserProductBatchv2():
-    args = request.args
-    user_id = args.get("user_id", -1)
-    if user_id != -1:
-        user_id = hashers.apple_id_to_user_id_hash(user_id)
-    data = rec2.get_batch(conn, user_id, request.args)
+    data = loadProducts(request.args)
     return jsonify(data)
 
 @app.route('/getProductSearchBatch', methods=['GET'])

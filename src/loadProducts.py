@@ -3,8 +3,7 @@ from random import shuffle
 from src.defs import postgres as p
 
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
-from src.utils import user_info
-from src.utils import static 
+from src.utils import static, hashers, user_info
 
 import sqlalchemy as s
 from sqlalchemy.orm.query import Query
@@ -58,6 +57,8 @@ def process_products(
 def loadProducts(args: dict) -> list:
 
     user_id = args.get('user_id', -1)
+    if user_id != -1:
+        user_id = hashers.apple_id_to_user_id_hash(user_id)
     user_has_recs = _user_has_recs(user_id)
     n_top = 5 if user_has_recs else 15
     n_rand = 30 - n_top
