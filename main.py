@@ -38,7 +38,7 @@ from src.productSearch import productSearch
 from src.autocomplete import searchSuggestions
 from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
-from src.single_product_info import get_single_product_info
+import src.single_product_info as spi 
 from src.product_price_history import get_product_price_history
 import src.write_user_boards as wub
 import src.read_user_boards as rub
@@ -102,12 +102,7 @@ def getSimilarItems():
 @app.route('/getSingleProductInfo', methods=['GET'])
 @cross_origin()
 def getSingleProductInfo():
-    args = request.args
-    product_id = args.get("product_id", -1)
-    if product_id == -1:
-        data = {}
-    else:
-        data = get_single_product_info(conn, product_id)
+    data = spi.getSingleProductInfo(request.args)
     return jsonify(data)
 
 @app.route('/getProductPriceHistory', methods=['GET'])

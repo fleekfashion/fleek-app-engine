@@ -1,36 +1,28 @@
+
+import typing as t
+from random import shuffle
 from src.defs import postgres as p
+
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
+from src.utils import static, hashers, user_info
 
-def get_single_product_info(conn, product_id):
-    query = f"""
-    WITH psi AS (
-        SELECT 
-            product_id, 
-            array_agg(row_to_json(t)) AS sizes
-        FROM {p.PRODUCT_SIZE_INFO_TABLE.fullname} t
-        WHERE product_id = {product_id}
-        GROUP BY product_id
-    ), joined_products AS (
-        SELECT 
-            pi.*,
-            psi.sizes
-        FROM {p.PRODUCT_INFO_TABLE.fullname} pi 
-        LEFT JOIN psi 
-        ON pi.product_id = psi.product_id
-        WHERE pi.product_id = {product_id}
-    )
+import sqlalchemy as s
+from sqlalchemy.orm.query import Query
+from sqlalchemy.sql.selectable import Alias, CTE, Select
+from sqlalchemy.orm.session import Session
+from sqlalchemy.sql.expression import literal
+from sqlalchemy.sql import text
+import src.utils.query as qutils
+from src.utils.sqlalchemy_utils import row_to_dict, session_scope 
 
-    SELECT *
-    FROM joined_products;
-    """
+def getSingleProductInfo(args: dict) -> dict:
+    product_id = args['product_id']
 
-    with conn.cursor() as cur:
-        cur_execute(cur, query)
-        columns = get_columns(cur)
-        pinfo_tuple = cur.fetchone()
-    
-    if pinfo_tuple is None:
-        return {}
-
-    product_info = get_labeled_values(columns, pinfo_tuple)
-    return product_info
+    with session_scope() as session:
+        base_pinfo = session.query(
+            p.ProductInfo
+        ) \
+        .where(p.ProductInfo.product_id == literal(product_id)) \
+        .cte('base_product_info')
+        pinfo = qutils.join_external_product_info(session, base_pinfo)
+    return row_to_dict(pinfo.first()) 
