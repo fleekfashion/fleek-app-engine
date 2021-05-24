@@ -44,6 +44,7 @@ import src.write_user_boards as wub
 import src.read_user_boards as rub
 import src.user_brand_actions as uba
 from src.loadProducts import loadProducts
+from src.similarProducts import getSimilarProducts
 
 app = Flask(__name__)
 
@@ -95,9 +96,7 @@ def getLabelSearches():
 
 @app.route('/getSimilarItems', methods=['GET'])
 def getSimilarItems():
-    args = request.args
-    product_id= args.get("product_id", -1)
-    data = rec2.get_similar_items(conn, product_id)
+    data = getSimilarProducts(request.args)
     return jsonify(data)
 
 @app.route('/getSingleProductInfo', methods=['GET'])
