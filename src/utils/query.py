@@ -145,7 +145,7 @@ def join_product_color_info(session: Session, products_subquery: t.Union[Alias, 
                 'color', p.ProductInfo.color,
             )
         ).label('product_color_options')
-    ).filter(alt_color_ids.c.product_id == p.ProductInfo.product_id) \
+    ).filter(alt_color_ids.c.alternate_color_product_id == p.ProductInfo.product_id) \
     .filter(p.ProductInfo.is_active == True) \
     .group_by(alt_color_ids.c.product_id) \
     .cte('alt_color_info_cte' + gen_rand())
