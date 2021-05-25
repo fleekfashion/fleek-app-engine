@@ -272,35 +272,3 @@ def get_similar_items(conn, product_id: int) -> list:
     return data
 
 
-def getProductColorOptions(args: dict) -> dict:
-    product_id = args['product_id']
-
-    with session_scope() as session:
-        ## Get alt colors
-        alt_pids = session.query(
-            p.ProductColorOptions.alternate_color_product_id.label('product_id')
-        ) \
-            .filter(p.ProductColorOptions.product_id == product_id)
-
-        ## Add current pid
-        all_pids = alt_pids.union(
-            session.query(
-                literal(product_id).label('product_id')
-            )
-        ).subquery(reduce_columns=True)
-
-        ## Get product info
-        pinfo_subq = qutils.join_product_info(
-            session,
-            all_pids
-        ).cte()
-
-        ## Order products
-        order_products = session.query(pinfo_subq) \
-            .filter(pinfo_subq.c.is_active == True) \
-            .order_by(pinfo_subq.c.color).all()
-
-    products = [ row_to_dict(row)  for row in order_products ]
-    return {
-        'products': products
-    }

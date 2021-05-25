@@ -33,7 +33,6 @@ from sqlalchemy import create_engine, MetaData, Table
 from src.defs.postgres import DATABASE_USER, PASSWORD, DBNAME, PROJECT
 from src.utils import hashers, static, user_info
 from src.rec import get_batch
-from src import rec2
 from src.productSearch import productSearch
 from src.autocomplete import searchSuggestions
 from src.trending import trendingSearches, labelSearches
@@ -43,7 +42,7 @@ from src.product_price_history import get_product_price_history
 import src.write_user_boards as wub
 import src.read_user_boards as rub
 import src.user_brand_actions as uba
-from src.loadProducts import loadProducts
+from src import loadProducts  
 from src.similarProducts import getSimilarProducts
 
 app = Flask(__name__)
@@ -71,7 +70,7 @@ def getUserProductBatch():
 
 @app.route('/getUserProductBatchv2', methods=['GET'])
 def getUserProductBatchv2():
-    data = loadProducts(request.args)
+    data = loadProducts.loadProducts(request.args)
     return jsonify(data)
 
 @app.route('/getProductSearchBatch', methods=['GET'])
@@ -197,7 +196,7 @@ def getUserFavedBrands():
 @app.route('/getProductColorOptions', methods=['GET'])
 def getProductColorOptions():
     return jsonify(
-        rec2.getProductColorOptions(request.args)
+        loadProducts.getProductColorOptions(request.args)
     )
 
 if __name__ == '__main__':
