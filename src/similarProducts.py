@@ -23,7 +23,9 @@ def getSimilarProducts(args: dict) -> t.List[dict]:
     with session_scope() as session:
         sim_pids = session.query(
             p.SimilarItems.similar_product_id.label('product_id')
-        ).offset(offset) \
+        ) \
+        .filter(p.SimilarItems.product_id == literal(product_id) ) \
+        .offset(offset) \
         .limit(limit) \
         .cte('similar_product_ids')
         similar_products = qutils.join_product_info(session, sim_pids)
