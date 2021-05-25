@@ -8,7 +8,7 @@ from sqlalchemy.sql import select, func, asc
 
 from src.defs import postgres as p
 
-USER_FAVED_BRANDS_CACHE: LRUCache = LRUCache(maxsize=2**10)
+USER_FAVED_BRANDS_CACHE: LRUCache = LRUCache(maxsize=2**6)
 
 @cached(USER_FAVED_BRANDS_CACHE)
 def get_user_fave_brands(user_id) -> t.List[str]:
