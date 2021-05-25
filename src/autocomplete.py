@@ -118,7 +118,9 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
 
 
     if len(hits) == 0:
-        return {"hits": []}
+        return {
+            "hits": []
+        }
 
     return {
         "advertiser_names": _get_advertiser_names(hits[0]),
@@ -162,7 +164,7 @@ def runSearch(searchString: str, offset: int, limit: int, index: Index) -> dict:
             .to_set()
 
     if len(valid_hits) < 3 and \
-        len(processed_hits['advertiser_names']) < 1 and \
+        len(processed_hits.get('advertiser_names', [])) < 1 and \
         _rm_tags(first_hit.get('suggestion', '')) == searchString:
 
         ## Remove the secondary attribute from string
