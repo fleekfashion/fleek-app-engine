@@ -14,7 +14,7 @@ DBNAME = "ktest"
 PROJECT = 'staging'
 
 conn_str = f"postgresql://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
-engine: Engine = create_engine(conn_str, pool_size=10, max_overflow=30, poolclass=QueuePool)
+engine: Engine = create_engine(conn_str, pool_size=10, max_overflow=50, poolclass=QueuePool)
 metadata = MetaData(engine, schema=PROJECT, )
 sessionMaker = sessionmaker(bind=engine)
 
