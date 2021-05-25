@@ -73,18 +73,13 @@ def process_facets_distributions(
         user_id: t.Optional[int]
     ) -> t.List[t.Dict[str, str]]:
 
+    def _process_search_string(searchString, name) -> str:
+        return rm_token(searchString, name, fuzz.partial_ratio, cutoff=100)
+
     def _build_suggestion(searchString: str, name: str, filter_type: str) -> str:
         suggestion = ""
-        
         ## Remove replaced word from search string
-        searchString = rm_token(searchString, name,
-            fuzz.partial_ratio, cutoff=100
-        )
-        if name in HIDDEN_LABEL_FIELDS:
-            searchString = rm_token(
-                searchString, HIDDEN_LABEL_FIELDS[name],
-                fuzz.partial_ratio, cutoff=100
-            )
+        searchString = _process_search_string(searchString, name)
 
         ## Add suggestion to correct location
         if filter_type == "product_labels":
@@ -92,6 +87,7 @@ def process_facets_distributions(
         elif filter_type == "product_secondary_labels":
             if name in HIDDEN_LABEL_FIELDS.keys():
                 bad_label = HIDDEN_LABEL_FIELDS[name]
+                searchString = rm_token(searchString, bad_label, fuzz.partial_ratio, cutoff=100)  
                 searchString = re.sub(f"\\b{bad_label}\\b", '', searchString).rstrip().lstrip()
                 suggestion = f"{searchString} {name}"
             else:
@@ -111,7 +107,7 @@ def process_facets_distributions(
         ], reverse=True)
         tags = [
             {
-                "suggestion": searchString,
+                "suggestion":  _process_search_string(searchString, brand[3]),
                 "filter_type": "advertiser_name",
                 "nbHits": brand[2],
                 "filter": brand[3]
