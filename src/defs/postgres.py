@@ -12,8 +12,8 @@ DBNAME = "ktest"
 PROJECT = 'staging'
 
 conn_str = f"postgresql://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
-engine: Engine = create_engine(conn_str)
-metadata = MetaData(engine, schema=PROJECT)
+engine: Engine = create_engine(conn_str, pool_size=0)
+metadata = MetaData(engine, schema=PROJECT, )
 
 ADVERTISER_PRODUCT_COUNT_TABLE = PostgreTable("advertiser_product_count", metadata, autoload=True)
 PRODUCT_INFO_TABLE = PostgreTable("product_info", metadata, autoload=True)
