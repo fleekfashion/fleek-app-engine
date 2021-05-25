@@ -3,7 +3,6 @@ import re
 
 from functional import seq, pseq
 from fuzzywuzzy import process
-from fuzzywuzzy import fuzz
 
 
 def _run_replace(queryString, res) -> str:
@@ -11,7 +10,7 @@ def _run_replace(queryString, res) -> str:
             .replace("  ", " ") \
             .lstrip()
 
-def rm_token(queryString: str, token: str, scorer) -> str:
+def rm_token(queryString: str, token: str, scorer, cutoff: int=0) -> str:
     x = queryString.split(" ")
     substrs = []
     substrs.extend(x)
@@ -21,7 +20,9 @@ def rm_token(queryString: str, token: str, scorer) -> str:
 
     ## Get scores
     ## Tiebreaker -> longest string
-    res = process.extract(token.lower(), substrs, scorer=scorer, limit=5)
-    res = sorted(res, key=lambda x: (x[1], len(x[0])), reverse=True)[0][0]
-    return _run_replace(queryString, res)
+    top_results = process.extract(token.lower(), substrs, scorer=scorer, limit=5)
+    result_score = sorted(top_results, key=lambda x: (x[1], len(x[0])), reverse=True)[0]
 
+    res = _run_replace(queryString, result_score[0]) \
+            if result_score[1] >= cutoff else queryString
+    return res
