@@ -11,7 +11,7 @@ from meilisearch.index import Index
 from src.productSearch import build_filters
 from functional import pseq 
 
-SUGGESTION_IMAGE_CACHE: TTLCache = TTLCache(maxsize=2**10, ttl=60*60)
+SUGGESTION_IMAGE_CACHE: TTLCache = TTLCache(maxsize=2**3, ttl=60*60)
 
 def _load_meili_results(
         searchString: str, 
