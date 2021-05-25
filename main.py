@@ -47,8 +47,9 @@ from src.similarProducts import getSimilarProducts
 
 app = Flask(__name__)
 
-SEARCH_URL = 'http://159.89.82.234'
-SEARCH_PSWD = "kian_is_on_fleek"
+
+SEARCH_URL = 'http://161.35.113.38/'
+SEARCH_PSWD = "fleek-app-prod1"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 c = meilisearch.Client(SEARCH_URL, SEARCH_PSWD)
