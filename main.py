@@ -33,16 +33,17 @@ from sqlalchemy import create_engine, MetaData, Table
 from src.defs.postgres import DATABASE_USER, PASSWORD, DBNAME, PROJECT
 from src.utils import hashers, static, user_info
 from src.rec import get_batch
-from src import rec2
 from src.productSearch import productSearch
 from src.autocomplete import searchSuggestions
 from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
-from src.single_product_info import get_single_product_info
+import src.single_product_info as spi 
 from src.product_price_history import get_product_price_history
 import src.write_user_boards as wub
 import src.read_user_boards as rub
 import src.user_brand_actions as uba
+from src import loadProducts  
+from src.similarProducts import getSimilarProducts
 
 app = Flask(__name__)
 
@@ -69,11 +70,7 @@ def getUserProductBatch():
 
 @app.route('/getUserProductBatchv2', methods=['GET'])
 def getUserProductBatchv2():
-    args = request.args
-    user_id = args.get("user_id", -1)
-    if user_id != -1:
-        user_id = hashers.apple_id_to_user_id_hash(user_id)
-    data = rec2.get_batch(conn, user_id, request.args)
+    data = loadProducts.loadProducts(request.args)
     return jsonify(data)
 
 @app.route('/getProductSearchBatch', methods=['GET'])
@@ -98,20 +95,13 @@ def getLabelSearches():
 
 @app.route('/getSimilarItems', methods=['GET'])
 def getSimilarItems():
-    args = request.args
-    product_id= args.get("product_id", -1)
-    data = rec2.get_similar_items(conn, product_id)
+    data = getSimilarProducts(request.args)
     return jsonify(data)
 
 @app.route('/getSingleProductInfo', methods=['GET'])
 @cross_origin()
 def getSingleProductInfo():
-    args = request.args
-    product_id = args.get("product_id", -1)
-    if product_id == -1:
-        data = {}
-    else:
-        data = get_single_product_info(conn, product_id)
+    data = spi.getSingleProductInfo(request.args)
     return jsonify(data)
 
 @app.route('/getProductPriceHistory', methods=['GET'])
@@ -201,6 +191,12 @@ def getUserFavedBrands():
     return jsonify(
         user_info.get_user_fave_brands(
             hashers.apple_id_to_user_id_hash(request.args['user_id']))
+    )
+
+@app.route('/getProductColorOptions', methods=['GET'])
+def getProductColorOptions():
+    return jsonify(
+        loadProducts.getProductColorOptions(request.args)
     )
 
 if __name__ == '__main__':

@@ -1,4 +1,3 @@
-
 import typing as t
 from random import shuffle
 from src.defs import postgres as p
@@ -15,14 +14,18 @@ from sqlalchemy.sql import text
 import src.utils.query as qutils
 from src.utils.sqlalchemy_utils import row_to_dict, session_scope 
 
-def getSingleProductInfo(args: dict) -> dict:
+
+def getSimilarProducts(args: dict) -> t.List[dict]:
     product_id = args['product_id']
+    offset = args.get('offset', 0)
+    limit = args.get('limit', 50)
 
     with session_scope() as session:
-        base_pinfo = session.query(
-            p.ProductInfo
-        ) \
-        .where(p.ProductInfo.product_id == literal(product_id)) \
-        .cte('base_product_info')
-        pinfo = qutils.join_external_product_info(session, base_pinfo)
-    return row_to_dict(pinfo.first()) 
+        sim_pids = session.query(
+            p.SimilarItems.similar_product_id.label('product_id')
+        ).offset(offset) \
+        .limit(limit) \
+        .cte('similar_product_ids')
+        similar_products = qutils.join_product_info(session, sim_pids)
+
+    return [ row_to_dict(row) for row in similar_products.all() ]
