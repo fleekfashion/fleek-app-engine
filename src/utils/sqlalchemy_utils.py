@@ -1,5 +1,4 @@
 from contextlib import contextmanager
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from src.defs import postgres as p
 from copy import copy
@@ -20,9 +19,7 @@ def session_scope():
         session.close()
 
 def load_session() -> Session:
-    Session = sessionmaker(bind=p.engine)
-    session = Session()
-    return session
+    return p.sessionMaker()
 
 def table_row_to_dict(row) -> dict:
     try:

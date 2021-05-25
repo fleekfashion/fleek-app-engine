@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, MetaData
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import QueuePool
 from functional import seq
@@ -15,6 +16,7 @@ PROJECT = 'staging'
 conn_str = f"postgresql://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
 engine: Engine = create_engine(conn_str, pool_size=10, max_overflow=30, poolclass=QueuePool)
 metadata = MetaData(engine, schema=PROJECT, )
+sessionMaker = sessionmaker(bind=engine)
 
 ADVERTISER_PRODUCT_COUNT_TABLE = PostgreTable("advertiser_product_count", metadata, autoload=True)
 PRODUCT_INFO_TABLE = PostgreTable("product_info", metadata, autoload=True)
