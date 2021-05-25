@@ -112,7 +112,7 @@ def getProductPriceHistory():
 @app.route('/pushUserEvent', methods=['POST'])
 def pushUserEvent():
     data = request.get_json(force=True)
-    res = upload_event(conn, data)
+    res = upload_event(data)
     return jsonify({'event is': res})
 
 

@@ -62,6 +62,7 @@ BoardProduct = Base.classes.board_product
 BoardType = Base.classes.board_type
 
 ## User Tables
+UserEvents = Base.classes.user_events
 UserBoard = Base.classes.user_board
 UserFavedBrands = Base.classes.user_faved_brands
 UserMutedBrands = Base.classes.user_muted_brands

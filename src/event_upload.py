@@ -2,9 +2,10 @@ import json
 from src.utils.psycop_utils import cur_execute
 from src.utils import hashers
 from src.defs import postgres as p
+from src.utils.sqlalchemy_utils import session_scope
 
 
-def upload_event(conn, args):
+def upload_event(args) -> bool:
     new_args = {}
 
     new_args["event"] = args["event"]
@@ -27,10 +28,14 @@ def upload_event(conn, args):
     for key, value in items:
         if value is None: 
             new_args.pop(key)
-    print(new_args)
 
-    query = p.USER_EVENTS_TABLE.insert().values(**new_args)
+    ue = p.UserEvents(**new_args)
 
-    conn = p.engine.connect()
-    conn.execute(query)
+    ## Execute session transaction
+    try:
+        with session_scope() as session:
+            session.add(ue)
+    except Exception as e:
+        print(e)
+        return False
     return True
