@@ -12,12 +12,13 @@ from fuzzywuzzy import fuzz
 from meilisearch.index import Index
 
 from src.defs.utils import HIDDEN_LABEL_FIELDS
+from src.defs.postgres import PROJECT
 from src.utils.fuzzymatching import rm_token 
 
 START = "<em>"
 END = "</em>"
 DISPLAY_FIELDS = ["product_label", "primary_attribute", "secondary_attribute", "attribute_descriptor", "colors"]
-
+MAX_CACHE_SIZE = 128 if PROJECT == 'prod' else 8
 
 def _rm_tags(x):
     return x.replace(START, "").replace(END, "")
@@ -118,7 +119,7 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
     }
 
 
-@cachetools.func.ttl_cache(ttl=3*24*60*60, maxsize=128)
+@cachetools.func.ttl_cache(ttl=3*24*60*60, maxsize=MAX_CACHE_SIZE)
 def runSearch(searchString: str, offset: int, limit: int, index: Index) -> dict:
     data = _load_meili_results(searchString, offset, limit, index)
     processed_hits = _process_hits(data['hits'], searchString)
