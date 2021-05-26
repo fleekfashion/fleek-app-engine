@@ -6,12 +6,13 @@ from typing import Dict, List, Any
 from dataclasses import dataclass
 
 import cachetools.func
-
 from functional import seq, pseq
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
 from meilisearch.index import Index
+
 from src.defs.utils import HIDDEN_LABEL_FIELDS
+from src.utils.fuzzymatching import rm_token 
 
 START = "<em>"
 END = "</em>"
@@ -64,24 +65,6 @@ def _parse_highlighted_field(field, strict=False, first=False, minlen=None, rm_t
         res = "" if len(res) == 0 else res[0]
     return res
 
-def _rm_advertiser(queryString: str, advertiser_name: str) -> str:
-    x = queryString.split(" ")
-    substrs = []
-    substrs.extend(x)
-    if len(substrs) > 1:
-        for i in range(len(x) - 1):
-            substrs.append(" ".join(x[i:i+2]))
-
-    ## Get scores
-    ## Tiebreaker -> longest string
-    res = process.extract(advertiser_name.lower(), substrs, scorer=fuzz.WRatio, limit=5)
-    res = sorted(res, key=lambda x: (x[1], len(x[0])), reverse=True)[0][0]
-
-    return re.sub(f"\\b{res}\\b", "", queryString) \
-            .replace("  ", " ") \
-            .lstrip()
-
-
 def _load_meili_results(searchString: str, offset: int, limit: int, index: Index) -> Dict[Any, Any]:
     query_args = {
             "limit": limit,
@@ -112,7 +95,7 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
 
     def _get_advertiser_names(hit: Dict[str, Any]) -> Dict[str, str]:
         res = seq(_parse_highlighted_field(hit['advertiser_names'])) \
-            .map(lambda x: (x, _rm_advertiser(searchString, x))) \
+            .map(lambda x: (x, rm_token(searchString, x, fuzz.WRatio))) \
             .to_dict()
         return res
 
