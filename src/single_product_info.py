@@ -18,11 +18,13 @@ from src.utils.sqlalchemy_utils import row_to_dict, session_scope
 def getSingleProductInfo(args: dict) -> dict:
     product_id = args['product_id']
 
+    base_pinfo = s.select(
+        p.ProductInfo
+    ) \
+    .where(p.ProductInfo.product_id == literal(product_id)) \
+    .cte('base_product_info')
+    pinfo = qutils.join_external_product_info(base_pinfo)
+
     with session_scope() as session:
-        base_pinfo = session.query(
-            p.ProductInfo
-        ) \
-        .where(p.ProductInfo.product_id == literal(product_id)) \
-        .cte('base_product_info')
-        pinfo = qutils.join_external_product_info(session, base_pinfo)
-    return row_to_dict(pinfo.first()) 
+        first_product = session.execute(pinfo).first()
+    return row_to_dict(first_product) 
