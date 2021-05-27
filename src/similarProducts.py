@@ -13,7 +13,7 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import literal
 from sqlalchemy.sql import text
 import src.utils.query as qutils
-from src.utils.sqlalchemy_utils import row_to_dict, session_scope 
+from src.utils.sqlalchemy_utils import run_query 
 from guppy import hpy
 import gc
 h = hpy()
@@ -31,7 +31,4 @@ def getSimilarProducts(args: dict) -> t.List[dict]:
     .limit(limit) \
     .cte('similar_product_ids')
     similar_products_query = qutils.join_product_info(sim_pids)
-    with session_scope() as session:
-        products = session.execute(similar_products_query).all()
-        res = [ row_to_dict(p) for p in products ]
-    return res 
+    return run_query(similar_products_query)

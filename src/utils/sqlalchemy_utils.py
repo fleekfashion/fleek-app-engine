@@ -1,9 +1,12 @@
+import typing as t
 from contextlib import contextmanager
 from sqlalchemy.orm.session import Session
 from src.defs import postgres as p
 from copy import copy
 from collections import ChainMap
 from collections.abc import Iterable
+
+from sqlalchemy.sql.selectable import Alias, CTE, Select
 
 @contextmanager
 def session_scope():
@@ -35,3 +38,19 @@ def row_to_dict(row) -> dict:
         return dict(ChainMap(*parsed_rows))
     except:
         return table_row_to_dict(row)
+
+def result_to_dict(result) -> dict:
+    return { key: value for key, value in result.items() }
+
+def run_query(q: Select) -> t.List[dict]:
+    with session_scope() as session:
+        results = session.execute(q).mappings()
+        parsed_res = [ result_to_dict(result) for result in results ]
+    return parsed_res
+
+def get_first(q: Select) -> dict:
+    with session_scope() as session:
+        result = session.execute(q).mappings().first()
+        parsed_res = result_to_dict(result) 
+    return parsed_res
+
