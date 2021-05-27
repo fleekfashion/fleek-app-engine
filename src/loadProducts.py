@@ -12,7 +12,7 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import literal
 from sqlalchemy.sql import text
 import src.utils.query as qutils
-from src.utils.sqlalchemy_utils import row_to_dict, session_scope 
+from src.utils.sqlalchemy_utils import row_to_dict, session_scope, run_query
 
 
 DELIMITER = ",_,"
@@ -94,10 +94,8 @@ def loadProducts(args: dict) -> list:
     complete_products_query = qutils.join_external_product_info(
         all_products
     )
-    with session_scope() as session:
-        products = session.execute(complete_products_query).all()
-        res = [ row_to_dict(row) for row in products ]
-    return res
+    products = run_query(complete_products_query)
+    return products
 
 
 def getProductColorOptions(args: dict) -> dict:
@@ -126,9 +124,7 @@ def getProductColorOptions(args: dict) -> dict:
         .filter(pinfo_subq.c.is_active == True) \
         .order_by(pinfo_subq.c.color)
 
-    with session_scope() as session:
-        res = session.execute(order_products)
-        products = [ row_to_dict(row)  for row in res]
+    products = run_query(order_products) 
     return {
         'products': products
     }
