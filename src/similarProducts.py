@@ -14,9 +14,7 @@ from sqlalchemy.sql.expression import literal
 from sqlalchemy.sql import text
 import src.utils.query as qutils
 from src.utils.sqlalchemy_utils import run_query 
-from guppy import hpy
 import gc
-h = hpy()
 
 def getSimilarProducts(args: dict) -> t.List[dict]:
     product_id = args['product_id']
