@@ -6,12 +6,11 @@ from typing import Dict, List, Any
 from cachetools import LRUCache, cached, ttl, TTLCache
 
 import cachetools.func
-from functional import seq 
+from functional import seq
 from meilisearch.index import Index
 from src.productSearch import build_filters
-from functional import pseq 
 
-SUGGESTION_IMAGE_CACHE: TTLCache = TTLCache(maxsize=2**3, ttl=60*60)
+SUGGESTION_IMAGE_CACHE: TTLCache = TTLCache(maxsize=2**3, ttl=3*60*60)
 
 def _load_meili_results(
         searchString: str, 
@@ -45,7 +44,7 @@ def get_first_image_url(
     return image_url
 
 def update_image_urls(data: list, index: Index) -> List[dict]:
-    res = pseq(data).map(lambda d:
+    res = seq(data).map(lambda d:
         {
             **d, 
             "product_image_url": get_first_image_url(d, index)
