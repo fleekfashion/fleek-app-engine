@@ -112,7 +112,7 @@ def getProductColorOptions(args: dict) -> dict:
         s.select(
             literal(product_id).label('product_id')
         )
-    ).subquery(reduce_columns=True)
+    ).cte('all_pids')
 
     ## Get product info
     pinfo_subq = qutils.join_product_info(
