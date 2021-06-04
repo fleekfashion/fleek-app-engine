@@ -32,29 +32,18 @@ def get_advertiser_names() -> t.List[str]:
     return advertiser_counts
 
 @cachetools.func.ttl_cache(ttl=12*60*60)
-def get_advertiser_price_quantiles() -> t.Dict[str, t.Dict[str, float]]:
+def _get_advertiser_price_quantiles(quantile: float) -> t.Dict[str, float]:
     q = s.select(
-        func.percentile_cont(.15) \
+        func.percentile_cont(quantile) \
             .within_group(p.ProductInfo.product_sale_price.asc()) \
-            .label('min_quantile'),
-        func.percentile_cont(.85) \
-            .within_group(p.ProductInfo.product_sale_price.asc()) \
-            .label('max_quantile'),
+            .label('value'),
         p.ProductInfo.advertiser_name
     ).group_by(p.ProductInfo.advertiser_name)
     res = run_query(q)
     return seq(res).map(lambda x:
-        (x['advertiser_name'], { key: value 
-                                for key, value in x.items() 
-                               if key != 'advertiser_name'})
+        (x['advertiser_name'], x['value'])
     ).to_dict()
 
-def get_advertiser_min_price_quantile(advertiser_name: str) -> float:
-    return get_advertiser_price_quantiles() \
-            .get(advertiser_name, {}) \
-            .get('min_quantile', 10000)
-
-def get_advertiser_max_price_quantile(advertiser_name: str) -> float:
-    return get_advertiser_price_quantiles() \
-            .get(advertiser_name, {}) \
-            .get('max_quantile', 0)
+def get_advertiser_price_quantile(advertiser_name: str, quantile: float) -> float:
+    return _get_advertiser_price_quantiles(quantile) \
+            .get(advertiser_name, 0)
