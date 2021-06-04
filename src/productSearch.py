@@ -7,7 +7,7 @@ from functional import seq
 import json
 from src.defs.utils import HIDDEN_LABEL_FIELDS
 from src.utils.user_info import get_user_fave_brands
-from src.utils.static import get_advertiser_counts
+from src.utils.static import get_advertiser_counts, get_advertiser_price_quantile
 from src.utils.hashers import apple_id_to_user_id_hash
 from src.utils.fuzzymatching import rm_token
 from fuzzywuzzy import fuzz
@@ -70,7 +70,8 @@ def process_facets_distributions(
         facets_distr: dict, 
         product_label_filter_applied: bool, 
         advertiser_filter_applied: bool, 
-        user_id: t.Optional[int]
+        user_id: t.Optional[int],
+        max_price: float
     ) -> t.List[t.Dict[str, str]]:
 
     def _process_search_string(searchString, name) -> str:
@@ -97,11 +98,12 @@ def process_facets_distributions(
         suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
         return suggestion
 
+    print(max_price, "\n\n")
     def _build_advertiser_tags(brand_counts: t.Dict[str, int]) -> t.List[dict]:
         fave_brands = get_user_fave_brands(user_id) if user_id else []
         advertiser_counts = get_advertiser_counts() 
         normalized_brands = sorted([ 
-                (name in fave_brands, nbHits/advertiser_counts.get(name, 10**10), nbHits, name ) 
+                (name in fave_brands, nbHits/advertiser_counts.get(name, 10**10), nbHits, name) 
                 for name, nbHits in brand_counts.items()
                 if nbHits > MIN_SEARCH_TAG_HITS
         ], reverse=True)
@@ -113,9 +115,9 @@ def process_facets_distributions(
                 "filter": brand[3]
             }
             for brand in normalized_brands
+            if get_advertiser_price_quantile(brand[3], .15) < max_price
         ]
-        return tags 
-
+        return tags
 
     def _default_process_tag(searchString: str, key: str, value: dict) -> t.List[dict]:
             return [                     
@@ -175,8 +177,8 @@ def productSearch(args, index: Index) -> list:
     product_labels = args.getlist("product_labels")
     product_secondary_labels = args.getlist("product_secondary_labels")
     internal_colors = args.getlist("internal_colors")
-    max_price = args.get("max_price", 10000)
-    min_price = args.get("min_price", 0)
+    max_price = int(args.get("max_price", 10000))
+    min_price = int(args.get("min_price", 0))
     user_id = apple_id_to_user_id_hash(args.get("user_id", None))
 
     query_args = {
@@ -205,6 +207,7 @@ def productSearch(args, index: Index) -> list:
         facets_distr=data['facetsDistribution'], 
         product_label_filter_applied=len(product_labels)>0,
         advertiser_filter_applied=len(advertiser_names)>0,
-        user_id=user_id
+        user_id=user_id,
+        max_price=max_price
     )
     return data
