@@ -10,6 +10,7 @@ from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import func as F
 from sqlalchemy.sql.expression import literal, literal_column
+from sqlalchemy.dialects.postgresql import array
 
 from src.utils import user_info
 from src.utils import static 
@@ -95,8 +96,11 @@ def _apply_filter(
     elif key == "max_price":
         q = q.filter(subq.c.product_sale_price <= int(value))
     elif key == "advertiser_name" and len(str(value)) > 0:
-        advertiser_names = value.split(DELIMITER)
+        advertiser_names = value.split(DELIMITER) if type(value) == str else value
         q = q.filter(subq.c.advertiser_name.in_(literal(advertiser_names)))
+    elif (key == "product_tag" or key == "product_labels") and len(str(value)) > 0:
+        product_labels = value.split(DELIMITER) if type(value) == str else value
+        q = q.filter(subq.c.product_labels.overlap(array(product_labels)) )
     elif key == "on_sale" and value:
         q = q.filter(subq.c.product_sale_price < subq.c.product_price)
     else:
