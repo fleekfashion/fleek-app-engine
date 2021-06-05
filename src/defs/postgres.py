@@ -43,6 +43,10 @@ USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
 USER_FAVED_BRANDS_TABLE = PostgreTable("user_faved_brands", metadata, autoload=True)
 USER_MUTED_BRANDS_TABLE = PostgreTable("user_muted_brands", metadata, autoload=True)
 
+ADVERTISER_TABLE = PostgreTable("advertiser", metadata, autoload=True)
+ORDER_TABLE = PostgreTable("order", metadata, autoload=True)
+ORDER_PRODUCT_TABLE = PostgreTable("order_product", metadata, autoload=True)
+
 def _name_for_collection_relationship(base, local_cls, referred_cls, constraint):
     if constraint.name:
         return constraint.name.lower()
@@ -72,6 +76,11 @@ UserEvents = Base.classes.user_events
 UserBoard = Base.classes.user_board
 UserFavedBrands = Base.classes.user_faved_brands
 UserMutedBrands = Base.classes.user_muted_brands
+
+## Order Tables
+Advertiser = Base.classes.advertiser
+Order = Base.classes.order
+OrderProduct = Base.classes.order_product
 
 ## Misc
 AdvertiserProductCount = Base.classes.advertiser_product_count
