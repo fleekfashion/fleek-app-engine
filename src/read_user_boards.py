@@ -1,21 +1,19 @@
 import typing as t
 
+import sqlalchemy as s
 from src.utils.query import join_product_info
-from src.utils.sqlalchemy_utils import load_session, row_to_dict, session_scope, table_row_to_dict
+from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
 from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql
-from sqlalchemy import func, select
+from sqlalchemy import func 
 import sqlalchemy as sqa
 import itertools
 
 def getBoardInfo(args: dict) -> dict:
     board_id = args['board_id']
-
-    with session_scope() as session:
-        board = session.query(p.Board).filter(p.Board.board_id == board_id).first()
-        result = table_row_to_dict(board) if board else {'success': False}
-    
+    board = s.select(p.Board).filter(p.Board.board_id == board_id).cte()
+    result = get_first(s.select(board))
     return result
 
 def getBoardProductsBatch(args: dict) -> dict:
@@ -23,17 +21,14 @@ def getBoardProductsBatch(args: dict) -> dict:
     offset = args['offset']
     limit = args['limit']
 
-    with session_scope() as session:
-        board_pids_query = session.query(p.BoardProduct.product_id) \
-                        .filter(p.BoardProduct.board_id == board_id) \
-                        .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
-                        .subquery(reduce_columns=True)
-        products_batch = join_product_info(session, board_pids_query) \
-                        .limit(limit) \
-                        .offset(offset) \
-                        .all()
-        result = [row_to_dict(row) for row in products_batch]
-    
+    board_pids_query = s.select(p.BoardProduct.product_id) \
+                    .filter(p.BoardProduct.board_id == board_id) \
+                    .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+                    .subquery(reduce_columns=True)
+    products_batch = join_product_info(board_pids_query) \
+        .limit(limit) \
+        .offset(offset) 
+    result = run_query(products_batch)
     return {
         "products": result
     }
@@ -43,57 +38,52 @@ def getUserBoardsBatch(args: dict) -> dict:
     offset = args['offset']
     limit = args['limit']
 
-    with session_scope() as session:
-        user_board_ids_subq = session.query(p.UserBoard) \
-                                .with_entities(p.UserBoard.board_id) \
-                                .filter(p.UserBoard.user_id == user_id) \
-                                .order_by(p.UserBoard.last_modified_timestamp.desc()) \
-                                .offset(offset) \
-                                .limit(limit) \
-                                .subquery()
+    user_board_ids_subq = s.select(p.UserBoard) \
+        .with_entities(p.UserBoard.board_id) \
+        .filter(p.UserBoard.user_id == user_id) \
+        .order_by(p.UserBoard.last_modified_timestamp.desc()) \
+        .offset(offset) \
+        .limit(limit) \
+        .subquery()
 
 
-        board_product_lateral_subq = session.query(p.BoardProduct) \
-                                        .with_entities(p.BoardProduct.board_id, p.BoardProduct.product_id) \
-                                        .filter(p.BoardProduct.board_id == user_board_ids_subq.c.board_id) \
-                                        .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
-                                        .limit(6) \
-                                        .subquery() \
-                                        .lateral()
+    board_product_lateral_subq = s.select(p.BoardProduct) \
+        .with_entities(p.BoardProduct.board_id, p.BoardProduct.product_id) \
+        .filter(p.BoardProduct.board_id == user_board_ids_subq.c.board_id) \
+        .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+        .limit(6) \
+        .subquery() \
+        .lateral()
 
-        join_board_product_subq = session.query(user_board_ids_subq, board_product_lateral_subq) \
-                                            .join(board_product_lateral_subq, sqa.true()) \
-                                            .subquery(reduce_columns=True)
+    join_board_product_subq = s.select(user_board_ids_subq, board_product_lateral_subq) \
+        .join(board_product_lateral_subq, sqa.true()) \
+        .subquery(reduce_columns=True)
 
-        join_product_info_query = join_product_info(session, join_board_product_subq).subquery()
+    join_product_info_query = join_product_info(s, join_board_product_subq).subquery()
 
-        product_cols = [(c.name, c) for c in join_product_info_query.c]
-        product_cols_json_agg = list(itertools.chain(*product_cols))
-        group_by_board_subq = session.query(
-                                    join_product_info_query.c.board_id,
-                                    postgresql.array_agg(
-                                        func.json_build_object(product_cols_json_agg)
-                                    ).label('products')
-                                ) \
-                                .group_by(join_product_info_query.c.board_id) \
-                                .subquery()
+    product_cols = [(c.name, c) for c in join_product_info_query.c]
+    product_cols_json_agg = list(itertools.chain(*product_cols))
+    group_by_board_subq = s.select(
+            join_product_info_query.c.board_id,
+            postgresql.array_agg(
+                func.json_build_object(product_cols_json_agg)
+            ).label('products')
+        ) \
+        .group_by(join_product_info_query.c.board_id) \
+        .subquery()
 
+    join_board_subq = s.select(p.Board.board_id, p.Board.name, p.Board.creation_date, p.Board.description, p.Board.artwork_url) \
+        .join(user_board_ids_subq, user_board_ids_subq.c.board_id == p.Board.board_id) \
+        .subquery()
 
-        join_board_subq = session.query(p.Board.board_id, p.Board.name, p.Board.creation_date, p.Board.description, p.Board.artwork_url) \
-                                .join(user_board_ids_subq, user_board_ids_subq.c.board_id == p.Board.board_id) \
-                                .subquery()
+    join_board_type_subq = s.select(join_board_subq, p.BoardType) \
+        .join(join_board_subq, join_board_subq.c.board_id == p.BoardType.board_id) \
+        .subquery(reduce_columns=True)
 
-        join_board_type_subq = session.query(join_board_subq, p.BoardType) \
-                                    .join(join_board_subq, join_board_subq.c.board_id == p.BoardType.board_id) \
-                                    .subquery(reduce_columns=True)
+    join_board_info_and_products = s.select(join_board_type_subq, group_by_board_subq) \
+        .join(join_board_type_subq, group_by_board_subq.c.board_id == join_board_type_subq.c.board_id)
 
-        join_board_info_and_products = session.query(join_board_type_subq, group_by_board_subq) \
-                                            .join(join_board_type_subq, group_by_board_subq.c.board_id == join_board_type_subq.c.board_id) \
-                                            .all()
-
-        result = [row_to_dict(row) for row in join_board_info_and_products]
-
+    result = run_query(join_board_info_and_products)
     return {
             "boards": result
         }
-                            
