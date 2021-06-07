@@ -38,13 +38,12 @@ def getUserBoardsBatch(args: dict) -> dict:
     offset = args['offset']
     limit = args['limit']
 
-    user_board_ids_subq = s.select(p.UserBoard.board_id) \
+    user_board_ids_subq = s.select(p.UserBoard.board_id, p.UserBoard.user_id) \
         .filter(p.UserBoard.user_id == user_id) \
         .order_by(p.UserBoard.last_modified_timestamp.desc()) \
         .offset(offset) \
         .limit(limit) \
         .cte()
-
 
     board_product_lateral_subq = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id) \
         .filter(p.BoardProduct.board_id == user_board_ids_subq.c.board_id) \
@@ -53,7 +52,7 @@ def getUserBoardsBatch(args: dict) -> dict:
         .subquery() \
         .lateral()
 
-    join_board_product_subq = s.select(user_board_ids_subq, board_product_lateral_subq) \
+    join_board_product_subq = s.select(board_product_lateral_subq, user_board_ids_subq.c.user_id) \
         .join(board_product_lateral_subq, s.true()) \
         .cte()
     join_product_info_query = join_product_info(join_board_product_subq).cte()
@@ -72,12 +71,12 @@ def getUserBoardsBatch(args: dict) -> dict:
     join_board_subq = s.select(p.Board.board_id, p.Board.name, p.Board.creation_date, p.Board.description, p.Board.artwork_url) \
         .join(user_board_ids_subq, user_board_ids_subq.c.board_id == p.Board.board_id) \
         .cte()
-
     join_board_type_subq = s.select(join_board_subq, p.BoardType) \
         .join(join_board_subq, join_board_subq.c.board_id == p.BoardType.board_id) \
         .cte()
 
-    join_board_info_and_products = s.select(join_board_type_subq, group_by_board_subq) \
+    join_board_type_subq_cols = [c for c in join_board_type_subq.c if 'board_id' not in c.name ]
+    join_board_info_and_products = s.select(*join_board_type_subq_cols, group_by_board_subq) \
         .join(join_board_type_subq, group_by_board_subq.c.board_id == join_board_type_subq.c.board_id)
 
     result = run_query(join_board_info_and_products)
