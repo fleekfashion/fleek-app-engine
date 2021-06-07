@@ -13,7 +13,7 @@ from meilisearch.index import Index
 
 from src.defs.utils import HIDDEN_LABEL_FIELDS
 from src.defs.postgres import PROJECT
-from src.utils.fuzzymatching import rm_token 
+from src.utils.fuzzymatching import rm_token, _handle_spaces
 
 START = "<em>"
 END = "</em>"
@@ -26,8 +26,6 @@ def _rm_tags(x):
 def _has_tags(x):
     return START in x or END in x
 
-def _handle_spaces(x):
-    return re.sub('\s+',' ', x).rstrip().lstrip()
 
 class SuggestionWord:
     def __init__(self, text: str, pos: int, is_label: bool):
