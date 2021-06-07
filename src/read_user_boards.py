@@ -14,7 +14,8 @@ def getBoardInfo(args: dict) -> dict:
     board_id = args['board_id']
     board = s.select(p.Board).filter(p.Board.board_id == board_id).cte()
     result = get_first(s.select(board))
-    return result
+    parsed_res = result if result else {"error": "invalid collection id"}
+    return parsed_res 
 
 def getBoardProductsBatch(args: dict) -> dict:
     board_id = args['board_id']

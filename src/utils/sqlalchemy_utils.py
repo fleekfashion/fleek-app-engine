@@ -48,9 +48,9 @@ def run_query(q: Select) -> t.List[dict]:
         parsed_res = [ result_to_dict(result) for result in results ]
     return parsed_res
 
-def get_first(q: Select) -> dict:
+def get_first(q: Select) -> t.Optional[dict]:
     with session_scope() as session:
         result = session.execute(q).mappings().first()
-        parsed_res = result_to_dict(result) 
+        parsed_res = result_to_dict(result) if result else None
     return parsed_res
 
