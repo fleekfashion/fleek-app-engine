@@ -29,7 +29,12 @@ def upload_event(args) -> bool:
 
     ue = p.UserEvents(**new_args)
 
-    with session_scope() as session:
-        session.add(ue)
-        session.commit()
+    ## Execute session transaction
+    try:
+        with session_scope() as session:
+            session.add(ue)
+            session.commit()
+    except Exception as e:
+        print(e)
+        return False
     return True
