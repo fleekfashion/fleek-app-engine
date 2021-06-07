@@ -74,7 +74,6 @@ def process_facets_distributions(
         max_price: float,
         nbHits: int
     ) -> t.List[t.Dict[str, str]]:
-
     def _process_search_string(searchString, name) -> str:
         return rm_token(searchString, name, fuzz.partial_ratio, cutoff=100)
 
@@ -82,7 +81,6 @@ def process_facets_distributions(
         suggestion = ""
         ## Remove replaced word from search string
         searchString = _process_search_string(searchString, name)
-
         ## Add suggestion to correct location
         if filter_type == "product_labels":
             suggestion = f"{searchString} {name}"
@@ -131,7 +129,6 @@ def process_facets_distributions(
             ]
 
     def _build_final_tags(general_tags: t.List[dict], advertiser_tags: t.List[dict]) -> t.List[dict]:
-
         N = N_SEARCH_TAGS // 3 ## 2 general tags + 1 advertiser name
         final_tags = list(itertools.chain(
             *[
@@ -139,13 +136,11 @@ def process_facets_distributions(
             for i in range(N)
             ] 
         ))
-
         ## If room for more, add advertiser names until hit limit
         final_tags.extend(
             advertiser_tags[N:N + (N_SEARCH_TAGS - len(final_tags))] 
         )
         return final_tags
-
 
     general_tags = []
     advertiser_tags = []
@@ -163,7 +158,6 @@ def process_facets_distributions(
                 _default_process_tag(searchString, key, value)
             )
     
-
     processed_tags = seq(sorted(general_tags, key=lambda x: x['nbHits'], reverse=True)) \
         .filter(lambda x: x['nbHits'] > MIN_SEARCH_TAG_HITS) \
         .filter(lambda x: x['filter'] not in searchString) \
