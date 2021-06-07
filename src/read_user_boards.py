@@ -58,7 +58,7 @@ def getUserBoardsBatch(args: dict) -> dict:
         .cte()
     join_product_info_query = join_product_info(join_board_product_subq).cte()
 
-    product_cols = [(c.name, c) for c in join_product_info_query.c]
+    product_cols = [(c.name, c) for c in join_product_info_query.c if 'board_id' not in c.name ]
     product_cols_json_agg = list(itertools.chain(*product_cols))
     group_by_board_subq = s.select(
             join_product_info_query.c.board_id,
