@@ -1,8 +1,9 @@
 import json
 from src.utils import hashers
 from src.defs import postgres as p
+from src.utils.sqlalchemy_utils import session_scope
 
-def upload_event(conn, args):
+def upload_event(args) -> bool:
     new_args = {}
 
     new_args["event"] = args["event"]
@@ -15,7 +16,7 @@ def upload_event(conn, args):
     new_args["tags"] = args.get("tags", [])
     new_args["advertiser_names"] = args.get("advertiser_names", None)
     new_args["product_labels"] = args.get("product_labels", None)
-    new_args["searchString"] = args.get("searchString", None)
+    new_args["searchstring"] = args.get("searchString", None)
 
     ## parse unstructured json data into string
     json_data = args.get("json_data", None)
@@ -23,12 +24,12 @@ def upload_event(conn, args):
 
     items = list(new_args.items())
     for key, value in items:
-        if value is None:
+        if value is None: 
             new_args.pop(key)
 
-    query = p.USER_EVENTS_TABLE.insert().values(**new_args)
-    print(query)
+    ue = p.UserEvents(**new_args)
 
-    conn = p.engine.connect()
-    conn.execute(query)
+    with session_scope() as session:
+        session.add(ue)
+        session.commit()
     return True

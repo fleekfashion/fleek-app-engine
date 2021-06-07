@@ -1,6 +1,10 @@
 from functools import partial 
+
+import cachetools
 from sqlalchemy import Table
 from functional import seq
+
+from src.defs import postgres as p
 
 def get_schema(self):
     return seq(self.c)
@@ -12,3 +16,13 @@ Table.get_schema = get_schema
 
 PostgreTable = Table
 
+HIDDEN_LABEL_FIELDS = {
+    "jeans": "pants",
+    "sweatpants": "pants",
+    "graphic tee": "shirt",
+    "t-shirt": "shirt",
+    "blouse": "shirt",
+    "leggings": "pants",
+    "bikini": "swimwear",
+    "romper": "jumpsuit"
+}
