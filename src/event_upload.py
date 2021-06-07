@@ -1,9 +1,7 @@
 import json
-from src.utils.psycop_utils import cur_execute
 from src.utils import hashers
 from src.defs import postgres as p
 from src.utils.sqlalchemy_utils import session_scope
-
 
 def upload_event(args) -> bool:
     new_args = {}
@@ -31,11 +29,7 @@ def upload_event(args) -> bool:
 
     ue = p.UserEvents(**new_args)
 
-    ## Execute session transaction
-    try:
-        with session_scope() as session:
-            session.add(ue)
-    except Exception as e:
-        print(e)
-        return False
+    with session_scope() as session:
+        session.add(ue)
+        session.commit()
     return True

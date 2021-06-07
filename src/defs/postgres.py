@@ -40,6 +40,9 @@ USER_BOARD_TABLE = PostgreTable("user_board", metadata, autoload=True)
 REJECTED_BOARD_TABLE = PostgreTable("rejected_board", metadata, autoload=True)
 
 USER_EVENTS_TABLE = PostgreTable("user_events", metadata, autoload=True)
+USER_PRODUCT_FAVES_TABLE = PostgreTable("user_product_faves", metadata, autoload=True)
+USER_PRODUCT_BAGS_TABLE = PostgreTable("user_product_bags", metadata, autoload=True)
+USER_PRODUCT_SEENS_TABLE = PostgreTable("user_product_seens", metadata, autoload=True)
 USER_FAVED_BRANDS_TABLE = PostgreTable("user_faved_brands", metadata, autoload=True)
 USER_MUTED_BRANDS_TABLE = PostgreTable("user_muted_brands", metadata, autoload=True)
 
