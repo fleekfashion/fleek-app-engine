@@ -71,7 +71,8 @@ def process_facets_distributions(
         product_label_filter_applied: bool, 
         advertiser_filter_applied: bool, 
         user_id: t.Optional[int],
-        max_price: float
+        max_price: float,
+        nbHits: int
     ) -> t.List[t.Dict[str, str]]:
 
     def _process_search_string(searchString, name) -> str:
@@ -98,7 +99,6 @@ def process_facets_distributions(
         suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
         return suggestion
 
-    print(max_price, "\n\n")
     def _build_advertiser_tags(brand_counts: t.Dict[str, int]) -> t.List[dict]:
         fave_brands = get_user_fave_brands(user_id) if user_id else []
         advertiser_counts = get_advertiser_counts() 
@@ -130,22 +130,6 @@ def process_facets_distributions(
                 for name, nbHits in value.items()
             ]
 
-    general_tags = []
-    advertiser_tags = []
-    for key, value in facets_distr.items():
-        if key == "advertiser_name":
-            if advertiser_filter_applied or user_id is None:
-                continue
-            advertiser_tags = _build_advertiser_tags(value)
-        elif key == "product_labels" and product_label_filter_applied:
-            continue
-        elif key == "product_tags":
-            continue
-        else:
-            general_tags.extend(
-                _default_process_tag(searchString, key, value)
-            )
-    
     def _build_final_tags(general_tags: t.List[dict], advertiser_tags: t.List[dict]) -> t.List[dict]:
 
         N = N_SEARCH_TAGS // 3 ## 2 general tags + 1 advertiser name
@@ -163,9 +147,27 @@ def process_facets_distributions(
         return final_tags
 
 
+    general_tags = []
+    advertiser_tags = []
+    for key, value in facets_distr.items():
+        if key == "advertiser_name":
+            if advertiser_filter_applied or user_id is None:
+                continue
+            advertiser_tags = _build_advertiser_tags(value)
+        elif key == "product_labels" and product_label_filter_applied:
+            continue
+        elif key == "product_tags":
+            continue
+        else:
+            general_tags.extend(
+                _default_process_tag(searchString, key, value)
+            )
+    
+
     processed_tags = seq(sorted(general_tags, key=lambda x: x['nbHits'], reverse=True)) \
         .filter(lambda x: x['nbHits'] > MIN_SEARCH_TAG_HITS) \
         .filter(lambda x: x['filter'] not in searchString) \
+        .filter(lambda x: x['nbHits'] < 4*nbHits/5) \
         .take(N_SEARCH_TAGS) \
         .to_list()
     final_res = _build_final_tags(processed_tags, advertiser_tags)
@@ -208,6 +210,7 @@ def productSearch(args, index: Index) -> list:
         product_label_filter_applied=len(product_labels)>0,
         advertiser_filter_applied=len(advertiser_names)>0,
         user_id=user_id,
-        max_price=max_price
+        max_price=max_price,
+        nbHits=data['nbHits']
     )
     return data
