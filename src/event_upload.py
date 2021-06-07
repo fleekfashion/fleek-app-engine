@@ -35,6 +35,7 @@ def upload_event(args) -> bool:
     try:
         with session_scope() as session:
             session.add(ue)
+            session.commit()
     except Exception as e:
         print(e)
         return False

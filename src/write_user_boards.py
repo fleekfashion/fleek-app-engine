@@ -65,6 +65,7 @@ def create_new_board(args: dict) -> dict:
             session.add(user_board)
             session.add(board_type)
             session.add_all(board_products)
+            session.commit()
     except Exception as e:
         print(e)
         return {"success": False}
@@ -88,6 +89,7 @@ def write_product_to_board(args: dict) -> dict:
     try:
         with session_scope() as session:
             session.add(board_product)
+            session.commit()
     except Exception as e:
         print(e)
         return {"success": False}
