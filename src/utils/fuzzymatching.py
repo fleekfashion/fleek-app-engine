@@ -4,17 +4,19 @@ import re
 from functional import seq, pseq
 from fuzzywuzzy import process
 
+def _handle_spaces(x):
+    return re.sub('\s+',' ', x).rstrip().lstrip()
 
 def _run_replace(queryString, res) -> str:
     return re.sub(f"\\b{res}\\b", "", queryString) \
             .replace("  ", " ") \
             .lstrip()
 
-def rm_token(queryString: str, token: str, scorer, cutoff: int=0) -> str:
+def rm_token(queryString: str, token: str, scorer, cutoff: int=0, combinations=True) -> str:
     x = queryString.split(" ")
     substrs = []
     substrs.extend(x)
-    if len(substrs) > 1:
+    if len(substrs) > 1 and combinations:
         for i in range(len(x) - 1):
             substrs.append(" ".join(x[i:i+2]))
 
