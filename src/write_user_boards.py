@@ -6,10 +6,6 @@ from datetime import datetime as dt
 
 
 def create_new_board(args: dict) -> dict:
-    board_args: dict = dict()
-    user_board_args: dict = dict() 
-    board_type_args: dict = dict() 
-    
     board_id = uuid.uuid4().hex
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     last_modified_timestamp = int(dt.now().timestamp())
@@ -73,10 +69,7 @@ def create_new_board(args: dict) -> dict:
     return {"success": True, "board_id": board_id}
 
 def write_product_to_board(args: dict) -> dict:
-    board_product_args: dict = {}
-
-    ## Required fields
-    basic_product_args = {
+    board_product_args = {
         'board_id': args['board_id'],
         'product_id': args['product_id'],
         'last_modified_timestamp': int(dt.now().timestamp()),
