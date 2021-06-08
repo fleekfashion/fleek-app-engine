@@ -49,7 +49,7 @@ from src.similarProducts import getSimilarProducts
 
 app = Flask(__name__)
 
-SEARCH_URL = 'http://159.89.82.234'
+SEARCH_URL = 'http://174.138.109.133/'
 SEARCH_PSWD = "kian_is_on_fleek"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
