@@ -77,7 +77,7 @@ def getUserBoardsBatch(args: dict) -> dict:
 
     join_board_type_subq_cols = [c for c in join_board_type_subq.c if 'board_id' not in c.name ]
     join_board_info_and_products = s.select(*join_board_type_subq_cols, group_by_board_subq) \
-        .join(join_board_type_subq, group_by_board_subq.c.board_id == join_board_type_subq.c.board_id)
+        .outerjoin(group_by_board_subq, group_by_board_subq.c.board_id == join_board_type_subq.c.board_id)
 
     result = run_query(join_board_info_and_products)
     return {
