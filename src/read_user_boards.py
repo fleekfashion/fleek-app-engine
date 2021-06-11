@@ -21,14 +21,15 @@ def getBoardProductsBatch(args: dict) -> dict:
     offset = args['offset']
     limit = args['limit']
 
-    board_pids_query = s.select(p.BoardProduct.product_id) \
+    board_pids_query = s.select(p.BoardProduct.product_id, p.BoardProduct.last_modified_timestamp) \
                     .filter(p.BoardProduct.board_id == board_id) \
                     .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+                    .limit(limit) \
+                    .offset(offset) \
                     .cte()
-    products_batch = join_product_info(board_pids_query) \
-        .limit(limit) \
-        .offset(offset) 
-    result = run_query(products_batch)
+    products_batch = join_product_info(board_pids_query).cte()
+    products_batch_ordered = s.select(products_batch).order_by(products_batch.c.last_modified_timestamp.desc())
+    result = run_query(products_batch_ordered)
     return {
         "products": result
     }
