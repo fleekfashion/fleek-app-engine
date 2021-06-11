@@ -42,6 +42,7 @@ from src.product_price_history import get_product_price_history
 import src.write_user_boards as wub
 import src.read_user_boards as rub
 import src.user_brand_actions as uba
+import src.board_suggestions as bs
 from src import orders
 from src import loadProducts  
 from src.similarProducts import getSimilarProducts
@@ -208,6 +209,12 @@ def getOrdersForAdvertiser():
 def getProductsFromAdvertiser():
     res = orders.getProductsFromAdvertiser(request.args)
     return jsonify(res)
+
+@app.route('/getBoardSuggestions', methods=['GET'])
+def getBoardSuggestions():
+    return jsonify(
+        bs.getBoardSuggestions(request.args)
+    )
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
