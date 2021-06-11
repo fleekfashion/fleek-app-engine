@@ -5,6 +5,7 @@ from src.defs import postgres as p
 from copy import copy
 from collections import ChainMap
 from collections.abc import Iterable
+from decimal import Decimal
 
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 
@@ -40,11 +41,16 @@ def row_to_dict(row) -> dict:
         return table_row_to_dict(row)
 
 def result_to_dict(result) -> dict:
-    return { key: value for key, value in result.items() }
+    def _parse_value(x):
+        if type(x) == Decimal:
+            return int(x) if x == x.to_integral_value() else float(x)
+        else:
+            return x
+    return { key: _parse_value(value) for key, value in result.items() }
 
 def run_query(q: Select) -> t.List[dict]:
     with session_scope() as session:
-        results = session.execute(q).mappings()
+        results = session.execute(q).mappings().all()
         parsed_res = [ result_to_dict(result) for result in results ]
     return parsed_res
 
@@ -53,4 +59,3 @@ def get_first(q: Select) -> t.Optional[dict]:
         result = session.execute(q).mappings().first()
         parsed_res = result_to_dict(result) if result else None
     return parsed_res
-
