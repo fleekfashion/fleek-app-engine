@@ -38,9 +38,9 @@ def _join_board_stats(q: CTE) -> Select:
 
     return s.select(
         q,
-        board_stats.c.n_products,
-        board_stats.c.advertiser_stats
-    ).filter(q.c.board_id == board_stats.c.board_id)
+        F.coalesce(board_stats.c.n_products, 0).label('n_products'),
+        F.coalesce(board_stats.c.advertiser_stats, []).label('advertiser_stats')
+    ).outerjoin(board_stats, q.c.board_id == board_stats.c.board_id)
 
 def getBoardInfo(args: dict) -> dict:
     board_id = args['board_id']
@@ -116,6 +116,7 @@ def getUserBoardsBatch(args: dict) -> dict:
 
     boards = _join_board_stats(join_board_info_and_products.cte())
     result = run_query(boards)
+
     for board in result:
         if board['products'] is not None:
             board['products'] = sorted(board['products'], key=lambda k: k['last_modified_timestamp'], reverse=True)
