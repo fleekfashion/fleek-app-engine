@@ -28,7 +28,7 @@ def getBoardProductsBatch(args: dict) -> dict:
                     .offset(offset) \
                     .cte()
     products_batch = join_product_info(board_pids_query).cte()
-    products_batch_ordered = s.select(products_batch).order_by(products_batch.c.last_modified_timestamp.desc())
+    products_batch_ordered = s.select(products_batch).order_by(products_batch.c.last_modified_timestamp.desc(), products_batch.c.product_id)
     result = run_query(products_batch_ordered)
     return {
         "products": result
