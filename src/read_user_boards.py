@@ -23,7 +23,7 @@ def getBoardProductsBatch(args: dict) -> dict:
 
     board_pids_query = s.select(p.BoardProduct.product_id, p.BoardProduct.last_modified_timestamp) \
                     .filter(p.BoardProduct.board_id == board_id) \
-                    .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+                    .order_by(p.BoardProduct.last_modified_timestamp.desc(), p.BoardProduct.product_id) \
                     .limit(limit) \
                     .offset(offset) \
                     .cte()
