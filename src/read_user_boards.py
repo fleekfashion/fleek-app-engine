@@ -47,7 +47,7 @@ def getUserBoardsBatch(args: dict) -> dict:
 
     board_product_lateral_subq = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id, p.BoardProduct.last_modified_timestamp) \
         .filter(p.BoardProduct.board_id == user_board_ids_subq.c.board_id) \
-        .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+        .order_by(p.BoardProduct.last_modified_timestamp.desc(), p.BoardProduct.product_id) \
         .limit(6) \
         .subquery() \
         .lateral()
@@ -82,7 +82,8 @@ def getUserBoardsBatch(args: dict) -> dict:
     result = run_query(join_board_info_and_products)
     for board in result:
         if board['products'] is not None:
+            board['products'] = sorted(board['products'], key=lambda k: k['product_id'])
             board['products'] = sorted(board['products'], key=lambda k: k['last_modified_timestamp'], reverse=True)
     return {
-            "boards": result
-        }
+        "boards": result
+    }
