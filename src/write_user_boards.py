@@ -3,6 +3,7 @@ from src.utils import hashers
 from src.defs import postgres as p
 import uuid
 from datetime import datetime as dt
+import sqlalchemy as s
 
 
 def create_new_board(args: dict) -> dict:
@@ -88,3 +89,40 @@ def write_product_to_board(args: dict) -> dict:
         return {"success": False}
     
     return {"success": True}
+
+def remove_product_from_board(args: dict) -> dict:
+    board_id = args['board_id']
+    product_id = args['product_id']
+
+    try:
+        with session_scope() as session:
+            remove_product_from_board_stmt = s.delete(p.BoardProduct).where(
+                s.and_(
+                    p.BoardProduct.board_id == board_id, 
+                    p.BoardProduct.product_id == product_id
+                )
+            )
+            session.execute(remove_product_from_board_stmt)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
+    return {"success": True}
+
+def remove_board(args: dict) -> dict:
+    board_id = args['board_id']
+    try:
+        with session_scope() as session:
+            remove_board_statements = [
+                s.delete(p.BoardProduct).where(p.BoardProduct.board_id == board_id),
+                s.delete(p.UserBoard).where(p.UserBoard.board_id == board_id),
+                s.delete(p.BoardType).where(p.BoardType.board_id == board_id),
+                s.delete(p.Board).where(p.Board.board_id == board_id)
+            ]
+            for statement in remove_board_statements: session.execute(statement)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
+    return {"success": True}
+
