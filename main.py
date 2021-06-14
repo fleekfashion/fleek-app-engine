@@ -201,6 +201,18 @@ def writeProductToBoard():
     res = wub.write_product_to_board(data)
     return jsonify(res)
 
+@app.route('/removeProductFromBoard', methods=['POST'])
+def removeProductFromBoard():
+    data = request.get_json(force=True)
+    res = wub.remove_product_from_board(data)
+    return jsonify(res)
+
+@app.route('/removeBoard', methods=['POST'])
+def removeBoard():
+    data = request.get_json(force=True)
+    res = wub.remove_board(data)
+    return jsonify(res)
+
 @app.route('/getBoardInfo', methods=['GET'])
 def getBoardInfo():
     res = rub.getBoardInfo(request.args)
