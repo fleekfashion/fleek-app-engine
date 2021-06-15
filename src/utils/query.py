@@ -227,3 +227,28 @@ def join_product_info(
         product_id_field=product_id_field
     )
     return parsed_products_query
+
+
+def _get_user_board_products(
+        user_id: int, 
+        offset: int, 
+        limit: int, 
+        n_products: int) -> Select:
+    user_board_ids_subq = s.select(p.UserBoard.board_id, p.UserBoard.user_id) \
+        .filter(p.UserBoard.user_id == user_id) \
+        .order_by(p.UserBoard.last_modified_timestamp.desc()) \
+        .offset(offset) \
+        .limit(limit) \
+        .cte()
+
+    board_product_lateral_subq = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id) \
+        .filter(p.BoardProduct.board_id == user_board_ids_subq.c.board_id) \
+        .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+        .limit(n_products) \
+        .subquery() \
+        .lateral()
+
+    return s.select(
+            board_product_lateral_subq, 
+            user_board_ids_subq.c.user_id
+    ).join(board_product_lateral_subq, s.true())
