@@ -34,7 +34,7 @@ from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
 import src.single_product_info as spi 
 from src.product_price_history import get_product_price_history
-from src.user_product_actions import write_user_product_fave, write_user_product_bag, write_user_product_seen, remove_user_product_fave, remove_user_product_bag
+import src.user_product_actions as upa
 import src.write_user_boards as wub
 import src.read_user_boards as rub
 import src.user_brand_actions as uba
@@ -114,31 +114,32 @@ def pushUserEvent():
 @app.route('/writeUserProductFave', methods=['POST'])
 def writeUserProductFave():
     data = request.get_json(force=True)
-    res = write_user_product_fave(data)
+    res = upa.write_user_product_fave(data)
     return jsonify({'success': res})
 
 @app.route('/writeUserProductBag', methods=['POST'])
 def writeUserProductBag():
     data = request.get_json(force=True)
-    res = write_user_product_bag(data)
+    res = upa.write_user_product_bag(data)
     return jsonify({'success': res})
 
 @app.route('/writeUserProductTrash', methods=['POST'])
 def writeUserProductTrash():
     data = request.get_json(force=True)
-    res = write_user_product_seen(data)
+    res = upa.write_user_product_seen(data)
     return jsonify({'success': res})
 
 @app.route('/removeUserProductFave', methods=['POST'])
 def removeUserProductFave():
     data = request.get_json(force=True)
-    res = remove_user_product_fave(data)
+    res = upa.remove_user_product_fave(data)
     return jsonify({'success': res})
 
 @app.route('/removeUserProductBag', methods=['POST'])
 def removeUserProductBag():
     data = request.get_json(force=True)
-    res = remove_user_product_bag(data)
+    res = upa.remove_user_product_bag(data)
+    return jsonify({'success': res})
 
 @app.route('/writeUserFavedBrand', methods=['POST'])
 def writeUserFavedBrand():
