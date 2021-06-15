@@ -44,6 +44,7 @@ import src.read_user_boards as rub
 import src.user_brand_actions as uba
 from src import orders
 from src import loadProducts  
+from src import add_to_board_options as atb
 from src.similarProducts import getSimilarProducts
 
 app = Flask(__name__)
@@ -207,6 +208,11 @@ def getOrdersForAdvertiser():
 @app.route('/getProductsFromAdvertiser', methods=['GET'])
 def getProductsFromAdvertiser():
     res = orders.getProductsFromAdvertiser(request.args)
+    return jsonify(res)
+
+@app.route('/getAddToBoardOptions', methods=['GET'])
+def getAddToBoardOptions():
+    res = atb.getAddToBoardOptions(request.args)
     return jsonify(res)
 
 if __name__ == '__main__':
