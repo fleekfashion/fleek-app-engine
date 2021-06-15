@@ -26,23 +26,26 @@ from flask_cors import cross_origin
 from sqlalchemy import create_engine, MetaData, Table
 
 from src.defs.postgres import DATABASE_USER, PASSWORD, DBNAME, PROJECT
-from src.utils import hashers
+from src.utils import hashers, static, user_info
 from src.rec import get_batch
-from src import rec2
 from src.productSearch import productSearch
 from src.autocomplete import searchSuggestions
 from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
-from src.single_product_info import get_single_product_info
+import src.single_product_info as spi 
 from src.product_price_history import get_product_price_history
-import src.user_product_actions as upa
+from src.user_product_actions import write_user_product_fave, write_user_product_bag, write_user_product_seen, remove_user_product_fave, remove_user_product_bag
+import src.write_user_boards as wub
+import src.read_user_boards as rub
 import src.user_brand_actions as uba
+from src import orders
+from src import loadProducts  
+from src.similarProducts import getSimilarProducts
 
 app = Flask(__name__)
 
-
-SEARCH_URL = 'http://161.35.113.38/'
-SEARCH_PSWD = "fleek-app-prod1"
+SEARCH_URL = 'http://159.89.82.234'
+SEARCH_PSWD = "kian_is_on_fleek"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
 c = meilisearch.Client(SEARCH_URL, SEARCH_PSWD)
@@ -63,11 +66,7 @@ def getUserProductBatch():
 
 @app.route('/getUserProductBatchv2', methods=['GET'])
 def getUserProductBatchv2():
-    args = request.args
-    user_id = args.get("user_id", -1)
-    if user_id != -1:
-        user_id = hashers.apple_id_to_user_id_hash(user_id)
-    data = rec2.get_batch(conn, user_id, request.args)
+    data = loadProducts.loadProducts(request.args)
     return jsonify(data)
 
 @app.route('/getProductSearchBatch', methods=['GET'])
@@ -82,30 +81,23 @@ def getSearchSuggestions():
 
 @app.route('/getTrendingSearches', methods=['GET'])
 def getTrendingSearches():
-    data = trendingSearches(request.args, trending_index)
+    data = trendingSearches(request.args, trending_index, index)
     return jsonify(data)
 
 @app.route('/getLabelSearches', methods=['GET'])
 def getLabelSearches():
-    data = labelSearches(request.args, label_index)
+    data = labelSearches(request.args, label_index, index)
     return jsonify(data)
 
 @app.route('/getSimilarItems', methods=['GET'])
 def getSimilarItems():
-    args = request.args
-    product_id= args.get("product_id", -1)
-    data = rec2.get_similar_items(conn, product_id)
+    data = getSimilarProducts(request.args)
     return jsonify(data)
 
 @app.route('/getSingleProductInfo', methods=['GET'])
 @cross_origin()
 def getSingleProductInfo():
-    args = request.args
-    product_id = args.get("product_id", -1)
-    if product_id == -1:
-        data = {}
-    else:
-        data = get_single_product_info(conn, product_id)
+    data = spi.getSingleProductInfo(request.args)
     return jsonify(data)
 
 @app.route('/getProductPriceHistory', methods=['GET'])
@@ -116,7 +108,7 @@ def getProductPriceHistory():
 @app.route('/pushUserEvent', methods=['POST'])
 def pushUserEvent():
     data = request.get_json(force=True)
-    res = upload_event(conn, data)
+    res = upload_event(data)
     return jsonify({'event is': res})
 
 @app.route('/writeUserProductFave', methods=['POST'])
@@ -146,8 +138,7 @@ def removeUserProductFave():
 @app.route('/removeUserProductBag', methods=['POST'])
 def removeUserProductBag():
     data = request.get_json(force=True)
-    res = upa.remove_user_product_bag(data)
-    return jsonify({'success': res})
+    res = remove_user_product_bag(data)
 
 @app.route('/writeUserFavedBrand', methods=['POST'])
 def writeUserFavedBrand():
@@ -182,6 +173,64 @@ def repeat():
 @app.route('/getStaticSizeOptions', methods=['GET'])
 def getStaticSizeOptions():
     return jsonify({'sizes': ["xxs", "xs", "xs/s", "s","s/m", "m", "m/l", "l", "xl", "xxl", "2xl"]})
+
+@app.route('/getAdvertiserNames', methods=['GET'])
+def getAdvertiserNames():
+    return jsonify(static.get_advertiser_names())
+
+@app.route('/getAdvertiserCounts', methods=['GET'])
+def getAdvertiserCounts():
+    return jsonify(static.get_advertiser_counts())
+
+@app.route('/createNewBoard', methods=['POST'])
+def createNewBoard():
+    data = request.get_json(force=True)
+    res = wub.create_new_board(data)
+    return jsonify(res)
+
+@app.route('/writeProductToBoard', methods=['POST'])
+def writeProductToBoard():
+    data = request.get_json(force=True)
+    res = wub.write_product_to_board(data)
+    return jsonify(res)
+
+@app.route('/getBoardInfo', methods=['GET'])
+def getBoardInfo():
+    res = rub.getBoardInfo(request.args)
+    return jsonify(res)
+
+@app.route('/getBoardProductsBatch', methods=['GET'])
+def getBoardProductsBatch():
+    res = rub.getBoardProductsBatch(request.args)
+    return jsonify(res)
+
+@app.route('/getUserBoardsBatch', methods=['GET'])
+def getUserBoardsBatch():
+    res = rub.getUserBoardsBatch(request.args)
+    return jsonify(res)
+
+@app.route('/getUserFavedBrands', methods=['GET'])
+def getUserFavedBrands():
+    return jsonify(
+        user_info.get_user_fave_brands(
+            hashers.apple_id_to_user_id_hash(request.args['user_id']))
+    )
+
+@app.route('/getProductColorOptions', methods=['GET'])
+def getProductColorOptions():
+    return jsonify(
+        loadProducts.getProductColorOptions(request.args)
+    )
+
+@app.route('/getOrdersForAdvertiser', methods=['GET'])
+def getOrdersForAdvertiser():
+    res = orders.getOrdersFromAdvertiser(request.args)
+    return jsonify(res)
+
+@app.route('/getProductsFromAdvertiser', methods=['GET'])
+def getProductsFromAdvertiser():
+    res = orders.getProductsFromAdvertiser(request.args)
+    return jsonify(res)
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the

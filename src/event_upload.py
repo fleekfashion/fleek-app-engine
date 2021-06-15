@@ -1,8 +1,9 @@
 import json
 from src.utils import hashers
 from src.defs import postgres as p
+from src.utils.sqlalchemy_utils import session_scope
 
-def upload_event(conn, args):
+def upload_event(args) -> bool:
     new_args = {}
 
     new_args["event"] = args["event"]
@@ -25,12 +26,10 @@ def upload_event(conn, args):
     for key, value in items:
         if value is None: 
             new_args.pop(key)
-    print(new_args)
 
-    print(new_args)
+    ue = p.UserEvents(**new_args)
 
-    query = p.USER_EVENTS_TABLE.insert().values(**new_args)
-
-    conn = p.engine.connect()
-    conn.execute(query)
+    with session_scope() as session:
+        session.add(ue)
+        session.commit()
     return True

@@ -1,5 +1,5 @@
-
 import typing as t
+import time
 from random import shuffle
 from src.defs import postgres as p
 
@@ -13,18 +13,20 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import literal
 from sqlalchemy.sql import text
 import src.utils.query as qutils
-from src.utils.sqlalchemy_utils import row_to_dict, session_scope 
+from src.utils.sqlalchemy_utils import run_query 
+import gc
 
-def getSingleProductInfo(args: dict) -> dict:
+def getSimilarProducts(args: dict) -> t.List[dict]:
     product_id = args['product_id']
+    offset = args.get('offset', 0)
+    limit = args.get('limit', 50)
 
-    base_pinfo = s.select(
-        p.ProductInfo
+    sim_pids = s.select(
+        p.SimilarItems.similar_product_id.label('product_id')
     ) \
-    .where(p.ProductInfo.product_id == literal(product_id)) \
-    .cte('base_product_info')
-    pinfo = qutils.join_external_product_info(base_pinfo)
-
-    with session_scope() as session:
-        first_product = session.execute(pinfo).first()
-    return row_to_dict(first_product) 
+    .filter(p.SimilarItems.product_id == literal(product_id) ) \
+    .offset(offset) \
+    .limit(limit) \
+    .cte('similar_product_ids')
+    similar_products_query = qutils.join_product_info(sim_pids)
+    return run_query(similar_products_query)

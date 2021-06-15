@@ -1,1 +1,1 @@
-gcloud compute ssh test-endpoint --zone us-central1-a
+gcloud compute ssh prod-endpoint --zone us-central1-a
