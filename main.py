@@ -46,6 +46,7 @@ import src.user_brand_actions as uba
 import src.board_suggestions as bs
 from src import orders
 from src import loadProducts  
+from src import add_to_board_options as atb
 from src.similarProducts import getSimilarProducts
 
 app = Flask(__name__)
@@ -256,6 +257,11 @@ def getBoardSuggestions():
     return jsonify(
         bs.getBoardSuggestions(request.args)
     )
+
+@app.route('/getAddToBoardOptions', methods=['GET'])
+def getAddToBoardOptions():
+    res = atb.getAddToBoardOptions(request.args)
+    return jsonify(res)
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the

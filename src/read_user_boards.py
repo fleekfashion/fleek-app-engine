@@ -68,6 +68,7 @@ def getBoardProductsBatch(args: dict) -> dict:
         "products": result
     }
 
+
 def getUserBoardsBatch(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     offset = args['offset']
