@@ -240,9 +240,12 @@ def _get_user_board_products(
         .limit(limit) \
         .cte()
 
-    board_product_lateral_subq = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id) \
+    board_product_lateral_subq = s.select(
+            p.BoardProduct.board_id, 
+            p.BoardProduct.product_id
+    ) \
         .filter(p.BoardProduct.board_id == user_board_ids_subq.c.board_id) \
-        .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+        .order_by(p.BoardProduct.last_modified_timestamp.desc(), p.BoardProduct.product_id) \
         .limit(n_products) \
         .subquery() \
         .lateral()
@@ -250,7 +253,7 @@ def _get_user_board_products(
     return s.select(
             board_product_lateral_subq, 
             user_board_ids_subq.c.user_id
-    ).join(board_product_lateral_subq, s.true())
+        ).join(board_product_lateral_subq, s.true())
 
 def join_board_info(q: CTE) -> Select:
     board_subq = s.select(
