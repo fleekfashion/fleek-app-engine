@@ -9,7 +9,7 @@ from src.defs.utils import HIDDEN_LABEL_FIELDS
 from src.utils.user_info import get_user_fave_brands
 from src.utils.static import get_advertiser_counts, get_advertiser_price_quantile
 from src.utils.hashers import apple_id_to_user_id_hash
-from src.utils.fuzzymatching import rm_token
+from src.utils.fuzzymatching import rm_token, _handle_spaces
 from fuzzywuzzy import fuzz
 
 N_SEARCH_TAGS = 12
@@ -71,7 +71,8 @@ def process_facets_distributions(
         product_label_filter_applied: bool, 
         advertiser_filter_applied: bool, 
         user_id: t.Optional[int],
-        max_price: float
+        max_price: float,
+        nbHits: int
     ) -> t.List[t.Dict[str, str]]:
 
     def _process_search_string(searchString, name) -> str:
@@ -81,24 +82,22 @@ def process_facets_distributions(
         suggestion = ""
         ## Remove replaced word from search string
         searchString = _process_search_string(searchString, name)
-
         ## Add suggestion to correct location
         if filter_type == "product_labels":
             suggestion = f"{searchString} {name}"
         elif filter_type == "product_secondary_labels":
             if name in HIDDEN_LABEL_FIELDS.keys():
                 bad_label = HIDDEN_LABEL_FIELDS[name]
-                searchString = rm_token(searchString, bad_label, fuzz.partial_ratio, cutoff=100)  
-                searchString = re.sub(f"\\b{bad_label}\\b", '', searchString).rstrip().lstrip()
-                suggestion = f"{searchString} {name}"
+                processed_string = rm_token(searchString, bad_label, fuzz.partial_ratio, cutoff=100, combinations=False)
+                processed_string = re.sub(f"\\b{bad_label}\\b", '', processed_string).rstrip().lstrip()
+                suggestion = f"{processed_string} {name}"
             else:
                 suggestion = f"{name} {searchString}"
         elif filter_type == "internal_color":
             suggestion = f"{name} {searchString}"
-        suggestion = re.sub('\s+',' ', suggestion).rstrip().lstrip()
+        suggestion = _handle_spaces(suggestion)
         return suggestion
 
-    print(max_price, "\n\n")
     def _build_advertiser_tags(brand_counts: t.Dict[str, int]) -> t.List[dict]:
         fave_brands = get_user_fave_brands(user_id) if user_id else []
         advertiser_counts = get_advertiser_counts() 
@@ -130,6 +129,20 @@ def process_facets_distributions(
                 for name, nbHits in value.items()
             ]
 
+    def _build_final_tags(general_tags: t.List[dict], advertiser_tags: t.List[dict]) -> t.List[dict]:
+        N = N_SEARCH_TAGS // 3 ## 2 general tags + 1 advertiser name
+        final_tags = list(itertools.chain(
+            *[
+                general_tags[2*i:2*(i+1)] + advertiser_tags[i:i+1] 
+            for i in range(N)
+            ] 
+        ))
+        ## If room for more, add advertiser names until hit limit
+        final_tags.extend(
+            advertiser_tags[N:N + (N_SEARCH_TAGS - len(final_tags))] 
+        )
+        return final_tags
+
     general_tags = []
     advertiser_tags = []
     for key, value in facets_distr.items():
@@ -146,26 +159,10 @@ def process_facets_distributions(
                 _default_process_tag(searchString, key, value)
             )
     
-    def _build_final_tags(general_tags: t.List[dict], advertiser_tags: t.List[dict]) -> t.List[dict]:
-
-        N = N_SEARCH_TAGS // 3 ## 2 general tags + 1 advertiser name
-        final_tags = list(itertools.chain(
-            *[
-                general_tags[2*i:2*(i+1)] + advertiser_tags[i:i+1] 
-            for i in range(N)
-            ] 
-        ))
-
-        ## If room for more, add advertiser names until hit limit
-        final_tags.extend(
-            advertiser_tags[N:N + (N_SEARCH_TAGS - len(final_tags))] 
-        )
-        return final_tags
-
-
     processed_tags = seq(sorted(general_tags, key=lambda x: x['nbHits'], reverse=True)) \
         .filter(lambda x: x['nbHits'] > MIN_SEARCH_TAG_HITS) \
         .filter(lambda x: x['filter'] not in searchString) \
+        .filter(lambda x: x['nbHits'] < 4*nbHits/5) \
         .take(N_SEARCH_TAGS) \
         .to_list()
     final_res = _build_final_tags(processed_tags, advertiser_tags)
@@ -208,6 +205,7 @@ def productSearch(args, index: Index) -> list:
         product_label_filter_applied=len(product_labels)>0,
         advertiser_filter_applied=len(advertiser_names)>0,
         user_id=user_id,
-        max_price=max_price
+        max_price=max_price,
+        nbHits=data['nbHits']
     )
     return data
