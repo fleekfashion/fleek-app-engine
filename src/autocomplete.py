@@ -10,6 +10,7 @@ from functional import seq
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
 from meilisearch.index import Index
+from src.defs.utils import HIDDEN_LABEL_FIELDS
 
 from src.defs.utils import HIDDEN_LABEL_FIELDS
 from src.defs.postgres import PROJECT
