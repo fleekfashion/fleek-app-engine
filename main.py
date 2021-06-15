@@ -114,25 +114,25 @@ def pushUserEvent():
 @app.route('/writeUserProductFave', methods=['POST'])
 def writeUserProductFave():
     data = request.get_json(force=True)
-    res = upa.write_user_product_fave(data)
+    res = write_user_product_fave(data)
     return jsonify({'success': res})
 
 @app.route('/writeUserProductBag', methods=['POST'])
 def writeUserProductBag():
     data = request.get_json(force=True)
-    res = upa.write_user_product_bag(data)
+    res = write_user_product_bag(data)
     return jsonify({'success': res})
 
 @app.route('/writeUserProductTrash', methods=['POST'])
 def writeUserProductTrash():
     data = request.get_json(force=True)
-    res = upa.write_user_product_seen(data)
+    res = write_user_product_seen(data)
     return jsonify({'success': res})
 
 @app.route('/removeUserProductFave', methods=['POST'])
 def removeUserProductFave():
     data = request.get_json(force=True)
-    res = upa.remove_user_product_fave(data)
+    res = remove_user_product_fave(data)
     return jsonify({'success': res})
 
 @app.route('/removeUserProductBag', methods=['POST'])
