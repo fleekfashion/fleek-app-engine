@@ -24,6 +24,8 @@ def getBoardSuggestions(args: dict) -> dict:
         .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
         .limit(MAX_PRODUCTS) \
         .cte()
+
+
     
     similar_products = s.select(
         p.SimilarItems.similar_product_id.label('product_id'),
@@ -56,7 +58,20 @@ def getBoardSuggestionsSecondaryLabels(args: dict) -> dict:
     user_id = args['user_id']
     offset = args['offset']
     limit = args['limit']
+    MAX_PRODUCTS = 50
     
+    board_products = s.select(p.BoardProduct) \
+        .filter(p.BoardProduct.board_id == board_id) \
+        .limit(MAX_PRODUCTS) \
+        .cte()
+
+    similar_products = s.select(
+        p.SimilarItems.similar_product_id.label('product_id'),
+        ) \
+        .join(board_products, board_products.c.product_id == p.SimilarItems.product_id) \
+        .group_by(p.SimilarItems.similar_product_id) \
+        .cte()
+
     q = s.select(
         p.ProductSecondaryLabels.product_secondary_label,
         F.count(p.ProductSecondaryLabels.product_id).label('n_products')
@@ -72,10 +87,16 @@ def getBoardSuggestionsSecondaryLabels(args: dict) -> dict:
         F.sum(q.c.n_products).label('score'),
         p.ProductSecondaryLabels.product_id
     ) \
+        .where(
+            p.ProductSecondaryLabels.product_id.in_(
+                s.select(similar_products.c.product_id)
+            )
+        ) \
         .where(p.ProductSecondaryLabels.product_secondary_label == q.c.product_secondary_label) \
-        .where(~ p.ProductSecondaryLabels.product_id.in_(
-            s.select(p.BoardProduct.product_id) \
-                .filter(p.BoardProduct.board_id == board_id)
+        .where(
+            ~p.ProductSecondaryLabels.product_id.in_(
+                s.select(p.BoardProduct.product_id) \
+                    .filter(p.BoardProduct.board_id == board_id)
             )
         ) \
         .group_by(p.ProductSecondaryLabels.product_id) \
@@ -96,4 +117,3 @@ def getBoardSuggestionsSecondaryLabels(args: dict) -> dict:
     return {
         "products": result
     }
-
