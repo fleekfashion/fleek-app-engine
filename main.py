@@ -255,7 +255,7 @@ def getProductsFromAdvertiser():
 @app.route('/getBoardSuggestions', methods=['GET'])
 def getBoardSuggestions():
     return jsonify(
-        bs.getBoardSuggestions(request.args)
+        bs.getBoardSuggestionsSecondaryLabels(request.args)
     )
 
 @app.route('/getAddToBoardOptions', methods=['GET'])
