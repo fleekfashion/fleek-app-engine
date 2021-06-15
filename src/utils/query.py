@@ -228,7 +228,6 @@ def join_product_info(
     )
     return parsed_products_query
 
-
 def _get_user_board_products(
         user_id: int, 
         offset: int, 
@@ -252,3 +251,17 @@ def _get_user_board_products(
             board_product_lateral_subq, 
             user_board_ids_subq.c.user_id
     ).join(board_product_lateral_subq, s.true())
+
+def join_board_info(q: CTE) -> Select:
+    board_subq = s.select(
+            q,
+            p.Board.name, 
+            p.Board.creation_date, 
+            p.Board.description, 
+            p.Board.artwork_url) \
+        .join(q, q.c.board_id == p.Board.board_id) \
+        .cte()
+    board_type = s.select(board_subq, p.BoardType) \
+        .join(board_subq, board_subq.c.board_id == p.BoardType.board_id)
+
+    return board_type
