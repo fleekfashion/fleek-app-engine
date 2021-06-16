@@ -1,9 +1,7 @@
 import json
-from src.utils.psycop_utils import cur_execute
 from src.utils import hashers
 from src.defs import postgres as p
 from src.utils.sqlalchemy_utils import session_scope
-
 
 def upload_event(args) -> bool:
     new_args = {}

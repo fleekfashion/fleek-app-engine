@@ -6,10 +6,11 @@ from typing import Dict, List, Any
 from dataclasses import dataclass
 
 import cachetools.func
-from functional import seq, pseq
+from functional import seq
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
 from meilisearch.index import Index
+from src.defs.utils import HIDDEN_LABEL_FIELDS
 
 from src.defs.utils import HIDDEN_LABEL_FIELDS
 from src.defs.postgres import PROJECT
@@ -107,7 +108,7 @@ def _process_hits(hits: List[Dict[Any, Any]], searchString: str) -> Dict[Any, An
     return {
         "advertiser_names": _get_advertiser_names(hits[0]),
         "color": _parse_highlighted_field(hits[0]['colors'], minlen=3, first=True, rm_tag=False),
-        "hits": pseq(hits) \
+        "hits": seq(hits) \
                     .map(_process_doc) \
                     .map(_process_suggestion) \
                     .filter(lambda x: 
