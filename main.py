@@ -213,7 +213,7 @@ def getProductsFromAdvertiser():
 @app.route('/getBoardSuggestions', methods=['GET'])
 def getBoardSuggestions():
     return jsonify(
-        bs.getBoardSuggestionsSecondaryLabels(request.args)
+        bs.getBoardSuggestions(request.args)
     )
 
 if __name__ == '__main__':
