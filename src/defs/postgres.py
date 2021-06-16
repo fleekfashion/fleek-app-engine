@@ -58,6 +58,9 @@ UserEvents = Base.classes.user_events
 UserBoard = Base.classes.user_board
 UserFavedBrands = Base.classes.user_faved_brands
 UserMutedBrands = Base.classes.user_muted_brands
+UserProductFaves = Base.classes.user_product_faves
+UserProductBags = Base.classes.user_product_bags
+UserProductSeens = Base.classes.user_product_seens
 
 ## Order Tables
 Advertiser = Base.classes.advertiser

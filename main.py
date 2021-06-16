@@ -17,16 +17,11 @@
 Demonstrates how to create a simple echo API as well as how to deal with
 various authentication methods.
 """
-import base64
-import json
-import logging
-import os
 import psycopg2
 import meilisearch
 
 from flask import Flask, jsonify, request
 from flask_cors import cross_origin
-from six.moves import http_client
 
 from sqlalchemy import create_engine, MetaData, Table
 
@@ -39,6 +34,7 @@ from src.trending import trendingSearches, labelSearches
 from src.event_upload import upload_event
 import src.single_product_info as spi 
 from src.product_price_history import get_product_price_history
+import src.user_product_actions as upa
 import src.write_user_boards as wub
 import src.read_user_boards as rub
 import src.user_brand_actions as uba
@@ -109,13 +105,41 @@ def getProductPriceHistory():
     data = get_product_price_history(conn, request.args)
     return jsonify(data)
 
-
 @app.route('/pushUserEvent', methods=['POST'])
 def pushUserEvent():
     data = request.get_json(force=True)
     res = upload_event(data)
     return jsonify({'event is': res})
 
+@app.route('/writeUserProductFave', methods=['POST'])
+def writeUserProductFave():
+    data = request.get_json(force=True)
+    res = upa.write_user_product_fave(data)
+    return jsonify({'success': res})
+
+@app.route('/writeUserProductBag', methods=['POST'])
+def writeUserProductBag():
+    data = request.get_json(force=True)
+    res = upa.write_user_product_bag(data)
+    return jsonify({'success': res})
+
+@app.route('/writeUserProductTrash', methods=['POST'])
+def writeUserProductTrash():
+    data = request.get_json(force=True)
+    res = upa.write_user_product_seen(data)
+    return jsonify({'success': res})
+
+@app.route('/removeUserProductFave', methods=['POST'])
+def removeUserProductFave():
+    data = request.get_json(force=True)
+    res = upa.remove_user_product_fave(data)
+    return jsonify({'success': res})
+
+@app.route('/removeUserProductBag', methods=['POST'])
+def removeUserProductBag():
+    data = request.get_json(force=True)
+    res = upa.remove_user_product_bag(data)
+    return jsonify({'success': res})
 
 @app.route('/writeUserFavedBrand', methods=['POST'])
 def writeUserFavedBrand():
