@@ -38,13 +38,13 @@ def _remove_product_event_helper(event_table: p.PostgreTable, args: dict) -> boo
     product_id = args['product_id']
 
     ## Execute session transaction
-    try:
-        remove_query = s.delete(event_table).where(
-            s.and_(
-                event_table.user_id == user_id,
-                event_table.product_id == product_id
-            )
+    remove_query = s.delete(event_table).where(
+        s.and_(
+            event_table.user_id == user_id,
+            event_table.product_id == product_id
         )
+    )
+    try:
         with session_scope() as session:
             session.execute(remove_query)
     except Exception as e:
@@ -52,7 +52,7 @@ def _remove_product_event_helper(event_table: p.PostgreTable, args: dict) -> boo
         return False
     return True
 
-def _add_product_seen_helper(args: dict) -> bool:
+def write_user_product_seen(args: dict) -> bool:
     ## Parse args
     new_args = _parse_product_event_args_helper(args)
 
@@ -71,9 +71,6 @@ def write_user_product_fave(args: dict) -> bool:
 
 def write_user_product_bag(args: dict) -> bool:
     return _add_product_event_helper(p.UserProductBags, args)
-
-def write_user_product_seen(args: dict) -> bool:
-    return _add_product_seen_helper(args)
 
 def remove_user_product_fave(args: dict) -> bool:
     return _remove_product_event_helper(p.UserProductFaves, args)
