@@ -38,9 +38,9 @@ def _join_board_stats(q: CTE) -> Select:
 
     return s.select(
         q,
-        board_stats.c.n_products,
-        board_stats.c.advertiser_stats
-    ).filter(q.c.board_id == board_stats.c.board_id)
+        F.coalesce(board_stats.c.n_products, 0).label('n_products'),
+        F.coalesce(board_stats.c.advertiser_stats, []).label('advertiser_stats')
+    ).outerjoin(board_stats, q.c.board_id == board_stats.c.board_id)
 
 def getBoardInfo(args: dict) -> dict:
     board_id = args['board_id']
