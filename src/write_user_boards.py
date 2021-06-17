@@ -12,6 +12,7 @@ def create_new_board(args: dict) -> dict:
     last_modified_timestamp = int(dt.now().timestamp())
     creation_date = dt.now().strftime('%Y-%m-%d')
     board_name = args['board_name']
+    board_type = args.get('board_type', 'user')
 
     ## Required fields
     board_args = {
@@ -19,6 +20,7 @@ def create_new_board(args: dict) -> dict:
         'creation_date': creation_date,
         'last_modified_timestamp': last_modified_timestamp,
         'name': board_name,
+        'board_type': board_type,
     }
 
     user_board_args = {
@@ -29,16 +31,6 @@ def create_new_board(args: dict) -> dict:
         'is_collaborator': False,
         'is_following': False,
         'is_suggested': False,
-    }
-
-    board_type_args = {
-        'board_id': board_id,
-        'is_user_generated': True,
-        'is_smart': False,
-        'is_price_drop': False,
-        'is_all_faves': False,
-        'is_global': False,
-        'is_daily_mix': False,
     }
 
     ## Optional fields
@@ -52,15 +44,12 @@ def create_new_board(args: dict) -> dict:
         p.BoardProduct(board_id=board_id, product_id=product_id, last_modified_timestamp=last_modified_timestamp)
         for product_id in args.get('product_ids', [])
     ]
-    board_type = p.BoardType(**board_type_args)
-
 
     ## Execute session transaction
     try:
         with session_scope() as session:
             session.add(board)
             session.add(user_board)
-            session.add(board_type)
             session.add_all(board_products)
             session.commit()
     except Exception as e:
@@ -116,7 +105,6 @@ def remove_board(args: dict) -> dict:
             remove_board_statements = [
                 s.delete(p.BoardProduct).where(p.BoardProduct.board_id == board_id),
                 s.delete(p.UserBoard).where(p.UserBoard.board_id == board_id),
-                s.delete(p.BoardType).where(p.BoardType.board_id == board_id),
                 s.delete(p.Board).where(p.Board.board_id == board_id)
             ]
             for statement in remove_board_statements: session.execute(statement)
