@@ -51,7 +51,6 @@ TopProducts = Base.classes.top_products
 ## Board Tables
 Board = Base.classes.board
 BoardProduct = Base.classes.board_product
-BoardType = Base.classes.board_type
 
 ## User Tables
 UserEvents = Base.classes.user_events
