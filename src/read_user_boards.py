@@ -103,16 +103,13 @@ def getUserBoardsBatch(args: dict) -> dict:
         .group_by(join_product_info_query.c.board_id) \
         .cte()
 
-    join_board_subq = s.select(p.Board.board_id, p.Board.name, p.Board.creation_date, p.Board.description, p.Board.artwork_url) \
+    join_board_subq = s.select(p.Board.board_id, p.Board.name, p.Board.creation_date, p.Board.description, p.Board.artwork_url, p.Board.board_type) \
         .join(user_board_ids_subq, user_board_ids_subq.c.board_id == p.Board.board_id) \
         .cte()
-    join_board_type_subq = s.select(join_board_subq, p.BoardType) \
-        .join(join_board_subq, join_board_subq.c.board_id == p.BoardType.board_id) \
-        .cte()
 
-    join_board_type_subq_cols = [c for c in join_board_type_subq.c if 'board_id' not in c.name or 'board_id' == c.name ]
-    join_board_info_and_products = s.select(*join_board_type_subq_cols, group_by_board_subq.c.products) \
-        .outerjoin(group_by_board_subq, group_by_board_subq.c.board_id == join_board_type_subq.c.board_id)
+    join_board_subq_cols = [c for c in join_board_subq.c if 'board_id' not in c.name or 'board_id' == c.name ]
+    join_board_info_and_products = s.select(*join_board_subq_cols, group_by_board_subq.c.products) \
+        .outerjoin(group_by_board_subq, group_by_board_subq.c.board_id == join_board_subq.c.board_id)
     
     boards = _join_board_stats(join_board_info_and_products.cte())
     result = run_query(boards)
