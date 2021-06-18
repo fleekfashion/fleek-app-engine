@@ -105,7 +105,6 @@ def remove_board(args: dict) -> dict:
             remove_board_statements = [
                 s.delete(p.BoardProduct).where(p.BoardProduct.board_id == board_id),
                 s.delete(p.UserBoard).where(p.UserBoard.board_id == board_id),
-                s.delete(p.BoardType).where(p.BoardType.board_id == board_id),
                 s.delete(p.Board).where(p.Board.board_id == board_id)
             ]
             for statement in remove_board_statements: session.execute(statement)
