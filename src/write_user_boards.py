@@ -4,7 +4,6 @@ from src.defs import postgres as p
 import uuid
 from datetime import datetime as dt
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.dialects import postgresql
 
 
 def create_new_board(args: dict) -> dict:
