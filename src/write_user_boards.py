@@ -102,10 +102,9 @@ def remove_board(args: dict) -> dict:
     board_id = args['board_id']
     try:
         with session_scope() as session:
+            remove_board_tables = [p.BoardProduct, p.UserBoard, p.Board]
             remove_board_statements = [
-                s.delete(p.BoardProduct).where(p.BoardProduct.board_id == board_id),
-                s.delete(p.UserBoard).where(p.UserBoard.board_id == board_id),
-                s.delete(p.Board).where(p.Board.board_id == board_id)
+                s.delete(table).where(table.board_id == board_id) for table in remove_board_tables
             ]
             for statement in remove_board_statements: session.execute(statement)
     except Exception as e:
