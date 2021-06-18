@@ -3,6 +3,7 @@ from src.utils import hashers
 from src.defs import postgres as p
 import uuid
 from datetime import datetime as dt
+from sqlalchemy.dialects.postgresql import insert
 import sqlalchemy as s
 
 
@@ -59,11 +60,20 @@ def create_new_board(args: dict) -> dict:
     return {"success": True, "board_id": board_id}
 
 def write_product_to_board(args: dict) -> dict:
+    timestamp = int(dt.now().timestamp())
     board_product_args = {
         'board_id': args['board_id'],
         'product_id': args['product_id'],
-        'last_modified_timestamp': int(dt.now().timestamp()),
+        'last_modified_timestamp': timestamp,
     }
+    user_event_args = {
+        'user_id': hashers.apple_id_to_user_id_hash(args['user_id']),
+        'product_id': args['product_id'],
+        'event_timestamp': timestamp
+    }
+
+    insert_event_statement = insert(p.UserProductFaves).values(**user_event_args).on_conflict_do_nothing()
+    insert_product_seen_statement = insert(p.UserProductSeens).values(**user_event_args).on_conflict_do_nothing()
 
     ## Construct SQLAlchemy Object
     board_product = p.BoardProduct(**board_product_args)
@@ -72,7 +82,8 @@ def write_product_to_board(args: dict) -> dict:
     try:
         with session_scope() as session:
             session.add(board_product)
-            session.commit()
+            session.execute(insert_event_statement)
+            session.execute(insert_product_seen_statement)
     except Exception as e:
         print(e)
         return {"success": False}
