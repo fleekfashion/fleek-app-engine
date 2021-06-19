@@ -3,8 +3,9 @@ from src.utils import hashers
 from src.defs import postgres as p
 import uuid
 from datetime import datetime as dt
-import sqlalchemy as s
 from sqlalchemy.dialects.postgresql import insert
+import sqlalchemy as s
+from sqlalchemy.exc import IntegrityError
 
 
 def create_new_board(args: dict) -> dict:
@@ -84,8 +85,9 @@ def write_product_to_board(args: dict) -> dict:
             session.add(board_product)
             session.execute(insert_event_statement)
             session.execute(insert_product_seen_statement)
+    except IntegrityError as e:
+        return {"success": False, "error": "IntegrityError: Product already exists in this board."}
     except Exception as e:
-        print(e)
         return {"success": False}
     
     return {"success": True}
@@ -113,10 +115,9 @@ def remove_board(args: dict) -> dict:
     board_id = args['board_id']
     try:
         with session_scope() as session:
+            remove_board_tables = [p.BoardProduct, p.UserBoard, p.Board]
             remove_board_statements = [
-                s.delete(p.BoardProduct).where(p.BoardProduct.board_id == board_id),
-                s.delete(p.UserBoard).where(p.UserBoard.board_id == board_id),
-                s.delete(p.Board).where(p.Board.board_id == board_id)
+                s.delete(table).where(table.board_id == board_id) for table in remove_board_tables
             ]
             for statement in remove_board_statements: session.execute(statement)
     except Exception as e:
