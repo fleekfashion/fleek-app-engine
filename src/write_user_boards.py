@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime as dt
 from sqlalchemy.dialects.postgresql import insert
 import sqlalchemy as s
+from sqlalchemy.exc import IntegrityError
 
 
 def create_new_board(args: dict) -> dict:
@@ -84,8 +85,9 @@ def write_product_to_board(args: dict) -> dict:
             session.add(board_product)
             session.execute(insert_event_statement)
             session.execute(insert_product_seen_statement)
+    except IntegrityError as e:
+        return {"success": False, "error": "IntegrityError: Product already exists in this board."}
     except Exception as e:
-        print(e)
         return {"success": False}
     
     return {"success": True}
