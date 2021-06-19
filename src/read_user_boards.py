@@ -55,14 +55,15 @@ def getBoardProductsBatch(args: dict) -> dict:
     offset = args['offset']
     limit = args['limit']
 
-    board_pids_query = s.select(p.BoardProduct.product_id) \
+    board_pids_query = s.select(p.BoardProduct.product_id, p.BoardProduct.last_modified_timestamp) \
                     .filter(p.BoardProduct.board_id == board_id) \
-                    .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+                    .order_by(p.BoardProduct.last_modified_timestamp.desc(), p.BoardProduct.product_id) \
+                    .limit(limit) \
+                    .offset(offset) \
                     .cte()
-    products_batch = qutils.join_product_info(board_pids_query) \
-        .limit(limit) \
-        .offset(offset) 
-    result = run_query(products_batch)
+    products_batch = qutils.join_product_info(board_pids_query).cte()
+    products_batch_ordered = s.select(products_batch).order_by(products_batch.c.last_modified_timestamp.desc(), products_batch.c.product_id)
+    result = run_query(products_batch_ordered)
     return {
         "products": result
     }
@@ -80,9 +81,9 @@ def getUserBoardsBatch(args: dict) -> dict:
         .limit(limit) \
         .cte()
 
-    board_product_lateral_subq = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id) \
+    board_product_lateral_subq = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id, p.BoardProduct.last_modified_timestamp) \
         .filter(p.BoardProduct.board_id == user_board_ids_subq.c.board_id) \
-        .order_by(p.BoardProduct.last_modified_timestamp.desc()) \
+        .order_by(p.BoardProduct.last_modified_timestamp.desc(), p.BoardProduct.product_id) \
         .limit(6) \
         .subquery() \
         .lateral()
@@ -103,19 +104,21 @@ def getUserBoardsBatch(args: dict) -> dict:
         .group_by(join_product_info_query.c.board_id) \
         .cte()
 
-    join_board_subq = s.select(p.Board.board_id, p.Board.name, p.Board.creation_date, p.Board.description, p.Board.artwork_url) \
+    join_board_subq = s.select(p.Board.board_id, p.Board.name, p.Board.creation_date, p.Board.description, p.Board.artwork_url, p.Board.board_type) \
         .join(user_board_ids_subq, user_board_ids_subq.c.board_id == p.Board.board_id) \
         .cte()
-    join_board_type_subq = s.select(join_board_subq, p.BoardType) \
-        .join(join_board_subq, join_board_subq.c.board_id == p.BoardType.board_id) \
-        .cte()
 
-    join_board_type_subq_cols = [c for c in join_board_type_subq.c if 'board_id' not in c.name ]
-    join_board_info_and_products = s.select(*join_board_type_subq_cols, group_by_board_subq) \
-        .outerjoin(group_by_board_subq, group_by_board_subq.c.board_id == join_board_type_subq.c.board_id)
-
+    join_board_subq_cols = [c for c in join_board_subq.c if 'board_id' not in c.name or 'board_id' == c.name ]
+    join_board_info_and_products = s.select(*join_board_subq_cols, group_by_board_subq.c.products) \
+        .outerjoin(group_by_board_subq, group_by_board_subq.c.board_id == join_board_subq.c.board_id)
+    
     boards = _join_board_stats(join_board_info_and_products.cte())
     result = run_query(boards)
+    
+    for board in result:
+        if board['products'] is not None:
+            board['products'] = sorted(board['products'], key=lambda k: k['product_id'])
+            board['products'] = sorted(board['products'], key=lambda k: k['last_modified_timestamp'], reverse=True)
     return {
         "boards": result
     }

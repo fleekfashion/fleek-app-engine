@@ -3,6 +3,9 @@ from src.utils import hashers
 from src.defs import postgres as p
 import uuid
 from datetime import datetime as dt
+from sqlalchemy.dialects.postgresql import insert
+import sqlalchemy as s
+from sqlalchemy.exc import IntegrityError
 
 
 def create_new_board(args: dict) -> dict:
@@ -11,6 +14,7 @@ def create_new_board(args: dict) -> dict:
     last_modified_timestamp = int(dt.now().timestamp())
     creation_date = dt.now().strftime('%Y-%m-%d')
     board_name = args['board_name']
+    board_type = args.get('board_type', 'user')
 
     ## Required fields
     board_args = {
@@ -18,6 +22,7 @@ def create_new_board(args: dict) -> dict:
         'creation_date': creation_date,
         'last_modified_timestamp': last_modified_timestamp,
         'name': board_name,
+        'board_type': board_type,
     }
 
     user_board_args = {
@@ -28,16 +33,6 @@ def create_new_board(args: dict) -> dict:
         'is_collaborator': False,
         'is_following': False,
         'is_suggested': False,
-    }
-
-    board_type_args = {
-        'board_id': board_id,
-        'is_user_generated': True,
-        'is_smart': False,
-        'is_price_drop': False,
-        'is_all_faves': False,
-        'is_global': False,
-        'is_daily_mix': False,
     }
 
     ## Optional fields
@@ -51,15 +46,12 @@ def create_new_board(args: dict) -> dict:
         p.BoardProduct(board_id=board_id, product_id=product_id, last_modified_timestamp=last_modified_timestamp)
         for product_id in args.get('product_ids', [])
     ]
-    board_type = p.BoardType(**board_type_args)
-
 
     ## Execute session transaction
     try:
         with session_scope() as session:
             session.add(board)
             session.add(user_board)
-            session.add(board_type)
             session.add_all(board_products)
             session.commit()
     except Exception as e:
@@ -69,11 +61,20 @@ def create_new_board(args: dict) -> dict:
     return {"success": True, "board_id": board_id}
 
 def write_product_to_board(args: dict) -> dict:
+    timestamp = int(dt.now().timestamp())
     board_product_args = {
         'board_id': args['board_id'],
         'product_id': args['product_id'],
-        'last_modified_timestamp': int(dt.now().timestamp()),
+        'last_modified_timestamp': timestamp,
     }
+    user_event_args = {
+        'user_id': hashers.apple_id_to_user_id_hash(args['user_id']),
+        'product_id': args['product_id'],
+        'event_timestamp': timestamp
+    }
+
+    insert_event_statement = insert(p.UserProductFaves).values(**user_event_args).on_conflict_do_nothing()
+    insert_product_seen_statement = insert(p.UserProductSeens).values(**user_event_args).on_conflict_do_nothing()
 
     ## Construct SQLAlchemy Object
     board_product = p.BoardProduct(**board_product_args)
@@ -82,9 +83,46 @@ def write_product_to_board(args: dict) -> dict:
     try:
         with session_scope() as session:
             session.add(board_product)
-            session.commit()
+            session.execute(insert_event_statement)
+            session.execute(insert_product_seen_statement)
+    except IntegrityError as e:
+        return {"success": False, "error": "IntegrityError: Product already exists in this board."}
     except Exception as e:
-        print(e)
         return {"success": False}
     
     return {"success": True}
+
+def remove_product_from_board(args: dict) -> dict:
+    board_id = args['board_id']
+    product_id = args['product_id']
+
+    try:
+        with session_scope() as session:
+            remove_product_from_board_stmt = s.delete(p.BoardProduct).where(
+                s.and_(
+                    p.BoardProduct.board_id == board_id, 
+                    p.BoardProduct.product_id == product_id
+                )
+            )
+            session.execute(remove_product_from_board_stmt)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
+    return {"success": True}
+
+def remove_board(args: dict) -> dict:
+    board_id = args['board_id']
+    try:
+        with session_scope() as session:
+            remove_board_tables = [p.BoardProduct, p.UserBoard, p.Board]
+            remove_board_statements = [
+                s.delete(table).where(table.board_id == board_id) for table in remove_board_tables
+            ]
+            for statement in remove_board_statements: session.execute(statement)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
+    return {"success": True}
+
