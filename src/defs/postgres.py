@@ -42,6 +42,8 @@ ProductInfo = Base.classes.product_info
 ProductColorOptions = Base.classes.product_color_options
 ProductPriceHistory = Base.classes.product_price_history
 ProductRecs = Base.classes.user_product_recommendations
+ProductLabels= Base.classes.product_labels
+ProductSecondaryLabels= Base.classes.product_secondary_labels
 ProductSizeInfo = Base.classes.product_size_info
 SimilarItems  = Base.classes.similar_products_v2
 TopProducts = Base.classes.top_products
@@ -49,13 +51,15 @@ TopProducts = Base.classes.top_products
 ## Board Tables
 Board = Base.classes.board
 BoardProduct = Base.classes.board_product
-BoardType = Base.classes.board_type
 
 ## User Tables
 UserEvents = Base.classes.user_events
 UserBoard = Base.classes.user_board
 UserFavedBrands = Base.classes.user_faved_brands
 UserMutedBrands = Base.classes.user_muted_brands
+UserProductFaves = Base.classes.user_product_faves
+UserProductBags = Base.classes.user_product_bags
+UserProductSeens = Base.classes.user_product_seens
 
 ## Order Tables
 Advertiser = Base.classes.advertiser
