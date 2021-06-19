@@ -256,13 +256,12 @@ def _get_user_board_products(
         ).join(board_product_lateral_subq, s.true())
 
 def join_board_info(q: CTE) -> Select:
-    board_q = s.select(
+    return s.select(
             q,
             p.Board.name, 
             p.Board.creation_date, 
             p.Board.description, 
             p.Board.artwork_url,
-            p.Board.board_type) \
+            p.Board.board_type
+        ) \
         .join(q, q.c.board_id == p.Board.board_id)
-
-    return board_q

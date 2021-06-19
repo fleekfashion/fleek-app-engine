@@ -247,16 +247,16 @@ def getProductsFromAdvertiser():
     res = orders.getProductsFromAdvertiser(request.args)
     return jsonify(res)
 
+@app.route('/getAddToBoardOptions', methods=['GET'])
+def getAddToBoardOptions():
+    res = atb.getAddToBoardOptions(request.args)
+    return jsonify(res)
+
 @app.route('/getBoardSuggestions', methods=['GET'])
 def getBoardSuggestions():
     return jsonify(
         bs.getBoardSuggestionsSecondaryLabels(request.args)
     )
-
-@app.route('/getAddToBoardOptions', methods=['GET'])
-def getAddToBoardOptions():
-    res = atb.getAddToBoardOptions(request.args)
-    return jsonify(res)
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
