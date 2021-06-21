@@ -89,14 +89,14 @@ def _apply_product_search_filter(
 
     product_search_words = query.rstrip().lstrip().split(' ')
 
-    product_label_clauses = or_(*[F.array_to_string(products_subquery.c.product_labels, '').ilike('%'+word+'%') for word in product_search_words])
+    product_label_clauses = or_(*[F.array_to_string(products_subquery.c.product_labels, DELIMITER).ilike(f'%{word}%') for word in product_search_words])
     product_color_clauses = or_(products_subquery.c.color.ilike(word) for word in product_search_words)
-    product_advertiser_name_clauses = or_(products_subquery.c.advertiser_name.ilike('%'+word+'%') for word in product_search_words)
-    product_name_clauses = or_(products_subquery.c.product_name.ilike('%'+word+'%') for word in product_search_words)
-    product_secondary_labels_clauses = or_(*[F.array_to_string(products_subquery.c.product_secondary_labels, '').ilike('%'+word+'%') for word in product_search_words])
+    product_advertiser_name_clauses = or_(products_subquery.c.advertiser_name.ilike(f'%{word}%') for word in product_search_words)
+    product_name_clauses = or_(products_subquery.c.product_name.ilike(f'%{word}%') for word in product_search_words)
+    product_secondary_labels_clauses = or_(*[F.array_to_string(products_subquery.c.product_secondary_labels, DELIMITER).ilike(f'%{word}%') for word in product_search_words])
     product_internal_color_clauses = or_(products_subquery.c.internal_color.ilike(word) for word in product_search_words)
-    product_brand_clauses = or_(products_subquery.c.product_brand.ilike('%'+word+'%') for word in product_search_words)
-    product_tags_clauses = or_(*[F.array_to_string(products_subquery.c.product_tags, '').ilike('%'+word+'%') for word in product_search_words])
+    product_brand_clauses = or_(products_subquery.c.product_brand.ilike(f'%{word}%') for word in product_search_words)
+    product_tags_clauses = or_(*[F.array_to_string(products_subquery.c.product_tags, DELIMITER).ilike(f'%{word}%') for word in product_search_words])
 
     product_query_with_match_cols = s.select(
         products_subquery, 
@@ -111,9 +111,10 @@ def _apply_product_search_filter(
     ).cte()
 
     match_cols = filter(lambda col: col.name.startswith('matches_'), product_query_with_match_cols.c)
+    non_match_cols = filter(lambda col: not col.name.startswith('matches_'), product_query_with_match_cols.c)
 
     product_search_filter_query = s.select(
-        product_query_with_match_cols
+        non_match_cols
     ).filter(
         or_(
             *[col == True for col in match_cols]
@@ -145,7 +146,7 @@ def _apply_filter(
         q = q.filter(subq.c.product_labels.overlap(array(product_labels)) )
     elif key == "on_sale" and value:
         q = q.filter(subq.c.product_sale_price < subq.c.product_price)
-    elif key == "product_search":
+    elif key == "product_search_string":
         q = _apply_product_search_filter(subq, value)
     else:
         return products_subquery
