@@ -1,9 +1,9 @@
-from src.utils.sqlalchemy_utils import session_scope
+from src.utils.sqlalchemy_utils import session_scope, run_query
 from src.utils import hashers
 from src.defs import postgres as p
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import insert
 import sqlalchemy as s
+from sqlalchemy import func as F
 
 def _parse_product_event_args_helper(args: dict) -> dict:
     new_args = {}
@@ -35,17 +35,26 @@ def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
 
 def _add_product_event_batch_helper(event_table: p.PostgreTable, args: dict):
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+    
+    ## Filter out only valid product_ids 
+    product_ids = [product['product_id'] for product in args['products']]
+    filtered_product_ids_q = s.select(p.ProductInfo.product_id).where(p.ProductInfo.product_id == F.any(product_ids))
+    filtered_product_ids_result = run_query(filtered_product_ids_q)
+    filtered_product_ids = [product['product_id'] for product in filtered_product_ids_result]
+    products_to_add = list(filter(lambda x: x['product_id'] in filtered_product_ids, args['products']))
+    
+    ## Construct event objects to be added
     def add_user_id_to_dict(d):
         d['user_id'] = user_id
         return d
-    event_objects = list(map(add_user_id_to_dict, args['products']))
-    insert_events_statement = insert(event_table).values(event_objects).on_conflict_do_nothing()
-    insert_product_seens_statement = insert(p.UserProductSeens).values(event_objects).on_conflict_do_nothing()
+    product_event_objects = list(map(add_user_id_to_dict, products_to_add))
+    insert_product_event_statement = insert(event_table).values(product_event_objects).on_conflict_do_nothing()
+    insert_product_seen_statement = insert(p.UserProductSeens).values(product_event_objects).on_conflict_do_nothing()
 
     try:
         with session_scope() as session:
-            session.execute(insert_events_statement)
-            session.execute(insert_product_seens_statement)
+            session.execute(insert_product_event_statement)
+            session.execute(insert_product_seen_statement)
     except Exception as e:
         print(e)
         return False
