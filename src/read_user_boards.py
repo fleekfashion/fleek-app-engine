@@ -73,21 +73,31 @@ def getUserBoardsBatch(args: dict) -> dict:
     offset = args['offset']
     limit = args['limit']
 
-    user_board_ids_subq = s.select(p.UserBoard.board_id, p.UserBoard.user_id) \
+    user_board_ids_subq = s.select(p.UserBoard.board_id) \
         .filter(p.UserBoard.user_id == user_id) \
-        .order_by(p.UserBoard.last_modified_timestamp.desc()) \
-        .offset(offset) \
-        .limit(limit) \
         .cte()
 
-    board_product_lateral_subq = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id, p.BoardProduct.last_modified_timestamp) \
-        .filter(p.BoardProduct.board_id == user_board_ids_subq.c.board_id) \
+    join_board_timestamp_subq = s.select(
+            user_board_ids_subq, 
+            p.Board.last_modified_timestamp.label('board_last_modified_timestamp')
+        ) \
+        .join(p.Board, user_board_ids_subq.c.board_id == p.Board.board_id) \
+        .cte()
+
+    board_offset_and_limit_subq = s.select(join_board_timestamp_subq) \
+        .order_by(join_board_timestamp_subq.c.board_last_modified_timestamp.desc()) \
+        .limit(limit) \
+        .offset(offset) \
+        .cte()
+
+    board_product_lateral_subq = s.select(p.BoardProduct) \
+        .filter(p.BoardProduct.board_id == board_offset_and_limit_subq.c.board_id) \
         .order_by(p.BoardProduct.last_modified_timestamp.desc(), p.BoardProduct.product_id) \
         .limit(6) \
         .subquery() \
         .lateral()
 
-    join_board_product_subq = s.select(board_product_lateral_subq, user_board_ids_subq.c.user_id) \
+    join_board_product_subq = s.select(board_offset_and_limit_subq, board_product_lateral_subq) \
         .join(board_product_lateral_subq, s.true()) \
         .cte()
     join_product_info_query = qutils.join_product_info(join_board_product_subq).cte()
@@ -96,23 +106,25 @@ def getUserBoardsBatch(args: dict) -> dict:
     product_cols_json_agg = list(itertools.chain(*product_cols))
     group_by_board_subq = s.select(
             join_product_info_query.c.board_id,
+            join_product_info_query.c.board_last_modified_timestamp,
             postgresql.array_agg(
                 F.json_build_object(*product_cols_json_agg)
             ).label('products')
         ) \
-        .group_by(join_product_info_query.c.board_id) \
+        .group_by(join_product_info_query.c.board_id, join_product_info_query.c.board_last_modified_timestamp) \
         .cte()
 
-    join_board_subq = s.select(p.Board.board_id, p.Board.name, p.Board.creation_date, p.Board.description, p.Board.artwork_url, p.Board.board_type) \
-        .join(user_board_ids_subq, user_board_ids_subq.c.board_id == p.Board.board_id) \
+    join_board_subq = s.select(p.Board.board_id, p.Board.name, p.Board.creation_date, p.Board.description, p.Board.artwork_url, p.Board.board_type, board_offset_and_limit_subq.c.board_last_modified_timestamp) \
+        .join(board_offset_and_limit_subq, board_offset_and_limit_subq.c.board_id == p.Board.board_id) \
         .cte()
 
     join_board_subq_cols = [c for c in join_board_subq.c if 'board_id' not in c.name or 'board_id' == c.name ]
     join_board_info_and_products = s.select(*join_board_subq_cols, group_by_board_subq.c.products) \
         .outerjoin(group_by_board_subq, group_by_board_subq.c.board_id == join_board_subq.c.board_id)
-    
-    boards = _join_board_stats(join_board_info_and_products.cte())
-    result = run_query(boards)
+
+    boards = _join_board_stats(join_board_info_and_products.cte()).cte()
+    boards_ordered = s.select(boards).order_by(boards.c.board_last_modified_timestamp.desc())
+    result = run_query(boards_ordered)
     
     for board in result:
         if board['products'] is not None:
