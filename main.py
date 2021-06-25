@@ -118,10 +118,22 @@ def writeUserProductFave():
     res = upa.write_user_product_fave(data)
     return jsonify({'success': res})
 
+@app.route('/writeUserProductFaveBatch', methods=['POST'])
+def writeUserProductFaveBatch():
+    data = request.get_json(force=True)
+    res = upa.write_user_product_fave_batch(data)
+    return jsonify({'success': res})
+
 @app.route('/writeUserProductBag', methods=['POST'])
 def writeUserProductBag():
     data = request.get_json(force=True)
     res = upa.write_user_product_bag(data)
+    return jsonify({'success': res})
+
+@app.route('/writeUserProductBagBatch', methods=['POST'])
+def writeUserProductBagBatch():
+    data = request.get_json(force=True)
+    res = upa.write_user_product_bag_batch(data)
     return jsonify({'success': res})
 
 @app.route('/writeUserProductTrash', methods=['POST'])
@@ -136,10 +148,22 @@ def removeUserProductFave():
     res = upa.remove_user_product_fave(data)
     return jsonify({'success': res})
 
+@app.route('/removeUserProductFaveBatch', methods=['POST'])
+def removeUserProductFaveBatch():
+    data = request.get_json(force=True)
+    res = upa.remove_user_product_fave_batch(data)
+    return jsonify({'success': res})
+
 @app.route('/removeUserProductBag', methods=['POST'])
 def removeUserProductBag():
     data = request.get_json(force=True)
     res = upa.remove_user_product_bag(data)
+    return jsonify({'success': res})
+
+@app.route('/removeUserProductBagBatch', methods=['POST'])
+def removeUserProductBagBatch():
+    data = request.get_json(force=True)
+    res = upa.remove_user_product_bag_batch(data)
     return jsonify({'success': res})
 
 @app.route('/writeUserFavedBrand', methods=['POST'])
