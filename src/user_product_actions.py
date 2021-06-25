@@ -49,14 +49,14 @@ def _add_product_event_batch_helper(event_table: p.PostgreTable, args: dict):
         .join(p.ProductInfo, product_event_values_cte.c.product_id == p.ProductInfo.product_id)
     insert_product_event_statement = insert(event_table) \
         .from_select(['user_id','product_id','event_timestamp'], filtered_product_event_q) \
-        .on_conflict_do_nothing()
+        .on_conflict_do_nothing() if event_table is not None else None
     insert_product_seen_statement = insert(p.UserProductSeens) \
         .from_select(['user_id','product_id','event_timestamp'], filtered_product_event_q) \
         .on_conflict_do_nothing()
 
     try:
         with session_scope() as session:
-            session.execute(insert_product_event_statement)
+            if insert_product_event_statement is not None: session.execute(insert_product_event_statement)
             session.execute(insert_product_seen_statement)
     except Exception as e:
         print(e)
@@ -122,6 +122,9 @@ def write_user_product_bag(args: dict) -> bool:
 
 def write_user_product_bag_batch(args: dict) -> bool:
     return _add_product_event_batch_helper(p.UserProductBags, args)
+
+def write_user_product_seen_batch(args: dict) -> bool:
+    return _add_product_event_batch_helper(None, args)
 
 def remove_user_product_fave(args: dict) -> bool:
     return _remove_product_event_helper(p.UserProductFaves, args)
