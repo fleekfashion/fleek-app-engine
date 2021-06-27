@@ -75,6 +75,9 @@ def write_product_to_board(args: dict) -> dict:
 
     insert_event_statement = insert(p.UserProductFaves).values(**user_event_args).on_conflict_do_nothing()
     insert_product_seen_statement = insert(p.UserProductSeens).values(**user_event_args).on_conflict_do_nothing()
+    update_board_statement = s.update(p.Board) \
+        .where(p.Board.board_id == board_product_args['board_id']) \
+        .values(last_modified_timestamp=timestamp)
 
     ## Construct SQLAlchemy Object
     board_product = p.BoardProduct(**board_product_args)
@@ -85,6 +88,7 @@ def write_product_to_board(args: dict) -> dict:
             session.add(board_product)
             session.execute(insert_event_statement)
             session.execute(insert_product_seen_statement)
+            session.execute(update_board_statement)
     except IntegrityError as e:
         return {"success": False, "error": "IntegrityError: Product already exists in this board."}
     except Exception as e:
