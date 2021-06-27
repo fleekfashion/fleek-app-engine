@@ -60,6 +60,23 @@ def create_new_board(args: dict) -> dict:
     
     return {"success": True, "board_id": board_id}
 
+def update_board_name(args: dict) -> dict:
+    board_id = args['board_id']
+    board_name = args['board_name']
+
+    update_board_name_statement = s.update(p.Board) \
+        .where(p.Board.board_id == board_id) \
+        .values(name=board_name)
+
+    try:
+        with session_scope() as session:
+            session.execute(update_board_name_statement)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+    
+    return {"success": True}
+
 def write_product_to_board(args: dict) -> dict:
     timestamp = int(dt.now().timestamp())
     board_product_args = {
