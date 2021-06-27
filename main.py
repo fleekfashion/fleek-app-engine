@@ -221,6 +221,12 @@ def createNewBoard():
     res = wub.create_new_board(data)
     return jsonify(res)
 
+@app.route('/updateBoardName', methods=['POST'])
+def updateBoardName():
+    data = request.get_json(force=True)
+    res = wub.update_board_name(data)
+    return jsonify(res)
+
 @app.route('/writeProductToBoard', methods=['POST'])
 def writeProductToBoard():
     data = request.get_json(force=True)
