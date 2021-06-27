@@ -262,6 +262,7 @@ def join_board_info(q: CTE) -> Select:
             p.Board.creation_date, 
             p.Board.description, 
             p.Board.artwork_url,
-            p.Board.board_type
+            p.Board.board_type,
+            p.Board.last_modified_timestamp
         ) \
         .join(q, q.c.board_id == p.Board.board_id)

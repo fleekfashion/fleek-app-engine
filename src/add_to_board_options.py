@@ -20,16 +20,22 @@ def getAddToBoardOptions(args):
 
     user_board_pid = qutils._get_user_board_products(user_id, offset, limit, 1).cte()
     user_board_products = qutils.join_base_product_info(user_board_pid).cte()
-    user_board_info = qutils.join_board_info(user_board_products).cte()
+
+    user_board_info = qutils.join_board_info(
+        s.select(p.UserBoard.board_id) \
+            .filter(p.UserBoard.user_id == user_id).cte()
+    ).cte()
+
+
 
     q = s.select(
         user_board_info.c.board_id,
         user_board_info.c.name,
-        user_board_info.c.product_image_url,
+        user_board_products.c.product_image_url,
         literal(product_id).in_(
             s.select(p.BoardProduct.product_id) \
                 .where(p.BoardProduct.board_id == user_board_info.c.board_id)
         ).label('is_in_board')
-    )
-
+    ).outerjoin(user_board_products, user_board_info.c.board_id == user_board_products.c.board_id) \
+        .order_by(user_board_info.c.last_modified_timestamp.desc())
     return run_query(q)
