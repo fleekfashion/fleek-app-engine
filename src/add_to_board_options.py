@@ -37,5 +37,5 @@ def getAddToBoardOptions(args):
                 .where(p.BoardProduct.board_id == user_board_info.c.board_id)
         ).label('is_in_board')
     ).outerjoin(user_board_products, user_board_info.c.board_id == user_board_products.c.board_id) \
-        .order_by(user_board_info.c.last_modified_timestamp)
+        .order_by(user_board_info.c.last_modified_timestamp.desc())
     return run_query(q)
