@@ -143,6 +143,12 @@ def writeUserProductTrash():
     res = upa.write_user_product_seen(data)
     return jsonify({'success': res})
 
+@app.route('/writeUserProductSeenBatch', methods=['POST'])
+def writeUserProductSeenBatch():
+    data = request.get_json(force=True)
+    res = upa.write_user_product_seen_batch(data)
+    return jsonify({'success': res})
+
 @app.route('/removeUserProductFave', methods=['POST'])
 def removeUserProductFave():
     data = request.get_json(force=True)

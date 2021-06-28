@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import insert
 import sqlalchemy as s
 from sqlalchemy import func as F
 from sqlalchemy.sql import Values
+from sqlalchemy.dialects.postgresql.dml import Insert
 
 def _parse_product_event_args_helper(args: dict) -> dict:
     new_args = {}
@@ -34,7 +35,7 @@ def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
         return False
     return True
 
-def _add_product_event_batch_helper(event_table: p.PostgreTable, args: dict):
+def _get_insert_statement_for_bulk_upload(event_table: p.PostgreTable, args: dict) -> Insert:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     product_event_values_cte = s.select(
         Values(
@@ -50,13 +51,28 @@ def _add_product_event_batch_helper(event_table: p.PostgreTable, args: dict):
     insert_product_event_statement = insert(event_table) \
         .from_select(['user_id','product_id','event_timestamp'], filtered_product_event_q) \
         .on_conflict_do_nothing()
-    insert_product_seen_statement = insert(p.UserProductSeens) \
-        .from_select(['user_id','product_id','event_timestamp'], filtered_product_event_q) \
-        .on_conflict_do_nothing()
+    
+    return insert_product_event_statement
+
+
+def _add_product_event_batch_helper(event_table: p.PostgreTable, args: dict):
+    insert_product_event_statement = _get_insert_statement_for_bulk_upload(event_table, args)
+    insert_product_seen_statement = _get_insert_statement_for_bulk_upload(p.UserProductSeens, args)
 
     try:
         with session_scope() as session:
             session.execute(insert_product_event_statement)
+            session.execute(insert_product_seen_statement)
+    except Exception as e:
+        print(e)
+        return False
+    return True
+
+def _add_product_seen_batch_helper(args: dict):
+    insert_product_seen_statement = _get_insert_statement_for_bulk_upload(p.UserProductSeens, args)
+
+    try:
+        with session_scope() as session:
             session.execute(insert_product_seen_statement)
     except Exception as e:
         print(e)
@@ -122,6 +138,9 @@ def write_user_product_bag(args: dict) -> bool:
 
 def write_user_product_bag_batch(args: dict) -> bool:
     return _add_product_event_batch_helper(p.UserProductBags, args)
+
+def write_user_product_seen_batch(args: dict) -> bool:
+    return _add_product_seen_batch_helper(args)
 
 def remove_user_product_fave(args: dict) -> bool:
     return _remove_product_event_helper(p.UserProductFaves, args)
