@@ -26,6 +26,7 @@ from flask_cors import cross_origin
 from sqlalchemy import create_engine, MetaData, Table
 
 from src.defs.postgres import DATABASE_USER, PASSWORD, DBNAME, PROJECT
+from src.defs.search import *
 from src.utils import hashers, static, user_info
 from src.rec import get_batch
 from src.productSearch import productSearch
@@ -45,17 +46,8 @@ from src import add_to_board_options as atb
 from src.similarProducts import getSimilarProducts
 
 app = Flask(__name__)
-
-SEARCH_URL = 'http://174.138.109.133/'
-SEARCH_PSWD = "kian_is_on_fleek"
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
                         host='localhost', port='5431', dbname=DBNAME)
-c = meilisearch.Client(SEARCH_URL, SEARCH_PSWD)
-index = c.get_index(f"{PROJECT}_products")
-ac_index = c.get_index(f"{PROJECT}_autocomplete")
-trending_index = c.get_index(f"{PROJECT}_trending_searches")
-label_index = c.get_index(f"{PROJECT}_labels")
-del c
 
 @app.route('/getUserProductBatch', methods=['GET'])
 def getUserProductBatch():
