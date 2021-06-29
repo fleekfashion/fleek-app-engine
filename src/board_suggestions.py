@@ -5,11 +5,14 @@ import sqlalchemy as s
 from sqlalchemy.sql.expression import literal, literal_column
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import func as F
+from werkzeug.datastructures import ImmutableMultiDict
 
 from src.utils import query as qutils 
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
 from src.defs import postgres as p
+from src.defs.search import index 
+from src.productSearch import productSearch
 
 def getBoardSuggestions(args: dict) -> dict:
     board_id = args['board_id']
@@ -72,6 +75,15 @@ def getBoardSuggestions(args: dict) -> dict:
         .limit(limit)
 
     result = run_query(products)
+
+    res2 = result if len(result) > 0 else productSearch(
+        index=index, 
+        args=ImmutableMultiDict({
+            'searchString': '',
+            'offset': offset,
+            'limit': limit
+        })
+    )
     return {
-        "products": result
+        "products": res2 
     }
