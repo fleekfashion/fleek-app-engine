@@ -83,7 +83,7 @@ def getBoardSuggestions(args: dict) -> dict:
             'offset': offset,
             'limit': limit
         })
-    )
+    ).get('hits')
     return {
         "products": res2 
     }
