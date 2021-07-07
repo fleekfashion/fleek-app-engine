@@ -98,23 +98,25 @@ def parse_filters(args: t.Union[dict, ImmutableMultiDict]) -> dict:
 
 def _apply_filter(
         q: Select,
+        products_subquery: t.Union[Alias, CTE],
         key: str,
         value: t.Any,
     ) -> Select:
 
+    subq = products_subquery
 
     if key == "min_price":
-        q = q.filter(q.c.product_sale_price >= int(value))
+        q = q.filter(subq.c.product_sale_price >= int(value))
     elif key == "max_price":
-        q = q.filter(q.c.product_sale_price <= int(value))
+        q = q.filter(subq.c.product_sale_price <= int(value))
     elif key in ["advertiser_name", "advertiser_names"] and len(str(value)) > 0:
         advertiser_names = value.split(DELIMITER) if type(value) == str else value
-        q = q.filter(q.c.advertiser_name.in_(literal(advertiser_names)))
+        q = q.filter(subq.c.advertiser_name.in_(literal(advertiser_names)))
     elif (key == "product_tag" or key == "product_labels") and len(str(value)) > 0:
         product_labels = value.split(DELIMITER) if type(value) == str else value
-        q = q.filter(q.c.product_labels.overlap(array(product_labels)) )
+        q = q.filter(subq.c.product_labels.overlap(array(product_labels)) )
     elif key == "on_sale" and value:
-        q = q.filter(q.c.product_sale_price < q.c.product_price)
+        q = q.filter(subq.c.product_sale_price < subq.c.product_price)
     return q
 
 def apply_filters(
@@ -123,12 +125,13 @@ def apply_filters(
         active_only: bool
     ) -> Select:
 
-    q = s.select(products_subquery)
-    if active_only:
-        q = q.filter(q.c.is_active == True)
     filters = parse_filters(args)
+    q = s.select(products_subquery)
+    q = q.filter(products_subquery.c.is_active == True) if active_only \
+        else q
+
     for key, value in filters.items():
-        q = _apply_filter(q, key, value)
+        q = _apply_filter(q, products_subquery, key, value)
     return q
 
 def join_product_color_info(products_subquery: t.Union[Alias, CTE], product_id_field: str = 'product_id') -> Select:
