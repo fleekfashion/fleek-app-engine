@@ -11,6 +11,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy import func as F
 from sqlalchemy.sql.expression import literal, literal_column
 from sqlalchemy.dialects.postgresql import array
+from werkzeug.datastructures import ImmutableMultiDict
 
 from src.utils import user_info
 from src.utils import static 
@@ -62,7 +63,7 @@ def apply_ranking(
         p.UserFavedBrands.advertiser_name,
         literal(scaling_factor).label('scaling_factor')
     ).filter(p.UserFavedBrands.user_id == literal(user_id)) \
-    .cte('fave_brands' + gen_rand())
+    .cte()
 
     ranked_products = s.select(
         products_subquery,
@@ -76,26 +77,39 @@ def apply_ranking(
         products_subquery.c.advertiser_name == faved_brands.c.advertiser_name,
         isouter=True
     ).filter(products_subquery.c.advertiser_name == AC.advertiser_name) \
-    .cte('ranked_products' + gen_rand())
+    .cte()
 
     final_q = s.select(ranked_products) \
                   .order_by(ranked_products.c.normalized_rank.asc())
     return final_q
 
+def parse_filters(args: t.Union[dict, ImmutableMultiDict]) -> dict:
+    if isinstance(args, ImmutableMultiDict):
+        res = { 
+            **args,
+            'advertiser_names': args.getlist('advertiser_names'),
+            'product_labels': args.getlist('product_labels'),
+            'product_secondary_labels': args.getlist('product_secondary_labels')
+        }
+    else:
+        res = args
+    res2 = { key: value for key, value in res.items() if not isinstance(value, list) or len(value) > 0 }
+    return res2
+
 def _apply_filter(
-        products_subquery: t.Union[Alias, CTE], 
+        q: Select,
+        products_subquery: t.Union[Alias, CTE],
         key: str,
         value: t.Any,
     ) -> Select:
 
-    q = s.select(products_subquery)
     subq = products_subquery
 
     if key == "min_price":
         q = q.filter(subq.c.product_sale_price >= int(value))
     elif key == "max_price":
         q = q.filter(subq.c.product_sale_price <= int(value))
-    elif key == "advertiser_name" and len(str(value)) > 0:
+    elif key in ["advertiser_name", "advertiser_names"] and len(str(value)) > 0:
         advertiser_names = value.split(DELIMITER) if type(value) == str else value
         q = q.filter(subq.c.advertiser_name.in_(literal(advertiser_names)))
     elif (key == "product_tag" or key == "product_labels") and len(str(value)) > 0:
@@ -103,9 +117,7 @@ def _apply_filter(
         q = q.filter(subq.c.product_labels.overlap(array(product_labels)) )
     elif key == "on_sale" and value:
         q = q.filter(subq.c.product_sale_price < subq.c.product_price)
-    else:
-        return products_subquery
-    return q.cte(f"{key}_filter_applied" + gen_rand())
+    return q
 
 def apply_filters(
         products_subquery: t.Union[Alias, CTE],
@@ -113,14 +125,14 @@ def apply_filters(
         active_only: bool
     ) -> Select:
 
-    subq = products_subquery
-    for key, value in args.items():
-        subq = _apply_filter(subq, key, value)
-    
-    final_q = s.select(subq)
-    if active_only:
-        final_q = final_q.filter(subq.c.is_active == True)
-    return final_q
+    filters = parse_filters(args)
+    q = s.select(products_subquery)
+    q = q.filter(products_subquery.c.is_active == True) if active_only \
+        else q
+
+    for key, value in filters.items():
+        q = _apply_filter(q, products_subquery, key, value)
+    return q
 
 def join_product_color_info(products_subquery: t.Union[Alias, CTE], product_id_field: str = 'product_id') -> Select:
     join_field = products_subquery.c[product_id_field]
@@ -131,7 +143,7 @@ def join_product_color_info(products_subquery: t.Union[Alias, CTE], product_id_f
         p.ProductColorOptions.alternate_color_product_id,
     ).filter(
         p.ProductColorOptions.product_id.in_(s.select(join_field))
-    ).cte('alt_color_ids_cte' + gen_rand())
+    ).cte()
 
     ## Get basic alt color info
     alt_color_info = s.select(
@@ -146,7 +158,7 @@ def join_product_color_info(products_subquery: t.Union[Alias, CTE], product_id_f
     ).filter(alt_color_ids.c.alternate_color_product_id == p.ProductInfo.product_id) \
     .filter(p.ProductInfo.is_active == True) \
     .group_by(alt_color_ids.c.product_id) \
-    .cte('alt_color_info_cte' + gen_rand())
+    .cte()
     
     ## Join with original query
     final_query = s.select(
@@ -175,7 +187,7 @@ def join_product_sizes(products_subquery: t.Union[Alias, CTE], product_id_field:
         p.ProductSizeInfo.product_id.in_(s.select(join_field))
     ) \
      .group_by(p.ProductSizeInfo.product_id) \
-     .cte('add_size_cte' + gen_rand())
+     .cte()
 
     return s.select(products_subquery, sizes_subquery.c.sizes) \
                   .join(sizes_subquery, sizes_subquery.c.product_id == join_field, isouter=True)
@@ -188,7 +200,7 @@ def join_external_product_info(
     color_info_products_subquery = join_product_color_info(
         products_subquery,
         product_id_field=product_id_field
-    ).cte('products_add_color_info_cte' + gen_rand())
+    ).cte()
 
     parsed_products_query = join_product_sizes(
         color_info_products_subquery,
@@ -219,7 +231,7 @@ def join_product_info(
     products_query = join_base_product_info(
         subquery,
         product_id_field=product_id_field
-    ).cte('base_product_info' + gen_rand())
+    ).cte()
 
     ## All external Product Info
     parsed_products_query = join_external_product_info(
