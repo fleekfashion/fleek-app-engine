@@ -24,9 +24,10 @@ def getSimilarProducts(args: dict) -> t.List[dict]:
     sim_pids = s.select(
         p.SimilarItems.similar_product_id.label('product_id')
     ) \
-    .filter(p.SimilarItems.product_id == literal(product_id) ) \
-    .offset(offset) \
-    .limit(limit) \
-    .cte('similar_product_ids')
-    similar_products_query = qutils.join_product_info(sim_pids)
-    return run_query(similar_products_query)
+        .filter(p.SimilarItems.product_id == literal(product_id) ) \
+        .offset(offset) \
+        .limit(limit) \
+        .cte('similar_product_ids')
+    similar_products_query = qutils.join_product_info(sim_pids).cte()
+    filtered_products = qutils.apply_filters(similar_products_query, args, active_only=True)
+    return run_query(filtered_products)
