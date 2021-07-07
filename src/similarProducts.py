@@ -29,4 +29,5 @@ def getSimilarProducts(args: dict) -> t.List[dict]:
     .limit(limit) \
     .cte('similar_product_ids')
     similar_products_query = qutils.join_product_info(sim_pids)
+    filtered_products = qutils.apply_filters(similar_products_query, args, active_only=True)
     return run_query(similar_products_query)
