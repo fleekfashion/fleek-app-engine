@@ -57,8 +57,8 @@ def getBoardProductsBatch(args: dict) -> dict:
 
     board_pids_query = s.select(p.BoardProduct.product_id, p.BoardProduct.last_modified_timestamp) \
                     .filter(p.BoardProduct.board_id == board_id) \
-                    .order_by(p.BoardProduct.last_modified_timestamp.desc(), p.BoardProduct.product_id) \
                     .cte()
+
     products = qutils.join_product_info(board_pids_query).cte()
     filtered_products = qutils.apply_filters(
         products,
@@ -67,11 +67,15 @@ def getBoardProductsBatch(args: dict) -> dict:
     ) \
         .limit(limit) \
         .offset(offset).cte()
+
     products_batch_ordered = s.select(filtered_products) \
-            .order_by(
-                filtered_products.c.last_modified_timestamp.desc(),
-                filtered_products.c.product_id
-            )
+        .order_by(
+            filtered_products.c.last_modified_timestamp.desc(),
+            filtered_products.c.product_id
+        ) \
+        .limit(limit) \
+        .offset(offset)
+
     result = run_query(products_batch_ordered)
     return {
         "products": result
