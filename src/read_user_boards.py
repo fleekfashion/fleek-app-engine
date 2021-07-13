@@ -64,9 +64,7 @@ def getBoardProductsBatch(args: dict) -> dict:
         products,
         args,
         active_only=False
-    ) \
-        .limit(limit) \
-        .offset(offset).cte()
+    ).cte()
 
     products_batch_ordered = s.select(filtered_products) \
         .order_by(
