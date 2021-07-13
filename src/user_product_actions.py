@@ -6,6 +6,7 @@ import sqlalchemy as s
 from sqlalchemy import func as F
 from sqlalchemy.sql import Values
 from sqlalchemy.dialects.postgresql.dml import Insert
+from sqlalchemy.sql.expression import literal
 
 def _parse_product_event_args_helper(args: dict) -> dict:
     new_args = {}
@@ -17,6 +18,37 @@ def _parse_product_event_args_helper(args: dict) -> dict:
 
     return new_args
 
+def build_write_to_smart_board_stmt(
+        user_id: int, 
+        product_id: int, 
+        event_timestamp: int
+    ) -> Insert:
+    ## Get user Boards
+    user_boards = s.select(p.UserBoard.board_id) \
+        .where(p.UserBoard.user_id == user_id)
+
+    ## Get smarttags for those boards
+    user_board_smart_tags = s.select(p.BoardSmartTag) \
+        .where(p.BoardSmartTag.board_id.in_(user_boards)) \
+        .cte()
+
+    ## Get relevent boards for the product
+    board_product = s.select(
+        user_board_smart_tags.c.board_id, 
+        p.ProductSmartTag.product_id, 
+        literal(event_timestamp).label('last_modified_timestamp')
+    ) \
+        .where(p.ProductSmartTag.product_id == product_id) \
+        .join(user_board_smart_tags, p.ProductSmartTag.smart_tag_id == user_board_smart_tags.c.smart_tag_id) \
+        .distinct()
+
+    ## Write product to those boards
+    insert_board_product= insert(p.BoardProduct) \
+        .from_select(['board_id', 'product_id', 'last_modified_timestamp'], board_product) \
+        .on_conflict_do_nothing()
+
+    return insert_board_product
+
 def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
     ## Parse args
     new_args = _parse_product_event_args_helper(args)
@@ -24,12 +56,15 @@ def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
     ## Create objects
     insert_event_statement = insert(event_table).values(**new_args).on_conflict_do_nothing()
     insert_product_seen_statement = insert(p.UserProductSeens).values(**new_args).on_conflict_do_nothing()
+    insert_to_smart_boards = build_write_to_smart_board_stmt(**new_args)
 
     ## Execute session transaction
     try:
         with session_scope() as session:
             session.execute(insert_event_statement)
             session.execute(insert_product_seen_statement)
+            session.execute(insert_to_smart_boards)
+            session.commit()
     except Exception as e:
         print(e)
         return False
@@ -63,6 +98,7 @@ def _add_product_event_batch_helper(event_table: p.PostgreTable, args: dict):
         with session_scope() as session:
             session.execute(insert_product_event_statement)
             session.execute(insert_product_seen_statement)
+            session.commit()
     except Exception as e:
         print(e)
         return False
@@ -74,6 +110,7 @@ def _add_product_seen_batch_helper(args: dict):
     try:
         with session_scope() as session:
             session.execute(insert_product_seen_statement)
+            session.commit()
     except Exception as e:
         print(e)
         return False
@@ -93,6 +130,7 @@ def _remove_product_event_helper(event_table: p.PostgreTable, args: dict) -> boo
     try:
         with session_scope() as session:
             session.execute(remove_query)
+            session.commit()
     except Exception as e:
         print(e)
         return False
@@ -108,6 +146,7 @@ def _remove_product_event_batch_helper(event_table: p.PostgreTable, args: dict) 
     try:
         with session_scope() as session:
             session.execute(remove_query)
+            session.commit()
     except Exception as e:
         print(e)
         return False
@@ -122,6 +161,7 @@ def write_user_product_seen(args: dict) -> bool:
     try:
         with session_scope() as session:
             session.execute(insert_product_seen_statement)
+            session.commit()
     except Exception as e:
         print(e)
         return False

@@ -52,6 +52,11 @@ TopProducts = Base.classes.top_products
 Board = Base.classes.board
 BoardProduct = Base.classes.board_product
 
+## Smart Tags
+SmartTag = Base.classes.smart_tag
+ProductSmartTag = Base.classes.product_smart_tag
+BoardSmartTag = Base.classes.board_smart_tag
+
 ## User Tables
 UserEvents = Base.classes.user_events
 UserBoard = Base.classes.user_board
