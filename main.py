@@ -44,6 +44,7 @@ from src import orders
 from src import loadProducts  
 from src import add_to_board_options as atb
 from src.similarProducts import getSimilarProducts
+from src import product_board_names
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -284,6 +285,12 @@ def getAddToBoardOptions():
 def getBoardSuggestions():
     return jsonify(
         bs.getBoardSuggestions(request.args)
+    )
+
+@app.route('/getProductBoardNameSuggestions', methods=['GET'])
+def getProductBoardNameSuggestions():
+    return jsonify(
+        product_board_names.getProductBoardNameSuggestions(request.args)
     )
 
 if __name__ == '__main__':
