@@ -294,12 +294,6 @@ def getProductBoardNameSuggestions():
         product_board_names.getProductBoardNameSuggestions(request.args)
     )
 
-@app.route('/getProductBoardNameSuggestions', methods=['GET'])
-def getProductBoardNameSuggestions():
-    return jsonify(
-        product_board_names.getProductBoardNameSuggestions(request.args)
-    )
-
 @app.route('/getBoardSmartTagSuggestions', methods=['GET'])
 def getBoardSmartTagSuggestions():
     return jsonify(
