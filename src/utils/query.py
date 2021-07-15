@@ -1,5 +1,6 @@
 import typing as t
 import random
+from datetime import datetime, timedelta
 
 import sqlalchemy as s
 from sqlalchemy.sql.selectable import Alias, CTE, Select
@@ -15,11 +16,14 @@ from werkzeug.datastructures import ImmutableMultiDict
 
 from src.utils import user_info
 from src.utils import static 
-
 DELIMITER = ",_,"
 
-def gen_rand() -> str:
-    return "_" + str(random.randint(1, 10**8))
+def days_ago_timestamp(days: int) -> int:
+    return int((datetime.utcnow() - timedelta(days=days) ).timestamp())
+
+def get_daily_random_seed() -> float:
+    random.seed(datetime.utcnow().date())
+    return random.random()
 
 def sort_columns(
         q: t.Union[Alias, CTE]
