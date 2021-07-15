@@ -45,11 +45,8 @@ from src import loadProducts
 from src import add_to_board_options as atb
 from src.similarProducts import getSimilarProducts
 from src import product_board_names
-<<<<<<< HEAD
 from src import board_smart_tag_suggestions
-=======
 from src import suggested_boards
->>>>>>> suggested-boards
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
