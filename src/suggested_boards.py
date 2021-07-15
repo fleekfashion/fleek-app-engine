@@ -139,8 +139,8 @@ def join_product_preview(ranked_smart_tags: CTE, user_id: int) -> Select:
     ).order_by(ranked_smart_tags.c.score.desc())
     return q
 
-def getSuggestedBoardsBatch(args: dict) -> dict:
-    user_id = args['user_id']
+def getSuggestedBoardsBatch(args: dict, dev_mode: bool=False) -> dict:
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id']) if not dev_mode else args['user_id']
     offset = args['offset']
     limit = args['limit']
 
