@@ -12,6 +12,22 @@ from src.utils import query as qutils
 from src.utils import hashers
 from src.defs import postgres as p
 
+def _get_bad_smart_tags(board_id: str) -> Select:
+    board_smart_tags = s.select(p.BoardSmartTag.smart_tag_id) \
+        .where(p.BoardSmartTag.board_id == board_id)
+
+    existing_tags = s.select(p.SmartTag.suggestion) \
+        .where(p.SmartTag.smart_tag_id.in_(board_smart_tags)) \
+        .cte()
+
+    return s.select(
+        p.SmartTag.smart_tag_id, 
+    ).where(
+        s.or_(
+            p.SmartTag.suggestion.like('%'+existing_tags.c.suggestion+'%'),
+            existing_tags.c.suggestion.like('%'+p.SmartTag.suggestion+'%')
+        )
+    )
 def getBoardSmartTagSuggestions(args: dict) -> dict:
     board_id = args['board_id']
     limit = 6
@@ -37,6 +53,7 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
     ) \
         .where(p.ProductSmartTag.product_id.in_(board_products)) \
         .where(~p.ProductSmartTag.product_id.in_(tagged_products)) \
+        .where(~p.ProductSmartTag.smart_tag_id.in_(_get_bad_smart_tags(board_id))) \
         .group_by(p.ProductSmartTag.smart_tag_id) \
         .cte()
 
@@ -55,8 +72,6 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
             literal_column('is_strong_suggestion').desc(), 
             literal_column('score').desc()
     ).limit(limit)
-
-    print(ranked)
 
     res = run_query(ranked)
     is_strong = len(res) > 0 and res[0]['is_strong_suggestion']
