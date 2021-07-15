@@ -34,7 +34,7 @@ def _get_filtered_products(user_id: int) -> Select:
         )
 
 
-def ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool = True) -> Select:
+def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool = True) -> Select:
     NORMALIZATION = .5
     MIN_PRODUCTS = 3
     SCORE_POWER = 1
@@ -81,3 +81,73 @@ def ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool = T
         .offset(offset) \
         .limit(limit)
     return ordered_smart_tags
+
+
+def _get_smart_tag_products(ranked_smart_tags, user_id: int) -> Select:
+    ## Get relevent smart products
+    smart_products = s.select(p.ProductSmartTag) \
+        .where(p.ProductSmartTag.smart_tag_id.in_(
+                s.select(ranked_smart_tags.c.smart_tag_id)
+            )
+        ).cte()
+
+    ## Get smart products in user faves
+    ## And get the top 6
+    pids = s.select(
+        smart_products,
+        p.UserProductFaves.event_timestamp.label('last_modified_timestamp'),
+         F.row_number().over(
+             smart_products.c.smart_tag_id, 
+             order_by=(
+                 p.UserProductFaves.event_timestamp.desc(), 
+                 p.UserProductFaves.product_id.desc()
+             )
+         ).label('row_number')
+    ).join(
+        p.UserProductFaves, 
+        p.UserProductFaves.product_id == smart_products.c.product_id,
+    ) \
+        .where(p.UserProductFaves.user_id == user_id) \
+        .cte()
+
+    ## Get top 6 for each smart tag
+    filtered_pids = s.select(pids) \
+        .where(pids.c.row_number <= 6) \
+        .order_by(pids.c.smart_tag_id, pids.c.row_number) \
+        .cte()
+    products  = qutils.join_product_info(filtered_pids)
+    return products
+
+def join_product_preview(ranked_smart_tags: CTE, user_id: int) -> Select:
+    products = _get_smart_tag_products(ranked_smart_tags, user_id).cte()
+
+    product_cols = [(c.name, c) for c in products.c if c.name not in ranked_smart_tags.c ]
+    product_cols_json_agg = list(itertools.chain(*product_cols))
+    product_preview = s.select(
+        products.c.smart_tag_id,
+        postgresql.array_agg(
+            F.json_build_object(*product_cols_json_agg)
+        ).label('products')
+    ).group_by(products.c.smart_tag_id) \
+        .cte()
+
+    q = s.select(
+        ranked_smart_tags,
+        product_preview.c.products
+    ).join(product_preview, 
+        ranked_smart_tags.c.smart_tag_id==product_preview.c.smart_tag_id
+    ).order_by(ranked_smart_tags.c.score.desc())
+    return q
+
+def getSuggestedBoardsBatch(args: dict) -> dict:
+    user_id = args['user_id']
+    offset = args['offset']
+    limit = args['limit']
+
+    ranked_smart_tags = get_ranked_user_smart_tags(user_id, offset, limit, rand=True).cte()
+    q = join_product_preview(ranked_smart_tags, user_id)
+    result = run_query(q)
+    boards = [ {**b, 'products': qutils.sort_product_preview(b['products']) } for b in result ]
+    return {
+        'boards': boards
+    }

@@ -33,6 +33,12 @@ def sort_columns(
     ])
     return ordered_q
 
+def sort_product_preview(products: t.List[dict]) -> t.List[dict]:
+    return sorted(
+            products, 
+            key=lambda x: ( x['last_modified_timestamp'], x['product_id'] ),
+            reverse=True
+    )
     
 def union_by_names(
         q1: t.Union[Alias, CTE], 
@@ -47,7 +53,6 @@ def union_by_names(
         else ordered_q1.union(ordered_q2)
     return res
 
-        
 def apply_ranking(
         products_subquery: t.Union[Alias, CTE], 
         user_id: int, 
