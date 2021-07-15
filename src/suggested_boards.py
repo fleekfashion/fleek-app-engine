@@ -70,7 +70,7 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
     ordered_smart_tags = s.select(
         normalized_smart_tags.c.smart_tag_id,
         normalized_smart_tags.c.score,
-        normalized_smart_tags.c.suggestion,
+        normalized_smart_tags.c.suggestion.label('name'),
         F.setseed(qutils.get_daily_random_seed())
     ) \
         .order_by( (
