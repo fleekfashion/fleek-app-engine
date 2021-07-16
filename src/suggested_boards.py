@@ -68,7 +68,7 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
         (smart_tags.c.score/F.power(p.SmartTag.n_hits, NORMALIZATION)).label('score'),
         p.SmartTag.suggestion,
         smart_tags.c.n_products,
-        smart_tags.c.pids
+        smart_tags.c.pids,
     ).join(p.SmartTag, smart_tags.c.smart_tag_id==p.SmartTag.smart_tag_id) \
         .where(smart_tags.c.n_products >= MIN_PRODUCTS) \
         .cte()
@@ -76,9 +76,19 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
 
     ## Remove duplicate ids (boards with matching previews)
     duplicate_ids = s.select(
-        normalized_smart_tags.c.smart_tag_id
-    ).join(t2, normalized_smart_tags.c.pids == t2.c.pids) \
-        .where(normalized_smart_tags.c.score < t2.c.score)
+        normalized_smart_tags.c.smart_tag_id,
+    ) \
+        .join(t2, normalized_smart_tags.c.pids == t2.c.pids) \
+        .where(
+            s.or_(
+                normalized_smart_tags.c.score < t2.c.score, ## Take the item with lower score (to remove)
+                s.and_(
+                    normalized_smart_tags.c.suggestion < t2.c.suggestion, ## Tie breaker is suggestion (arbitrary)
+                    normalized_smart_tags.c.score == t2.c.score
+                )
+            )
+        ) \
+        .distinct()
 
     ## Order the smarttags with random seeding
     ordered_smart_tags = s.select(
@@ -90,8 +100,7 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
     ) \
         .where(~normalized_smart_tags.c.smart_tag_id.in_(duplicate_ids)) \
         .order_by( (
-            F.random()*F.power(normalized_smart_tags.c.score, SCORE_POWER) if rand \
-                else F.power(normalized_smart_tags.c.score, SCORE_POWER)
+            F.power(normalized_smart_tags.c.score, SCORE_POWER)
         ).desc()
     ) \
         .offset(offset) \
