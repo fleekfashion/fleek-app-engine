@@ -6,7 +6,7 @@ from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
 from src.defs import postgres as p
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 import itertools
 
@@ -49,6 +49,12 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
             )
         ).label('score'),
         F.count(products.c.product_id).label('n_products'),
+        psql.array_agg(
+            psql.aggregate_order_by(
+                products.c.product_id,
+                products.c.event_timestamp.desc()
+            )
+        )[0:3].label('pids'),
         p.ProductSmartTag.smart_tag_id
     ).join(
         p.ProductSmartTag,
@@ -61,32 +67,52 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
         smart_tags.c.smart_tag_id,
         (smart_tags.c.score/F.power(p.SmartTag.n_hits, NORMALIZATION)).label('score'),
         p.SmartTag.suggestion,
-        smart_tags.c.n_products
+        smart_tags.c.n_products,
+        smart_tags.c.pids,
     ).join(p.SmartTag, smart_tags.c.smart_tag_id==p.SmartTag.smart_tag_id) \
         .where(smart_tags.c.n_products >= MIN_PRODUCTS) \
         .cte()
+    t2 = normalized_smart_tags.alias('t2')
+
+    ## Remove duplicate ids (boards with matching previews)
+    duplicate_ids = s.select(
+        normalized_smart_tags.c.smart_tag_id,
+    ) \
+        .join(t2, normalized_smart_tags.c.pids == t2.c.pids) \
+        .where(
+            s.or_(
+                normalized_smart_tags.c.score < t2.c.score, ## Take the item with lower score (to remove)
+                s.and_(
+                    normalized_smart_tags.c.suggestion < t2.c.suggestion, ## Tie breaker is suggestion (arbitrary)
+                    normalized_smart_tags.c.score == t2.c.score
+                )
+            )
+        ) \
+        .distinct()
 
     ## Order the smarttags with random seeding
     ordered_smart_tags = s.select(
         normalized_smart_tags.c.smart_tag_id,
         normalized_smart_tags.c.score,
+        normalized_smart_tags.c.pids,
         normalized_smart_tags.c.suggestion.label('name'),
         F.setseed(qutils.get_daily_random_seed())
     ) \
+        .where(~normalized_smart_tags.c.smart_tag_id.in_(duplicate_ids)) \
         .order_by( (
-            F.random()*F.power(normalized_smart_tags.c.score, SCORE_POWER) if rand \
-                else F.power(normalized_smart_tags.c.score, SCORE_POWER)
+            F.power(normalized_smart_tags.c.score, SCORE_POWER)
         ).desc()
     ) \
         .offset(offset) \
         .limit(limit)
-    return ordered_smart_tags
+    return ordered_smart_tags 
 
 
 def _get_smart_tag_products(ranked_smart_tags, user_id: int) -> Select:
     ## Get relevent smart products
     smart_products = s.select(p.ProductSmartTag) \
-        .where(p.ProductSmartTag.smart_tag_id.in_(
+        .where(
+            p.ProductSmartTag.smart_tag_id.in_(
                 s.select(ranked_smart_tags.c.smart_tag_id)
             )
         ).cte()
@@ -125,15 +151,18 @@ def join_product_preview(ranked_smart_tags: CTE, user_id: int) -> Select:
     product_cols_json_agg = list(itertools.chain(*product_cols))
     product_preview = s.select(
         products.c.smart_tag_id,
-        postgresql.array_agg(
-            F.json_build_object(*product_cols_json_agg)
-        ).label('products')
+        psql.array_agg(
+            psql.aggregate_order_by(
+                F.json_build_object(*product_cols_json_agg),
+                products.c.last_modified_timestamp.desc()
+            )
+        ).label('products'),
     ).group_by(products.c.smart_tag_id) \
         .cte()
 
     q = s.select(
         ranked_smart_tags,
-        product_preview.c.products
+        product_preview.c.products,
     ).join(product_preview, 
         ranked_smart_tags.c.smart_tag_id==product_preview.c.smart_tag_id
     ).order_by(ranked_smart_tags.c.score.desc())
@@ -146,8 +175,7 @@ def getSuggestedBoardsBatch(args: dict, dev_mode: bool=False) -> dict:
 
     ranked_smart_tags = get_ranked_user_smart_tags(user_id, offset, limit, rand=True).cte()
     q = join_product_preview(ranked_smart_tags, user_id)
-    result = run_query(q)
-    boards = [ {**b, 'products': qutils.sort_product_preview(b['products']) } for b in result ]
+    boards = run_query(q)
     return {
         'boards': boards
     }
