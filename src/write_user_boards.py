@@ -1,3 +1,4 @@
+from src.defs.types.board_type import BoardType
 from src.utils.sqlalchemy_utils import session_scope
 from src.utils import hashers
 from src.defs import postgres as p
@@ -9,14 +10,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import Values
 from sqlalchemy.sql.expression import cast
 
-
 def create_new_board(args: dict) -> dict:
     board_id = uuid.uuid4().hex
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     last_modified_timestamp = int(dt.now().timestamp())
     creation_date = dt.now().strftime('%Y-%m-%d')
     board_name = args['board_name']
-    board_type = args.get('board_type', 'user')
+    board_type = args.get('board_type', BoardType.USER_GENERATED)
 
     ## Required fields
     board_args = {
@@ -62,22 +62,19 @@ def create_new_board(args: dict) -> dict:
     
     return {"success": True, "board_id": board_id}
 
-def create_price_drop_board(args: dict) -> dict:
+def get_price_drop_board_insert_stmts(args: dict):
     board_id = uuid.uuid4().hex
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     last_modified_timestamp = int(dt.now().timestamp())
-    creation_date = dt.now().strftime('%Y-%m-%d')
-    board_name = args['board_name']
 
-    ## Required fields
     board_args = {
-        'board_id':board_id,
-        'creation_date': creation_date,
-        'name': board_name,
+        'board_id': board_id,
+        'creation_date': dt.now().strftime('%Y-%m-%d'),
+        'name': args['board_name'],
         'description': args.get('description', None),
         'last_modified_timestamp': last_modified_timestamp,
         'artwork_url': args.get('artwork_url', None),
-        'board_type': 'price_drop',
+        'board_type': BoardType.PRICE_DROP
     }
 
     user_board_args = {
@@ -90,7 +87,7 @@ def create_price_drop_board(args: dict) -> dict:
         'is_suggested': False,
     }
     
-    get_price_drop_boards_for_user_id_cte = s.select(p.Board.board_type) \
+    get_boards_for_user_id_cte = s.select(p.Board.board_type) \
         .join(p.UserBoard, p.UserBoard.board_id == p.Board.board_id) \
         .where(p.UserBoard.user_id == user_id) \
         .cte()
@@ -124,30 +121,21 @@ def create_price_drop_board(args: dict) -> dict:
                 user_board_args['is_owner'], user_board_args['is_collaborator'], user_board_args['is_following'],
                 user_board_args['is_suggested'])])
     ).cte()
+
+    where_not_exists_stmt = ~s.exists([get_boards_for_user_id_cte.c.board_type]) \
+        .where(get_boards_for_user_id_cte.c.board_type == BoardType.PRICE_DROP)
     
-    board_select_stmt = s.select(board_table).where(
-        ~s.exists([get_price_drop_boards_for_user_id_cte.c.board_type]) \
-            .where(get_price_drop_boards_for_user_id_cte.c.board_type == 'price_drop')
-    ).cte() 
-    user_board_select_stmt = s.select(user_board_table).where(
-        ~s.exists([get_price_drop_boards_for_user_id_cte.c.board_type]) \
-            .where(get_price_drop_boards_for_user_id_cte.c.board_type == 'price_drop')
-    ).cte()
+    board_select_stmt = s.select(board_table) \
+        .where(where_not_exists_stmt) \
+        .cte() 
+    user_board_select_stmt = s.select(user_board_table) \
+        .where(where_not_exists_stmt) \
+        .cte()
     
     board_insert_statement = s.insert(p.Board).from_select(list(board_args.keys()) , board_select_stmt)
     user_board_insert_statement = s.insert(p.UserBoard).from_select(list(user_board_args.keys()) , user_board_select_stmt)
 
-    ## Execute session transaction
-    try:
-        with session_scope() as session:
-            session.execute(board_insert_statement)
-            session.execute(user_board_insert_statement)
-            session.commit()
-    except Exception as e:
-        print(e)
-        return {"success": False}
-    
-    return {"success": True}
+    return [board_insert_statement, user_board_insert_statement]
 
 def update_board_name(args: dict) -> dict:
     board_id = args['board_id']

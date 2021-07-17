@@ -17,34 +17,31 @@
 Demonstrates how to create a simple echo API as well as how to deal with
 various authentication methods.
 """
-import psycopg2
 import meilisearch
-
+import psycopg2
 from flask import Flask, jsonify, request
 from flask_cors import cross_origin
+from sqlalchemy import MetaData, Table, create_engine
 
-from sqlalchemy import create_engine, MetaData, Table
-
-from src.defs.postgres import DATABASE_USER, PASSWORD, DBNAME, PROJECT
-from src.defs.search import *
-from src.utils import hashers, static, user_info
-from src.rec import get_batch
-from src.productSearch import productSearch
-from src.autocomplete import searchSuggestions
-from src.trending import trendingSearches, labelSearches
-from src.event_upload import upload_event
-import src.single_product_info as spi 
-from src.product_price_history import get_product_price_history
+import src.board_suggestions as bs
+import src.read_user_boards as rub
+import src.single_product_info as spi
+import src.user_brand_actions as uba
 import src.user_product_actions as upa
 import src.write_user_boards as wub
-import src.read_user_boards as rub
-import src.user_brand_actions as uba
-import src.board_suggestions as bs
-from src import orders
-from src import loadProducts  
+import src.db_init as dbi
 from src import add_to_board_options as atb
+from src import loadProducts, orders, product_board_names
+from src.autocomplete import searchSuggestions
+from src.defs.postgres import DATABASE_USER, DBNAME, PASSWORD, PROJECT
+from src.defs.search import *
+from src.event_upload import upload_event
+from src.product_price_history import get_product_price_history
+from src.productSearch import productSearch
+from src.rec import get_batch
 from src.similarProducts import getSimilarProducts
-from src import product_board_names
+from src.trending import labelSearches, trendingSearches
+from src.utils import hashers, static, user_info
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -214,12 +211,6 @@ def createNewBoard():
     res = wub.create_new_board(data)
     return jsonify(res)
 
-@app.route('/createPriceDropBoard', methods=['POST'])
-def createPriceDropBoard():
-    data = request.get_json(force=True)
-    res = wub.create_price_drop_board(data)
-    return jsonify(res)
-
 @app.route('/updateBoardName', methods=['POST'])
 def updateBoardName():
     data = request.get_json(force=True)
@@ -298,6 +289,12 @@ def getProductBoardNameSuggestions():
     return jsonify(
         product_board_names.getProductBoardNameSuggestions(request.args)
     )
+
+@app.route('/dbInitialize', methods=['POST'])
+def db_initialize():
+    data = request.get_json(force=True)
+    res = dbi.db_initialize(data)
+    return jsonify(res)
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
