@@ -214,6 +214,12 @@ def createNewBoard():
     res = wub.create_new_board(data)
     return jsonify(res)
 
+@app.route('/createPriceDropBoard', methods=['POST'])
+def createPriceDropBoard():
+    data = request.get_json(force=True)
+    res = wub.create_price_drop_board(data)
+    return jsonify(res)
+
 @app.route('/updateBoardName', methods=['POST'])
 def updateBoardName():
     data = request.get_json(force=True)
