@@ -52,7 +52,8 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
         psql.array_agg(
             psql.aggregate_order_by(
                 products.c.product_id,
-                products.c.event_timestamp.desc()
+                products.c.event_timestamp.desc(),
+                products.c.product_id.desc()
             )
         )[0:3].label('pids'),
         p.ProductSmartTag.smart_tag_id
@@ -154,7 +155,8 @@ def join_product_preview(ranked_smart_tags: CTE, user_id: int) -> Select:
         psql.array_agg(
             psql.aggregate_order_by(
                 F.json_build_object(*product_cols_json_agg),
-                products.c.last_modified_timestamp.desc()
+                products.c.last_modified_timestamp.desc(),
+                products.c.product_id.desc()
             )
         ).label('products'),
     ).group_by(products.c.smart_tag_id) \
