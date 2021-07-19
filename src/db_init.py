@@ -1,4 +1,4 @@
-from src.write_user_boards import get_price_drop_board_insert_stmts
+from src.price_drop import get_price_drop_board_insert_stmts
 from src.utils.sqlalchemy_utils import session_scope
 
 def db_initialize(args: dict) -> dict:
