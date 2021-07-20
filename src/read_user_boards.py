@@ -44,7 +44,7 @@ def getBoardProductsBatch(args: dict) -> dict:
     products_batch_ordered = s.select(filtered_products) \
         .order_by(
             filtered_products.c.last_modified_timestamp.desc(),
-            filtered_products.c.product_id
+            filtered_products.c.product_id.desc()
         ) \
         .limit(limit) \
         .offset(offset)
