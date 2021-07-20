@@ -80,7 +80,7 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
             p.BoardProduct.last_modified_timestamp,
             F.row_number() \
                 .over(
-                    boards_batch.c.board_id, 
+                    p.BoardProduct.board_id,
                     order_by=(
                         p.BoardProduct.last_modified_timestamp.desc(),
                         p.BoardProduct.product_id.desc()
