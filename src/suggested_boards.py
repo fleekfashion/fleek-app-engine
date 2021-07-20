@@ -1,7 +1,7 @@
 import typing as t
 
 import sqlalchemy as s
-from src.utils import query as qutils 
+from src.utils import board, query as qutils 
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
@@ -55,7 +55,7 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
                 products.c.event_timestamp.desc(),
                 products.c.product_id.desc()
             )
-        )[0:3].label('pids'),
+        )[0:2].label('pids'),
         p.ProductSmartTag.smart_tag_id
     ).join(
         p.ProductSmartTag,
@@ -123,52 +123,14 @@ def _get_smart_tag_products(ranked_smart_tags, user_id: int) -> Select:
     pids = s.select(
         smart_products,
         p.UserProductFaves.event_timestamp.label('last_modified_timestamp'),
-         F.row_number().over(
-             smart_products.c.smart_tag_id, 
-             order_by=(
-                 p.UserProductFaves.event_timestamp.desc(), 
-                 p.UserProductFaves.product_id.desc()
-             )
-         ).label('row_number')
     ).join(
         p.UserProductFaves, 
         p.UserProductFaves.product_id == smart_products.c.product_id,
     ) \
         .where(p.UserProductFaves.user_id == user_id) \
         .cte()
+    return pids
 
-    ## Get top 6 for each smart tag
-    filtered_pids = s.select(pids) \
-        .where(pids.c.row_number <= 6) \
-        .order_by(pids.c.smart_tag_id, pids.c.row_number) \
-        .cte()
-    products  = qutils.join_product_info(filtered_pids)
-    return products
-
-def join_product_preview(ranked_smart_tags: CTE, user_id: int) -> Select:
-    products = _get_smart_tag_products(ranked_smart_tags, user_id).cte()
-
-    product_cols = [(c.name, c) for c in products.c if c.name not in ranked_smart_tags.c ]
-    product_cols_json_agg = list(itertools.chain(*product_cols))
-    product_preview = s.select(
-        products.c.smart_tag_id,
-        psql.array_agg(
-            psql.aggregate_order_by(
-                F.json_build_object(*product_cols_json_agg),
-                products.c.last_modified_timestamp.desc(),
-                products.c.product_id.desc()
-            )
-        ).label('products'),
-    ).group_by(products.c.smart_tag_id) \
-        .cte()
-
-    q = s.select(
-        ranked_smart_tags,
-        product_preview.c.products,
-    ).join(product_preview, 
-        ranked_smart_tags.c.smart_tag_id==product_preview.c.smart_tag_id
-    ).order_by(ranked_smart_tags.c.score.desc())
-    return q
 
 def getSuggestedBoardsBatch(args: dict, dev_mode: bool=False) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id']) if not dev_mode else args['user_id']
@@ -176,7 +138,26 @@ def getSuggestedBoardsBatch(args: dict, dev_mode: bool=False) -> dict:
     limit = args['limit']
 
     ranked_smart_tags = get_ranked_user_smart_tags(user_id, offset, limit, rand=True).cte()
-    q = join_product_preview(ranked_smart_tags, user_id)
+    smart_tag_products = _get_smart_tag_products(ranked_smart_tags, user_id)
+
+    product_previews = board.get_product_previews(
+            smart_tag_products, 
+            "smart_tag_id", 
+            "last_modified_timestamp").cte()
+    tag_stats = board.get_product_group_stats(
+            smart_tag_products, 
+            "smart_tag_id").cte()
+
+    q = s.select(
+        ranked_smart_tags,
+        tag_stats.c.n_products,
+        tag_stats.c.advertiser_stats,
+        product_previews.c.products,
+    ) \
+        .join(product_previews, tag_stats.c.smart_tag_id == product_previews.c.smart_tag_id) \
+        .join(ranked_smart_tags, tag_stats.c.smart_tag_id == ranked_smart_tags.c.smart_tag_id) \
+        .order_by(ranked_smart_tags.c.score.desc())
+
     boards = run_query(q)
     return {
         'boards': boards
