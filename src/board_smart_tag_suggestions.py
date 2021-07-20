@@ -76,6 +76,9 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
     ).join(
             p.SmartTag,
             board_tag_count.c.smart_tag_id==p.SmartTag.smart_tag_id
+    ).join(
+            n_products,
+            True
     ).order_by(
             literal_column('is_strong_suggestion').desc(), 
             literal_column('score').desc()
