@@ -2,7 +2,7 @@ import typing as t
 
 import sqlalchemy as s
 from src.utils import query as qutils 
-from src.utils.board import get_product_group_stats 
+from src.utils.board import get_product_group_stats, get_product_previews
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
@@ -50,6 +50,7 @@ def getBoardProductsBatch(args: dict) -> dict:
         .filter(p.BoardProduct.board_id == board_id) \
         .cte()
 
+    ## Get and filter products
     products = qutils.join_product_info(board_pids_query).cte()
     filtered_products = qutils.apply_filters(
         products,
@@ -57,6 +58,7 @@ def getBoardProductsBatch(args: dict) -> dict:
         active_only=False
     ).cte()
 
+    ## Order Products
     products_batch_ordered = s.select(filtered_products) \
         .order_by(
             filtered_products.c.last_modified_timestamp.desc(),
@@ -78,57 +80,33 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
     user_board_ids = s.select(p.UserBoard.board_id) \
         .filter(p.UserBoard.user_id == user_id) \
 
+    ## Get current boards batch
     boards_batch = s.select(
             p.Board.board_id,
-            p.Board.last_modified_timestamp
         ) \
         .where(p.Board.board_id.in_(user_board_ids)) \
         .order_by(p.Board.last_modified_timestamp.desc()) \
         .limit(limit) \
         .offset(offset) \
-        .cte()
-    board_batch_ids = s.select(boards_batch.c.board_id)
 
+    ## Get products from relevant boards
     board_products = s.select(
             p.BoardProduct.board_id,
             p.BoardProduct.product_id,
             p.BoardProduct.last_modified_timestamp,
-            F.row_number() \
-                .over(
-                    p.BoardProduct.board_id,
-                    order_by=(
-                        p.BoardProduct.last_modified_timestamp.desc(),
-                        p.BoardProduct.product_id.desc()
-                    )
-                ).label('row_number')
         ) \
         .filter(
-            p.BoardProduct.board_id.in_(board_batch_ids)
+            p.BoardProduct.board_id.in_(boards_batch)
         ) \
         .cte()
-
-    filtered_board_product = s.select(board_products) \
-        .where(board_products.c.row_number <= 6)  \
-        .cte()
-    board_product_info = qutils.join_product_info(filtered_board_product).cte()
-
-    product_cols = [(c.name, c) for c in board_product_info.c if 'board_id' not in c.name ]
-    product_cols_json_agg = list(itertools.chain(*product_cols))
-    product_previews = s.select(
-            board_product_info.c.board_id,
-            psql.array_agg(
-                psql.aggregate_order_by(
-                    F.json_build_object(*product_cols_json_agg),
-                    board_product_info.c.last_modified_timestamp.desc(),
-                    board_product_info.c.product_id.desc()
-                )
-            ).label('products'),
-        ) \
-        .group_by(
-            board_product_info.c.board_id
-        ) \
-        .cte()
-
+    product_previews = get_product_previews(
+            board_products,
+            'board_id',
+            'last_modified_timestamp',
+            desc=True
+    ).cte()
+    
+    ## Join board info with the board products
     board_info = _get_boards_info(product_previews).cte()
     boards = s.select(
             board_info,
