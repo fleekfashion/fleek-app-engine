@@ -300,6 +300,12 @@ def getSuggestedBoardsBatch():
         suggested_boards.getSuggestedBoardsBatch(request.args)
     )
 
+@app.route('/getUserSmartTagProductBatch', methods=['GET'])
+def getUserSmartTagProductBatch():
+    return jsonify(
+        suggested_boards.getUserSmartTagProductBatch(request.args, dev_mode=True)
+    )
+
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
     # application on Google App Engine. See entrypoint in app.yaml.
