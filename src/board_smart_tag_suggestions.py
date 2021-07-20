@@ -8,7 +8,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy import func as F 
 from sqlalchemy.sql.expression import literal_column
 
-from src.utils import query as qutils
+from src.utils import string_parser, query as qutils
 from src.utils import hashers
 from src.defs import postgres as p
 
@@ -80,6 +80,7 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
     ).limit(limit)
 
     res = run_query(ranked)
+    res = string_parser._process_smart_tags(res)
     is_strong = len(res) > 0 and res[0]['is_strong_suggestion']
     return {
         'suggestions': res,

@@ -2,7 +2,7 @@ import typing as t
 
 import sqlalchemy as s
 from src.utils import query as qutils 
-from src.utils import board
+from src.utils import board, string_parser
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
@@ -10,6 +10,25 @@ from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 import itertools
+
+def _get_board_smart_tags(board_ids: Select) -> Select:
+    board_smart_tags = s.select(
+        p.BoardSmartTag.board_id,
+        psql.array_agg(
+            psql.aggregate_order_by(
+                F.json_build_object(
+                    "smart_tag_id", p.SmartTag.smart_tag_id,
+                    "suggestion", p.SmartTag.suggestion,
+                    "product_label", p.SmartTag.product_label
+                ),
+                p.SmartTag.suggestion
+            )
+        ).label('smart_tags')
+    ) \
+        .where(p.BoardSmartTag.board_id.in_(board_ids)) \
+        .join(p.SmartTag, p.BoardSmartTag.smart_tag_id == p.SmartTag.smart_tag_id) \
+        .group_by(p.BoardSmartTag.board_id)
+    return board_smart_tags
 
 def _get_boards_info(boards: CTE) -> Select:
     board_ids = s.select(boards.c.board_id)
@@ -20,13 +39,17 @@ def _get_boards_info(boards: CTE) -> Select:
         ) \
         .cte()
     board_stats = board.get_product_group_stats(board_products, 'board_id').cte()
+    board_smart_tags = _get_board_smart_tags(board_ids).cte()
+
     board_info = s.select(
         p.Board.__table__,
         F.coalesce(board_stats.c.n_products, 0).label('n_products'),
-        F.coalesce(board_stats.c.advertiser_stats, []).label('advertiser_stats')
+        F.coalesce(board_stats.c.advertiser_stats, []).label('advertiser_stats'),
+        F.coalesce(board_smart_tags.c.smart_tags, []).label('smart_tags')
     ) \
         .where(p.Board.board_id.in_(board_ids)) \
-        .outerjoin(board_stats, board_stats.c.board_id == p.Board.board_id)
+        .outerjoin(board_stats, board_stats.c.board_id == p.Board.board_id) \
+        .outerjoin(board_smart_tags, board_smart_tags.c.board_id == p.Board.board_id)
     return board_info
 
 
@@ -36,7 +59,10 @@ def getBoardInfo(args: dict) -> dict:
     board = _get_boards_info(basic_board)
     result = get_first(board)
     parsed_res = result if result else {"error": "invalid collection id"}
-    return parsed_res
+    #processed_board = string_parser.process_boards([parsed_res])[0]
+    processed_board = parsed_res
+    processed_board = string_parser.process_boards([parsed_res])[0]
+    return processed_board 
 
 def getBoardProductsBatch(args: dict) -> dict:
     board_id = args['board_id']
@@ -119,7 +145,8 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
     boards_ordered = s.select(boards) \
             .order_by(boards.c.last_modified_timestamp.desc())
     result = run_query(boards_ordered)
+    parsed_boards = string_parser.process_boards(result)
     
     return {
-        "boards": result
+        "boards": parsed_boards 
     }

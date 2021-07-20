@@ -161,7 +161,7 @@ def getSuggestedBoardsBatch(args: dict, dev_mode: bool=False) -> dict:
         .order_by(ranked_smart_tags.c.score.desc())
 
     boards = run_query(q)
-    parsed_boards = string_parser.process_boards(boards) 
+    parsed_boards = string_parser.process_suggested_boards(boards) 
     return {
         'boards': parsed_boards 
     }
