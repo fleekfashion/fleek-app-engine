@@ -49,6 +49,7 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
         .where(p.ProductSmartTag.smart_tag_id.in_(board_smart_tags))
     n_products = s.select(F.count(p.BoardProduct.product_id).label('n_products')) \
             .where(p.BoardProduct.board_id == board_id) \
+            .group_by(p.BoardProduct.board_id) \
             .cte('board_product_count')
 
     ## Get the number of products per tag in the board
