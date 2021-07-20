@@ -72,7 +72,7 @@ def get_product_previews(
             products.c.product_id,
             F.row_number() \
                 .over(
-                    products.c.board_id,
+                    tmp_id_col,
                     order_by=(
                         order_by_field,
                         products.c.product_id.desc()
@@ -103,4 +103,3 @@ def get_product_previews(
             board_product_info.c.tmp_id_col
         )
     return product_previews
-
