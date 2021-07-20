@@ -106,7 +106,6 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
             desc=True
     ).cte()
     
-    print(product_previews)
     ## Join board info with the board products
     board_info = _get_boards_info(product_previews).cte()
     boards = s.select(
