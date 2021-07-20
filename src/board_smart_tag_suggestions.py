@@ -72,8 +72,10 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
             board_tag_count.c.smart_tag_id==p.SmartTag.smart_tag_id
     ).join(
             n_products,
-            True
-    ).order_by(
+            board_tag_count.c.c <= 10*n_products.c.n_products ## stupid condition to silence error
+    ) \
+        .where(board_tag_count.c.c > 1) \
+        .order_by(
             literal_column('is_strong_suggestion').desc(), 
             literal_column('score').desc()
     ).limit(limit)
