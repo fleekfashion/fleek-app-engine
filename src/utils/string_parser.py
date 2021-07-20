@@ -14,8 +14,6 @@ def _process_smart_tags(tags: t.List[dict]) -> t.List[dict]:
             for t in tags ]
 
 def process_boards(boards: t.List[dict]) -> t.List[dict]:
-    print(boards[0]['smart_tags'])
-    return boards
     parsed_boards = [ {**b, "smart_tags": _process_smart_tags(b['smart_tags']) }
             for b in boards ]
     return parsed_boards
