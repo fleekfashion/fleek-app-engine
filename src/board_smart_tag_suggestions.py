@@ -13,6 +13,12 @@ from src.utils import hashers
 from src.defs import postgres as p
 
 def _get_bad_smart_tags(board_id: str) -> Select:
+    """
+    get list of tag ids that 
+    a) Are on board
+    b) suggestion like '%existing_suggestion%'
+    c) existing_suggestion like '%suggestion%'
+    """
     board_smart_tags = s.select(p.BoardSmartTag.smart_tag_id) \
         .where(p.BoardSmartTag.board_id == board_id)
 
