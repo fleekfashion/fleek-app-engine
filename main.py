@@ -303,7 +303,7 @@ def getSuggestedBoardsBatch():
 @app.route('/getUserSmartTagProductBatch', methods=['GET'])
 def getUserSmartTagProductBatch():
     return jsonify(
-        suggested_boards.getUserSmartTagProductBatch(request.args, dev_mode=True)
+        suggested_boards.getUserSmartTagProductBatch(request.args)
     )
 
 if __name__ == '__main__':
