@@ -68,11 +68,12 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
     ranked = s.select(
         board_tag_count.c.smart_tag_id,
         p.SmartTag.suggestion,
+        p.SmartTag.product_label,
         (board_tag_count.c.c/F.sqrt(p.SmartTag.n_hits)).label('score'),
         ((1.0*board_tag_count.c.c/n_products.c.n_products) > strong_cutoff).label('is_strong_suggestion')
         
     ).join(
-            p.SmartTag, 
+            p.SmartTag,
             board_tag_count.c.smart_tag_id==p.SmartTag.smart_tag_id
     ).order_by(
             literal_column('is_strong_suggestion').desc(), 
