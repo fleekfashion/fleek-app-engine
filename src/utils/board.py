@@ -70,6 +70,7 @@ def get_product_previews(
     board_products = s.select(
             tmp_id_col.label('tmp_id_col'),
             products.c.product_id,
+            products.c.last_modified_timestamp,
             F.row_number() \
                 .over(
                     tmp_id_col,
@@ -95,7 +96,7 @@ def get_product_previews(
             psql.array_agg(
                 psql.aggregate_order_by(
                     F.json_build_object(*product_cols_json_agg),
-                    board_product_info.c.row_number.desc()
+                    board_product_info.c.row_number.asc()
                 )
             ).label('products'),
         ) \

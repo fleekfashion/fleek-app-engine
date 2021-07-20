@@ -2,7 +2,7 @@ import typing as t
 
 import sqlalchemy as s
 from src.utils import query as qutils 
-from src.utils.board import get_product_group_stats, get_product_previews
+from src.utils import board
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
@@ -19,7 +19,7 @@ def _get_boards_info(boards: CTE) -> Select:
             )
         ) \
         .cte()
-    board_stats = get_product_group_stats(board_products, 'board_id').cte()
+    board_stats = board.get_product_group_stats(board_products, 'board_id').cte()
     board_info = s.select(
         p.Board.__table__,
         F.coalesce(board_stats.c.n_products, 0).label('n_products'),
@@ -100,14 +100,13 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
             p.BoardProduct.board_id.in_(boards_batch)
         ) \
         .cte()
-    product_previews = get_product_previews(
+    product_previews = board.get_product_previews(
             board_products,
             'board_id',
             'last_modified_timestamp',
             desc=True
     ).cte()
     
-    print(product_previews)
     ## Join board info with the board products
     board_info = _get_boards_info(product_previews).cte()
     boards = s.select(
