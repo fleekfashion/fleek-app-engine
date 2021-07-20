@@ -165,3 +165,43 @@ def getSuggestedBoardsBatch(args: dict, dev_mode: bool=False) -> dict:
     return {
         'boards': parsed_boards 
     }
+
+def getUserSmartTagProductBatch(args: dict, dev_mode: bool=False) -> dict:
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id']) if not dev_mode \
+            else args['user_id']
+    smart_tag_id = args['smart_tag_id']
+    offset = args['offset']
+    limit = args['limit']
+
+    smart_products = s.select(
+        p.ProductSmartTag.product_id
+    ).where(p.ProductSmartTag.smart_tag_id == smart_tag_id)
+
+    user_faves = s.select(
+        p.UserProductFaves.product_id,
+        p.UserProductFaves.event_timestamp.label('last_modified_timestamp')
+    ) \
+        .where(p.UserProductFaves.user_id == user_id) \
+        .where(p.UserProductFaves.product_id.in_(smart_products)) \
+        .cte()
+
+    products = qutils.join_product_info(user_faves).cte()
+    filtered_products = qutils.apply_filters(
+        products,
+        args,
+        active_only=False
+    ).cte()
+
+    ## Order Products
+    products_batch_ordered = s.select(filtered_products) \
+        .order_by(
+            filtered_products.c.last_modified_timestamp.desc(),
+            filtered_products.c.product_id.desc()
+        ) \
+        .limit(limit) \
+        .offset(offset)
+
+    result = run_query(products_batch_ordered)
+    return {
+        "products": result
+    }
