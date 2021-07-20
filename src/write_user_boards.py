@@ -147,3 +147,37 @@ def remove_board(args: dict) -> dict:
 
     return {"success": True}
 
+def write_smart_tag_to_board(args: dict) -> dict:
+    board_smart_tag_args = {
+        'board_id': args['board_id'],
+        'smart_tag_id': args['smart_tag_id']
+    }
+    board_smart_tag = p.BoardSmartTag(**board_smart_tag_args)
+
+    try:
+        with session_scope() as session:
+            session.add(board_smart_tag)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+    
+    return {"success": True}
+
+def remove_smart_tag_from_board(args: dict) -> dict:
+    board_id = args['board_id']
+    smart_tag_id = args['smart_tag_id']
+
+    try:
+        with session_scope() as session:
+            remove_smart_tag_from_board_stmt = s.delete(p.BoardSmartTag).where(
+                s.and_(
+                    p.BoardSmartTag.board_id == board_id, 
+                    p.BoardSmartTag.smart_tag_id == smart_tag_id
+                )
+            )
+            session.execute(remove_smart_tag_from_board_stmt)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
+    return {"success": True}
