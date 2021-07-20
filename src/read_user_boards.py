@@ -2,7 +2,7 @@ import typing as t
 
 import sqlalchemy as s
 from src.utils import query as qutils 
-from src.utils.board import join_board_stats
+from src.utils.board import get_product_group_stats 
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
@@ -11,13 +11,29 @@ from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 import itertools
 
+def _get_boards_info(boards: CTE) -> Select:
+    board_ids = s.select(boards.c.board_id)
+    board_products = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id) \
+        .filter(p.BoardProduct.board_id.in_(
+            s.select(boards.c.board_id)
+            )
+        ) \
+        .cte()
+    board_stats = get_product_group_stats(board_products, 'board_id').cte()
+    board_info = s.select(
+        p.Board.__table__,
+        F.coalesce(board_stats.c.n_products, 0).label('n_products'),
+        F.coalesce(board_stats.c.advertiser_stats, []).label('advertiser_stats')
+    ) \
+        .where(p.Board.board_id.in_(board_ids)) \
+        .outerjoin(board_stats, board_stats.c.board_id == p.Board.board_id)
+    return board_info
+
+
 def getBoardInfo(args: dict) -> dict:
     board_id = args['board_id']
-    basic_board = s.select(p.Board).filter(p.Board.board_id == board_id).cte()
-    board_products = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id) \
-        .filter(p.BoardProduct.board_id == board_id) \
-        .cte()
-    board = join_board_stats(basic_board, board_products)
+    basic_board = s.select(p.Board.board_id).filter(p.Board.board_id == board_id).cte()
+    board = _get_boards_info(basic_board)
     result = get_first(board)
     parsed_res = result if result else {"error": "invalid collection id"}
     return parsed_res
@@ -113,21 +129,14 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
         ) \
         .cte()
 
-    board_previews = s.select(
-            p.Board.board_id,
-            p.Board.name,
-            p.Board.creation_date,
-            p.Board.description,
-            p.Board.artwork_url,
-            p.Board.board_type,
-            p.Board.last_modified_timestamp,
+    board_info = _get_boards_info(product_previews).cte()
+    boards = s.select(
+            board_info,
             product_previews.c.products
         ) \
-        .where(p.Board.board_id.in_(board_batch_ids)) \
-        .outerjoin(product_previews, product_previews.c.board_id == p.Board.board_id) \
+        .outerjoin(product_previews, product_previews.c.board_id == board_info.c.board_id) \
         .cte()
 
-    boards = join_board_stats(board_previews, board_products).cte()
     boards_ordered = s.select(boards) \
             .order_by(boards.c.last_modified_timestamp.desc())
     result = run_query(boards_ordered)

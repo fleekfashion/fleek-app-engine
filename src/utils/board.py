@@ -18,18 +18,30 @@ from src.utils import query as qutils
 from src.utils import user_info
 from src.utils import static 
 
-def join_board_stats(board_info: CTE, board_products: CTE) -> Select:
-    q3 = qutils.join_base_product_info(board_products).cte()
+def get_product_group_stats(
+        products: CTE,
+        id_col: t.Optional[str]
+    ) -> Select:
 
+    ## Process id col
+    id_colname = id_col if id_col else "temp_id"
+    tmp_id_col = literal_column(id_col) if id_col else literal(1)
+
+
+    ## join pinfo
+    q3 = qutils.join_base_product_info(products).cte()
+
+    ## Get advertiser level stats
     advertiser_stats = s.select(
-        q3.c.board_id,
+        tmp_id_col.label('tmp_id'),
         q3.c.advertiser_name,
         F.count(q3.c.product_id).label('n_products')
-    ).group_by(q3.c.board_id, q3.c.advertiser_name) \
+    ).group_by(tmp_id_col, q3.c.advertiser_name) \
         .cte()
 
+    ## Get total group level stats
     board_stats = s.select(
-        advertiser_stats.c.board_id,
+        advertiser_stats.c.tmp_id.label(id_colname),
         F.sum(advertiser_stats.c.n_products).label('n_products'),
         postgresql.array_agg(
             F.json_build_object(
@@ -38,11 +50,6 @@ def join_board_stats(board_info: CTE, board_products: CTE) -> Select:
             )
         ).label('advertiser_stats'),
     ) \
-        .group_by(advertiser_stats.c.board_id) \
-        .cte()
+        .group_by(advertiser_stats.c.tmp_id)
 
-    return s.select(
-        board_info,
-        F.coalesce(board_stats.c.n_products, 0).label('n_products'),
-        F.coalesce(board_stats.c.advertiser_stats, []).label('advertiser_stats')
-    ).outerjoin(board_stats, board_info.c.board_id == board_stats.c.board_id)
+    return board_stats
