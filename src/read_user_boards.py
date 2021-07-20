@@ -30,6 +30,23 @@ def _get_board_smart_tags(board_ids: Select) -> Select:
         .group_by(p.BoardSmartTag.board_id)
     return board_smart_tags
 
+def _get_board_opt_smart_tag(board_products: CTE) -> Select:
+    board_smart_tag = s.select(
+        board_products.c.board_id,
+        F.count(board_products.c.product_id).label('n_products'),
+        p.ProductSmartTag.smart_tag_id
+    ) \
+    .join(p.ProductSmartTag, p.ProductSmartTag.product_id == board_products.c.product_id) \
+    .where(~board_products.c.board_id.in_(s.select(p.BoardSmartTag.board_id))) \
+    .group_by(board_products.c.board_id, p.ProductSmartTag.smart_tag_id) \
+    .cte()
+
+    max_smart_tags = s.select(
+        board_smart_tag.c.board_id,
+        F.max(board_smart_tag.c.n_products).label('n_products')
+    ).group_by(board_smart_tag.c.board_id)
+    return max_smart_tags
+
 def _get_boards_info(boards: CTE) -> Select:
     board_ids = s.select(boards.c.board_id)
     board_products = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id) \
@@ -40,16 +57,23 @@ def _get_boards_info(boards: CTE) -> Select:
         .cte()
     board_stats = board.get_product_group_stats(board_products, 'board_id').cte()
     board_smart_tags = _get_board_smart_tags(board_ids).cte()
+    board_opt_tag = _get_board_opt_smart_tag(board_products).cte()
 
     board_info = s.select(
         p.Board.__table__,
         F.coalesce(board_stats.c.n_products, 0).label('n_products'),
         F.coalesce(board_stats.c.advertiser_stats, []).label('advertiser_stats'),
-        F.coalesce(board_smart_tags.c.smart_tags, []).label('smart_tags')
+        F.coalesce(board_smart_tags.c.smart_tags, []).label('smart_tags'),
+        (
+            (   1.0*F.coalesce(board_opt_tag.c.n_products, 0)
+                / F.coalesce(board_stats.c.n_products, 1)
+            ) > .5
+        ).label('has_strong_suggestion')
     ) \
         .where(p.Board.board_id.in_(board_ids)) \
         .outerjoin(board_stats, board_stats.c.board_id == p.Board.board_id) \
-        .outerjoin(board_smart_tags, board_smart_tags.c.board_id == p.Board.board_id)
+        .outerjoin(board_smart_tags, board_smart_tags.c.board_id == p.Board.board_id) \
+        .outerjoin(board_opt_tag, board_opt_tag.c.board_id == p.Board.board_id)
     return board_info
 
 
@@ -59,8 +83,6 @@ def getBoardInfo(args: dict) -> dict:
     board = _get_boards_info(basic_board)
     result = get_first(board)
     parsed_res = result if result else {"error": "invalid collection id"}
-    #processed_board = string_parser.process_boards([parsed_res])[0]
-    processed_board = parsed_res
     processed_board = string_parser.process_boards([parsed_res])[0]
     return processed_board 
 
