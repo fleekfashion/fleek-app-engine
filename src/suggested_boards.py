@@ -1,7 +1,7 @@
 import typing as t
 
 import sqlalchemy as s
-from src.utils import board, query as qutils 
+from src.utils import string_parser, board, query as qutils 
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
@@ -68,6 +68,7 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
         smart_tags.c.smart_tag_id,
         (smart_tags.c.score/F.power(p.SmartTag.n_hits, NORMALIZATION)).label('score'),
         p.SmartTag.suggestion,
+        p.SmartTag.product_label,
         smart_tags.c.n_products,
         smart_tags.c.pids,
     ).join(p.SmartTag, smart_tags.c.smart_tag_id==p.SmartTag.smart_tag_id) \
@@ -84,7 +85,7 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
             s.or_(
                 normalized_smart_tags.c.score < t2.c.score, ## Take the item with lower score (to remove)
                 s.and_(
-                    normalized_smart_tags.c.suggestion < t2.c.suggestion, ## Tie breaker is suggestion (arbitrary)
+                    normalized_smart_tags.c.suggestion > t2.c.suggestion, ## Tie breaker is suggestion (arbitrary)
                     normalized_smart_tags.c.score == t2.c.score
                 )
             )
@@ -97,6 +98,7 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
         normalized_smart_tags.c.score,
         normalized_smart_tags.c.pids,
         normalized_smart_tags.c.suggestion.label('name'),
+        normalized_smart_tags.c.product_label,
         F.setseed(qutils.get_daily_random_seed())
     ) \
         .where(~normalized_smart_tags.c.smart_tag_id.in_(duplicate_ids)) \
@@ -159,6 +161,7 @@ def getSuggestedBoardsBatch(args: dict, dev_mode: bool=False) -> dict:
         .order_by(ranked_smart_tags.c.score.desc())
 
     boards = run_query(q)
+    parsed_boards = string_parser.process_boards(boards) 
     return {
-        'boards': boards
+        'boards': parsed_boards 
     }
