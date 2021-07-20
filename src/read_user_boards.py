@@ -2,7 +2,7 @@ import typing as t
 
 import sqlalchemy as s
 from src.utils import query as qutils 
-from src.utils.boards import join_board_stats
+from src.utils.board import join_board_stats
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
@@ -27,9 +27,12 @@ def getBoardProductsBatch(args: dict) -> dict:
     offset = args['offset']
     limit = args['limit']
 
-    board_pids_query = s.select(p.BoardProduct.product_id, p.BoardProduct.last_modified_timestamp) \
-                    .filter(p.BoardProduct.board_id == board_id) \
-                    .cte()
+    board_pids_query = s.select(
+        p.BoardProduct.product_id, 
+        p.BoardProduct.last_modified_timestamp
+    ) \
+        .filter(p.BoardProduct.board_id == board_id) \
+        .cte()
 
     products = qutils.join_product_info(board_pids_query).cte()
     filtered_products = qutils.apply_filters(
@@ -51,20 +54,19 @@ def getBoardProductsBatch(args: dict) -> dict:
     }
 
 
-def getUserBoardsBatch(args: dict) -> dict:
-    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id']) if not dev_mode else args['user_id']
     offset = args['offset']
     limit = args['limit']
 
-    user_board_ids_subq = s.select(p.UserBoard.board_id) \
+    user_board_ids = s.select(p.UserBoard.board_id) \
         .filter(p.UserBoard.user_id == user_id) \
-        .cte()
 
     boards_batch = s.select(
-            user_board_ids_subq, 
-            p.Board.last_modified_timestamp.label('board_last_modified_timestamp')
+            p.Board.board_id,
+            p.Board.last_modified_timestamp
         ) \
-        .join(p.Board, user_board_ids_subq.c.board_id == p.Board.board_id) \
+        .where(p.Board.board_id.in_(user_board_ids)) \
         .order_by(p.Board.last_modified_timestamp.desc()) \
         .limit(limit) \
         .offset(offset) \
@@ -72,8 +74,9 @@ def getUserBoardsBatch(args: dict) -> dict:
     board_batch_ids = s.select(boards_batch.c.board_id)
 
     board_products = s.select(
-            p.BoardProduct.board_id, 
+            p.BoardProduct.board_id,
             p.BoardProduct.product_id,
+            p.BoardProduct.last_modified_timestamp,
             F.row_number() \
                 .over(
                     boards_batch.c.board_id, 
@@ -88,9 +91,9 @@ def getUserBoardsBatch(args: dict) -> dict:
         ) \
         .cte()
 
-    filtered_board_product = s.select(
-        board_products
-    ).where(board_products.c.row_number <= 6)
+    filtered_board_product = s.select(board_products) \
+        .where(board_products.c.row_number <= 6)  \
+        .cte()
     board_product_info = qutils.join_product_info(filtered_board_product).cte()
 
     product_cols = [(c.name, c) for c in board_product_info.c if 'board_id' not in c.name ]
@@ -118,7 +121,7 @@ def getUserBoardsBatch(args: dict) -> dict:
             p.Board.artwork_url,
             p.Board.board_type,
             p.Board.last_modified_timestamp,
-            product_previews.products
+            product_previews.c.products
         ) \
         .where(p.Board.board_id.in_(board_batch_ids)) \
         .outerjoin(product_previews, product_previews.c.board_id == p.Board.board_id) \
@@ -126,7 +129,7 @@ def getUserBoardsBatch(args: dict) -> dict:
 
     boards = join_board_stats(board_previews, board_products).cte()
     boards_ordered = s.select(boards) \
-            .order_by(boards.c.board_last_modified_timestamp.desc())
+            .order_by(boards.c.last_modified_timestamp.desc())
     result = run_query(boards_ordered)
     
     return {

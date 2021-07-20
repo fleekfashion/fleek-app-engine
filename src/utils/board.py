@@ -13,13 +13,12 @@ from sqlalchemy.sql.expression import literal, literal_column
 from sqlalchemy.dialects.postgresql import array
 from werkzeug.datastructures import ImmutableMultiDict
 
+from src.utils import query as qutils 
+
 from src.utils import user_info
 from src.utils import static 
 
 def join_board_stats(board_info: CTE, board_products: CTE) -> Select:
-    board_products = s.select(q.c.board_id, p.BoardProduct.product_id) \
-        .filter(q.c.board_id == p.BoardProduct.board_id ) \
-        .cte()
     q3 = qutils.join_base_product_info(board_products).cte()
 
     advertiser_stats = s.select(
