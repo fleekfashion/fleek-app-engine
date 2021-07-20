@@ -8,6 +8,7 @@ mypy = "*"
 pylint = "*"
 appnope = "*"
 ipykernel = "*"
+inflect = "*"
 
 [packages]
 flask = "==1.1.2"
@@ -26,6 +27,7 @@ meilisearch = "==0.15.1"
 sqlalchemy = "==1.4.*"
 cachetools = "==4.2.1"
 ipykernel = "*"
+inflect = "*"
 
 [requires]
 python_version = "3.7"
