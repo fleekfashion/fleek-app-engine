@@ -137,18 +137,18 @@ def apply_filters(
         q = _apply_filter(q, products_subquery, key, value)
     return q
 
-def insert_on_where_not_exists_condition(args: dict, table: p.PostgreTable, where_not_exists_stmt: UnaryExpression) -> Insert:
+def insert_on_filter_condition(args: dict, table: p.PostgreTable, filter_condition: UnaryExpression) -> Insert:
     cols = table.__table__.c
     values = Values(*[s.column(c.name, c.type) for c in cols], name="temp_" + table.__table__.name)
     data = tuple([args[c.name] for c in cols])
     
-    data_where_not_exists_stmt = s.select(values.data([data])) \
-        .where(where_not_exists_stmt) \
+    data_on_filter_statement = s.select(values.data([data])) \
+        .where(filter_condition) \
         .cte()
     
     insert_statement = s.insert(table).from_select(
-        [col.name for col in data_where_not_exists_stmt.c],
-        data_where_not_exists_stmt
+        [col.name for col in data_on_filter_statement.c],
+        data_on_filter_statement
     )
     return insert_statement
 

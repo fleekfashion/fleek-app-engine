@@ -1,4 +1,4 @@
-from src.utils.query import insert_on_where_not_exists_condition
+from src.utils.query import insert_on_filter_condition
 from typing import List
 import uuid
 from datetime import datetime as dt
@@ -52,7 +52,7 @@ def get_insert_board_on_board_type_not_exists_statements(args: dict, board_type:
     where_not_exists_stmt = ~s.exists([get_boards_for_user_id_cte.c.board_type]) \
         .where(get_boards_for_user_id_cte.c.board_type == board_type)
 
-    board_insert_statement = insert_on_where_not_exists_condition(board_args, p.Board, where_not_exists_stmt)
-    user_board_insert_statement = insert_on_where_not_exists_condition(user_board_args, p.UserBoard, where_not_exists_stmt)
+    board_insert_statement = insert_on_filter_condition(board_args, p.Board, where_not_exists_stmt)
+    user_board_insert_statement = insert_on_filter_condition(user_board_args, p.UserBoard, where_not_exists_stmt)
 
     return [board_insert_statement, user_board_insert_statement]
