@@ -1,5 +1,6 @@
 import typing as t
 import random
+from datetime import datetime, timedelta
 
 import sqlalchemy as s
 from sqlalchemy.sql import Values
@@ -18,11 +19,14 @@ from werkzeug.datastructures import ImmutableMultiDict
 
 from src.utils import user_info
 from src.utils import static 
-
 DELIMITER = ",_,"
 
-def gen_rand() -> str:
-    return "_" + str(random.randint(1, 10**8))
+def days_ago_timestamp(days: int) -> int:
+    return int((datetime.utcnow() - timedelta(days=days) ).timestamp())
+
+def get_daily_random_seed() -> float:
+    random.seed(datetime.utcnow().date())
+    return random.random()
 
 def sort_columns(
         q: t.Union[Alias, CTE]
@@ -32,6 +36,12 @@ def sort_columns(
     ])
     return ordered_q
 
+def sort_product_preview(products: t.List[dict]) -> t.List[dict]:
+    return sorted(
+            products, 
+            key=lambda x: ( x['last_modified_timestamp'], x['product_id'] ),
+            reverse=True
+    )
     
 def union_by_names(
         q1: t.Union[Alias, CTE], 
@@ -46,7 +56,6 @@ def union_by_names(
         else ordered_q1.union(ordered_q2)
     return res
 
-        
 def apply_ranking(
         products_subquery: t.Union[Alias, CTE], 
         user_id: int, 
