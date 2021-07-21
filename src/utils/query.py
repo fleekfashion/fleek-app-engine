@@ -2,6 +2,9 @@ import typing as t
 import random
 
 import sqlalchemy as s
+from sqlalchemy.sql import Values
+from sqlalchemy.sql.dml import Insert
+from sqlalchemy.sql.elements import UnaryExpression
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from sqlalchemy import subquery 
 from sqlalchemy import Column
@@ -133,6 +136,21 @@ def apply_filters(
     for key, value in filters.items():
         q = _apply_filter(q, products_subquery, key, value)
     return q
+
+def insert_on_where_not_exists_condition(args: dict, table: p.PostgreTable, where_not_exists_stmt: UnaryExpression) -> Insert:
+    cols = table.__table__.c
+    values = Values(*[s.column(c.name, c.type) for c in cols], name="temp_" + table.__table__.name)
+    data = tuple([args[c.name] for c in cols])
+    
+    data_where_not_exists_stmt = s.select(values.data([data])) \
+        .where(where_not_exists_stmt) \
+        .cte()
+    
+    insert_statement = s.insert(table).from_select(
+        [col.name for col in data_where_not_exists_stmt.c],
+        data_where_not_exists_stmt
+    )
+    return insert_statement
 
 def join_product_color_info(products_subquery: t.Union[Alias, CTE], product_id_field: str = 'product_id') -> Select:
     join_field = products_subquery.c[product_id_field]
