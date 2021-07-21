@@ -1,3 +1,4 @@
+from src.defs.types.board_type import BoardType
 from src.utils.sqlalchemy_utils import session_scope
 from src.utils import hashers
 from src.defs import postgres as p
@@ -7,14 +8,13 @@ from sqlalchemy.dialects.postgresql import insert
 import sqlalchemy as s
 from sqlalchemy.exc import IntegrityError
 
-
 def create_new_board(args: dict) -> dict:
     board_id = uuid.uuid4().hex
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     last_modified_timestamp = int(dt.now().timestamp())
     creation_date = dt.now().strftime('%Y-%m-%d')
     board_name = args['board_name']
-    board_type = args.get('board_type', 'user')
+    board_type = args.get('board_type', BoardType.USER_GENERATED)
 
     ## Required fields
     board_args = {

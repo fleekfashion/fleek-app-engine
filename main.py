@@ -45,6 +45,7 @@ from src import loadProducts
 from src import add_to_board_options as atb
 from src.similarProducts import getSimilarProducts
 from src import product_board_names
+import src.db_init as dbi
 from src import board_smart_tag_suggestions
 from src import suggested_boards
 
@@ -294,6 +295,12 @@ def getProductBoardNameSuggestions():
     return jsonify(
         product_board_names.getProductBoardNameSuggestions(request.args)
     )
+
+@app.route('/dbInitialize', methods=['POST'])
+def db_initialize():
+    data = request.get_json(force=True)
+    res = dbi.db_initialize(data)
+    return jsonify(res)
 
 @app.route('/getBoardSmartTagSuggestions', methods=['GET'])
 def getBoardSmartTagSuggestions():
