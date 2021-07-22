@@ -48,6 +48,7 @@ from src import product_board_names
 import src.db_init as dbi
 from src import board_smart_tag_suggestions
 from src import suggested_boards
+import src.db_init as dbi
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -256,6 +257,18 @@ def getUserBoardsBatch():
     res = rub.getUserBoardsBatch(request.args)
     return jsonify(res)
 
+@app.route('/writeSmartTagToBoard', methods=['POST'])
+def writeSmartTagToBoard():
+    data = request.get_json(force=True)
+    res = wub.write_smart_tag_to_board(data)
+    return jsonify(res)
+
+@app.route('/removeSmartTagFromBoard', methods=['POST'])
+def removeSmartTagFromBoard():
+    data = request.get_json(force=True)
+    res = wub.remove_smart_tag_from_board(data)
+    return jsonify(res)
+
 @app.route('/getUserFavedBrands', methods=['GET'])
 def getUserFavedBrands():
     return jsonify(
@@ -287,7 +300,7 @@ def getAddToBoardOptions():
 @app.route('/getBoardSuggestions', methods=['GET'])
 def getBoardSuggestions():
     return jsonify(
-        bs.getBoardSuggestions(request.args)
+        bs.getBoardSuggestionsSecondaryLabels(request.args)
     )
 
 @app.route('/getProductBoardNameSuggestions', methods=['GET'])
@@ -295,12 +308,6 @@ def getProductBoardNameSuggestions():
     return jsonify(
         product_board_names.getProductBoardNameSuggestions(request.args)
     )
-
-@app.route('/dbInitialize', methods=['POST'])
-def db_initialize():
-    data = request.get_json(force=True)
-    res = dbi.db_initialize(data)
-    return jsonify(res)
 
 @app.route('/getBoardSmartTagSuggestions', methods=['GET'])
 def getBoardSmartTagSuggestions():
@@ -319,6 +326,11 @@ def getUserSmartTagProductBatch():
     return jsonify(
         suggested_boards.getUserSmartTagProductBatch(request.args)
     )
+@app.route('/dbInitialize', methods=['POST'])
+def db_initialize():
+    data = request.get_json(force=True)
+    res = dbi.db_initialize(data)
+    return jsonify(res)
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
