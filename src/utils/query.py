@@ -6,6 +6,7 @@ import sqlalchemy as s
 from sqlalchemy.sql import Values
 from sqlalchemy.sql.dml import Insert
 from sqlalchemy.sql.elements import UnaryExpression
+from sqlalchemy.sql.dml import Update
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from sqlalchemy import subquery 
 from sqlalchemy import Column
@@ -27,6 +28,11 @@ def days_ago_timestamp(days: int) -> int:
 def get_daily_random_seed() -> float:
     random.seed(datetime.utcnow().date())
     return random.random()
+
+def get_board_update_timestamp_statement(board_id: int, last_modified_timestamp: int) -> Update:
+    return s.update(p.Board) \
+        .where(p.Board.board_id == board_id) \
+        .values(last_modified_timestamp=last_modified_timestamp)
 
 def sort_columns(
         q: t.Union[Alias, CTE]
