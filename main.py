@@ -256,6 +256,18 @@ def getUserBoardsBatch():
     res = rub.getUserBoardsBatch(request.args)
     return jsonify(res)
 
+@app.route('/writeSmartTagToBoard', methods=['POST'])
+def writeSmartTagToBoard():
+    data = request.get_json(force=True)
+    res = wub.write_smart_tag_to_board(data)
+    return jsonify(res)
+
+@app.route('/removeSmartTagFromBoard', methods=['POST'])
+def removeSmartTagFromBoard():
+    data = request.get_json(force=True)
+    res = wub.remove_smart_tag_from_board(data)
+    return jsonify(res)
+
 @app.route('/getUserFavedBrands', methods=['GET'])
 def getUserFavedBrands():
     return jsonify(
