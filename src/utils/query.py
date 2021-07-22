@@ -3,7 +3,9 @@ import random
 from datetime import datetime, timedelta
 
 import sqlalchemy as s
-from sqlalchemy.sql.dml import Update
+from sqlalchemy.sql import Values
+from sqlalchemy.sql.dml import Insert, Update
+from sqlalchemy.sql.elements import UnaryExpression
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from sqlalchemy import subquery 
 from sqlalchemy import Column
@@ -148,6 +150,21 @@ def apply_filters(
     for key, value in filters.items():
         q = _apply_filter(q, products_subquery, key, value)
     return q
+
+def insert_on_filter_condition(args: dict, table: p.PostgreTable, filter_condition: UnaryExpression) -> Insert:
+    cols = table.__table__.c
+    values = Values(*[s.column(c.name, c.type) for c in cols], name="temp_" + table.__table__.name)
+    data = tuple([args[c.name] for c in cols])
+    
+    data_on_filter_statement = s.select(values.data([data])) \
+        .where(filter_condition) \
+        .cte()
+    
+    insert_statement = s.insert(table).from_select(
+        [col.name for col in data_on_filter_statement.c],
+        data_on_filter_statement
+    )
+    return insert_statement
 
 def join_product_color_info(products_subquery: t.Union[Alias, CTE], product_id_field: str = 'product_id') -> Select:
     join_field = products_subquery.c[product_id_field]
