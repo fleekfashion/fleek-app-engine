@@ -1,3 +1,4 @@
+from src.utils.query import get_board_update_timestamp_statement
 from src.utils.sqlalchemy_utils import session_scope
 from src.utils import hashers
 from src.defs import postgres as p
@@ -92,9 +93,7 @@ def write_product_to_board(args: dict) -> dict:
 
     insert_event_statement = insert(p.UserProductFaves).values(**user_event_args).on_conflict_do_nothing()
     insert_product_seen_statement = insert(p.UserProductSeens).values(**user_event_args).on_conflict_do_nothing()
-    update_board_statement = s.update(p.Board) \
-        .where(p.Board.board_id == board_product_args['board_id']) \
-        .values(last_modified_timestamp=timestamp)
+    update_board_statement = get_board_update_timestamp_statement(board_product_args['board_id'], timestamp)
 
     ## Construct SQLAlchemy Object
     board_product = p.BoardProduct(**board_product_args)
@@ -154,9 +153,15 @@ def write_smart_tag_to_board(args: dict) -> dict:
     }
     board_smart_tag = p.BoardSmartTag(**board_smart_tag_args)
 
+    update_board_statement = get_board_update_timestamp_statement(
+        board_smart_tag_args['board_id'], 
+        int(dt.now().timestamp())
+    )
+
     try:
         with session_scope() as session:
             session.add(board_smart_tag)
+            session.execute(update_board_statement)
     except Exception as e:
         print(e)
         return {"success": False}
@@ -167,15 +172,22 @@ def remove_smart_tag_from_board(args: dict) -> dict:
     board_id = args['board_id']
     smart_tag_id = args['smart_tag_id']
 
+    remove_smart_tag_from_board_stmt = s.delete(p.BoardSmartTag).where(
+        s.and_(
+            p.BoardSmartTag.board_id == board_id, 
+            p.BoardSmartTag.smart_tag_id == smart_tag_id
+        )
+    )
+
+    update_board_statement = get_board_update_timestamp_statement(
+        board_id, 
+        int(dt.now().timestamp())
+    )
+
     try:
         with session_scope() as session:
-            remove_smart_tag_from_board_stmt = s.delete(p.BoardSmartTag).where(
-                s.and_(
-                    p.BoardSmartTag.board_id == board_id, 
-                    p.BoardSmartTag.smart_tag_id == smart_tag_id
-                )
-            )
             session.execute(remove_smart_tag_from_board_stmt)
+            session.execute(update_board_statement)
     except Exception as e:
         print(e)
         return {"success": False}
