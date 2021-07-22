@@ -332,11 +332,6 @@ def getUserSmartTagProductBatch():
     return jsonify(
         suggested_boards.getUserSmartTagProductBatch(request.args)
     )
-@app.route('/dbInitialize', methods=['POST'])
-def db_initialize():
-    data = request.get_json(force=True)
-    res = dbi.db_initialize(data)
-    return jsonify(res)
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
