@@ -24,7 +24,7 @@ def get_update_board_timestamp_stmt_from_select(board_ids: Select, timestamp: in
     return s.update(p.Board) \
         .where(p.Board.board_id.in_(board_ids)) \
         .values(last_modified_timestamp=timestamp) \
-        .execution_options(synchronize_session='evaluate')
+        .execution_options(synchronize_session=False)
 
 def get_board_update_timestamp_statement(board_id: int, last_modified_timestamp: int) -> Update:
     return s.update(p.Board) \
