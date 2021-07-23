@@ -8,7 +8,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy import func as F 
 from sqlalchemy.sql.expression import literal_column
 
-from src.utils import query as qutils
+from src.utils import string_parser, query as qutils
 from src.utils import hashers
 from src.defs import postgres as p
 
@@ -49,6 +49,7 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
         .where(p.ProductSmartTag.smart_tag_id.in_(board_smart_tags))
     n_products = s.select(F.count(p.BoardProduct.product_id).label('n_products')) \
             .where(p.BoardProduct.board_id == board_id) \
+            .group_by(p.BoardProduct.board_id) \
             .cte('board_product_count')
 
     ## Get the number of products per tag in the board
@@ -68,18 +69,26 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
     ranked = s.select(
         board_tag_count.c.smart_tag_id,
         p.SmartTag.suggestion,
+        p.SmartTag.product_label,
+        board_tag_count.c.c.label('n_products'),
         (board_tag_count.c.c/F.sqrt(p.SmartTag.n_hits)).label('score'),
         ((1.0*board_tag_count.c.c/n_products.c.n_products) > strong_cutoff).label('is_strong_suggestion')
         
     ).join(
-            p.SmartTag, 
+            p.SmartTag,
             board_tag_count.c.smart_tag_id==p.SmartTag.smart_tag_id
-    ).order_by(
+    ).join(
+            n_products,
+            board_tag_count.c.c <= 10*n_products.c.n_products ## stupid condition to silence error
+    ) \
+        .where(board_tag_count.c.c > 1) \
+        .order_by(
             literal_column('is_strong_suggestion').desc(), 
             literal_column('score').desc()
     ).limit(limit)
 
     res = run_query(ranked)
+    res = string_parser._process_smart_tags(res)
     is_strong = len(res) > 0 and res[0]['is_strong_suggestion']
     return {
         'suggestions': res,
