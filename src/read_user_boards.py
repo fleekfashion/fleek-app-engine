@@ -11,7 +11,13 @@ from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 import itertools
 
+import importlib
+importlib.reload(board)
+
 def _get_board_smart_tags(board_ids: Select) -> Select:
+    """
+    Get table of (board_id, smart_tag_id)
+    """
     board_smart_tags = s.select(
         p.BoardSmartTag.board_id,
         psql.array_agg(
@@ -31,6 +37,10 @@ def _get_board_smart_tags(board_ids: Select) -> Select:
     return board_smart_tags
 
 def _get_board_opt_smart_tag(board_products: CTE) -> Select:
+    """
+    Get table of (board_id, smart_tag_id) with
+    the max number of products in that board 
+    """
     board_smart_tag = s.select(
         board_products.c.board_id,
         F.count(board_products.c.product_id).label('n_products'),
@@ -48,6 +58,9 @@ def _get_board_opt_smart_tag(board_products: CTE) -> Select:
     return max_smart_tags
 
 def _get_boards_info(boards: CTE) -> Select:
+    """
+    Get all relevant board metadata given a list of boards
+    """
     board_ids = s.select(boards.c.board_id)
     board_products = s.select(p.BoardProduct.board_id, p.BoardProduct.product_id) \
         .filter(p.BoardProduct.board_id.in_(
@@ -63,6 +76,7 @@ def _get_boards_info(boards: CTE) -> Select:
         p.Board.__table__,
         F.coalesce(board_stats.c.n_products, 0).label('n_products'),
         F.coalesce(board_stats.c.advertiser_stats, []).label('advertiser_stats'),
+        board_stats.c.total_savings,
         F.coalesce(board_smart_tags.c.smart_tags, []).label('smart_tags'),
         (
             (   1.0*F.coalesce(board_opt_tag.c.n_products, 0)

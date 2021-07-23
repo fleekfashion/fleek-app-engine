@@ -64,6 +64,7 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
         board_tag_count.c.smart_tag_id,
         p.SmartTag.suggestion,
         p.SmartTag.product_label,
+        board_tag_count.c.c.label('n_products'),
         (board_tag_count.c.c/F.sqrt(p.SmartTag.n_hits)).label('score'),
         ((1.0*board_tag_count.c.c/n_products.c.n_products) > strong_cutoff).label('is_strong_suggestion')
         
