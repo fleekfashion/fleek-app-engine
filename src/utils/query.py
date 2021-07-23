@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import sqlalchemy as s
 from sqlalchemy.sql import Values
-from sqlalchemy.sql.dml import Insert
+from sqlalchemy.sql.dml import Insert, Update
 from sqlalchemy.sql.elements import UnaryExpression
 from sqlalchemy.sql.dml import Update
 from sqlalchemy.sql.selectable import Alias, CTE, Select

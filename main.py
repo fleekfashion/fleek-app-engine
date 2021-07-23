@@ -218,6 +218,12 @@ def createNewBoard():
     res = wub.create_new_board(data)
     return jsonify(res)
 
+@app.route('/createUserSuggestedBoard', methods=['POST'])
+def createUserSuggestedBoard():
+    data = request.get_json(force=True)
+    res = wub.create_user_suggested_board(data)
+    return jsonify(res)
+
 @app.route('/updateBoardName', methods=['POST'])
 def updateBoardName():
     data = request.get_json(force=True)
