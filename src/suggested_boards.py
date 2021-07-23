@@ -33,6 +33,14 @@ def _get_filtered_products(user_id: int) -> Select:
             ~p.UserProductFaves.product_id.in_(_get_user_board_products(user_id))
         )
 
+def _get_existing_user_smart_tags(user_id: int) -> Select:
+    return s.select(p.BoardSmartTag.smart_tag_id) \
+        .where(
+            p.BoardSmartTag.board_id.in_(
+                s.select(p.UserBoard.board_id) \
+                    .where(p.UserBoard.user_id == user_id)
+            )
+        )
 
 def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool = True) -> Select:
     NORMALIZATION = .5
@@ -90,6 +98,9 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
                 )
             )
         ) \
+        .where(~normalized_smart_tags.c.smart_tag_id.in_( ## Do not sugg
+            _get_existing_user_smart_tags(user_id)
+        )) \
         .distinct()
 
     ## Order the smarttags with random seeding
