@@ -7,7 +7,7 @@ from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
 from src.defs import postgres as p
-from src.defs.types.board_type import BoardType 
+from src.defs.types.board_type import BoardType
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 import itertools
@@ -183,7 +183,7 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
             .where(
                 s.or_(
                     boards.c.board_type == BoardType.USER_GENERATED,
-                    F.array_length(boards.c.products) > 0
+                    F.cardinality(boards.c.products) > 0
                 )
             ) \
             .order_by(boards.c.last_modified_timestamp.desc())
