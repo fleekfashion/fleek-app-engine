@@ -3,6 +3,7 @@ import random
 import itertools
 
 import sqlalchemy as s
+from sqlalchemy.sql.dml import Insert, Update
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from sqlalchemy import subquery 
 from sqlalchemy import Column
@@ -19,6 +20,17 @@ from src.utils import query as qutils
 from src.utils import user_info
 from src.utils import static 
 
+def get_update_board_timestamp_stmt_from_select(board_ids: Select, timestamp: int) -> Update:
+    return s.update(p.Board) \
+        .where(p.Board.board_id.in_(board_ids)) \
+        .values(last_modified_timestamp=timestamp) \
+        .execution_options(synchronize_session=False)
+
+def get_board_update_timestamp_statement(board_id: int, last_modified_timestamp: int) -> Update:
+    return s.update(p.Board) \
+        .where(p.Board.board_id == board_id) \
+        .values(last_modified_timestamp=last_modified_timestamp)
+
 def get_product_group_stats(
         products: CTE,
         id_col: t.Optional[str]
@@ -28,21 +40,20 @@ def get_product_group_stats(
     id_colname = id_col if id_col else "temp_id"
     tmp_id_col = literal_column(id_col) if id_col else literal(1)
 
-
     ## join pinfo
     q3 = qutils.join_base_product_info(products).cte()
 
     ## Get advertiser level stats
     advertiser_stats = s.select(
-        tmp_id_col.label('tmp_id'),
+        tmp_id_col,
         q3.c.advertiser_name,
         F.count(q3.c.product_id).label('n_products')
     ).group_by(tmp_id_col, q3.c.advertiser_name) \
         .cte()
 
     ## Get total group level stats
-    board_stats = s.select(
-        advertiser_stats.c.tmp_id.label(id_colname),
+    full_advertiser_stats = s.select(
+        tmp_id_col,
         F.sum(advertiser_stats.c.n_products).label('n_products'),
         psql.array_agg(
             F.json_build_object(
@@ -51,7 +62,24 @@ def get_product_group_stats(
             )
         ).label('advertiser_stats'),
     ) \
-        .group_by(advertiser_stats.c.tmp_id)
+        .group_by(tmp_id_col) \
+        .cte()
+
+    active_stats = s.select(
+        tmp_id_col,
+        F.sum(q3.c.product_price - q3.c.product_sale_price).label('total_savings')
+    ) \
+        .where(q3.c.is_active) \
+        .group_by(tmp_id_col) \
+        .cte()
+
+    board_stats = s.select(
+        full_advertiser_stats,
+        active_stats.c.total_savings
+    ).outerjoin(
+        active_stats, 
+        full_advertiser_stats.c[id_colname] == active_stats.c[id_colname]
+    )
 
     return board_stats
 

@@ -1,4 +1,5 @@
 from src.utils.sqlalchemy_utils import session_scope, run_query
+from src.utils import board
 from src.utils import hashers
 from src.defs import postgres as p
 from sqlalchemy.dialects.postgresql import insert
@@ -6,24 +7,30 @@ import sqlalchemy as s
 from sqlalchemy import func as F
 from sqlalchemy.sql import Values
 from sqlalchemy.dialects.postgresql.dml import Insert
+from sqlalchemy.sql.selectable import Select, CTE
 from sqlalchemy.sql.expression import literal
+import importlib
 
+importlib.reload(board)
 def _parse_product_event_args_helper(args: dict) -> dict:
     new_args = {}
 
     ## Required
-    new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id'])
+    new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id']) if not p.DEV_MODE \
+            else args['user_id']
     new_args['product_id'] = args['product_id']
     new_args['event_timestamp'] = args['event_timestamp']
 
     return new_args
 
-def build_write_to_smart_board_stmt(
-        user_id: int, 
-        product_id: int, 
-        event_timestamp: int
-    ) -> Insert:
-    ## Get user Boards
+def _get_relevent_smart_boards(
+        user_id: Select,
+        product_id: int,
+    ) -> Select:
+    """
+    Given a pid, get all relevent smart board ids
+    """
+
     user_boards = s.select(p.UserBoard.board_id) \
         .where(p.UserBoard.user_id == user_id)
 
@@ -33,17 +40,34 @@ def build_write_to_smart_board_stmt(
         .cte()
 
     ## Get relevent boards for the product
-    board_product = s.select(
-        user_board_smart_tags.c.board_id, 
-        p.ProductSmartTag.product_id, 
-        literal(event_timestamp).label('last_modified_timestamp')
+    relevent_boards = s.select(
+        user_board_smart_tags.c.board_id,
     ) \
-        .where(p.ProductSmartTag.product_id == product_id) \
-        .join(user_board_smart_tags, p.ProductSmartTag.smart_tag_id == user_board_smart_tags.c.smart_tag_id) \
-        .distinct()
+        .where(user_board_smart_tags.c.smart_tag_id.in_(
+            s.select(p.ProductSmartTag.smart_tag_id) \
+                .where(p.ProductSmartTag.product_id == product_id)
+        )
+    )
+    return relevent_boards
+
+def build_write_to_smart_board_stmt(
+        relevent_boards: CTE,
+        product_id: int, 
+        event_timestamp: int
+    ) -> Insert:
+    """
+    Given list of boards
+    write a product to them
+    """
+
+    board_product = s.select(
+        relevent_boards.c.board_id,
+        product_id,
+        event_timestamp
+    )
 
     ## Write product to those boards
-    insert_board_product= insert(p.BoardProduct) \
+    insert_board_product = insert(p.BoardProduct) \
         .from_select(['board_id', 'product_id', 'last_modified_timestamp'], board_product) \
         .on_conflict_do_nothing()
 
@@ -52,11 +76,17 @@ def build_write_to_smart_board_stmt(
 def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
     ## Parse args
     new_args = _parse_product_event_args_helper(args)
+    user_id = new_args['user_id']
+    product_id = new_args['product_id']
+    timestamp = new_args['event_timestamp']
 
     ## Create objects
     insert_event_statement = insert(event_table).values(**new_args).on_conflict_do_nothing()
     insert_product_seen_statement = insert(p.UserProductSeens).values(**new_args).on_conflict_do_nothing()
-    insert_to_smart_boards = build_write_to_smart_board_stmt(**new_args)
+
+    relevent_boards = _get_relevent_smart_boards(user_id, product_id)
+    insert_to_smart_boards = build_write_to_smart_board_stmt(relevent_boards.cte(), product_id, timestamp)
+    update_boards_statement = board.get_update_board_timestamp_stmt_from_select(relevent_boards, timestamp)
 
     ## Execute session transaction
     try:
@@ -64,6 +94,7 @@ def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
             session.execute(insert_event_statement)
             session.execute(insert_product_seen_statement)
             session.execute(insert_to_smart_boards)
+            session.execute(update_boards_statement)
             session.commit()
     except Exception as e:
         print(e)
