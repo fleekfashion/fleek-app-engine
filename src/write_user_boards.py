@@ -6,7 +6,7 @@ from src.utils import hashers
 from src.defs import postgres as p
 import uuid
 from datetime import datetime as dt
-from sqlalchemy.dialects.postgresql import insert, UUID
+from sqlalchemy.dialects.postgresql import insert
 import sqlalchemy as s
 from sqlalchemy.exc import IntegrityError
 
