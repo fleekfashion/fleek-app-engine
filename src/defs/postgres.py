@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import Engine
@@ -12,6 +14,7 @@ DATABASE_USER = "postgres"
 PASSWORD = "fleek-app-prod1"
 DBNAME = "ktest"
 PROJECT = 'staging'
+DEV_MODE = bool(os.environ.get('DEV_MODE', False))
 
 conn_str = f"postgresql://{DATABASE_USER}:{PASSWORD}@localhost:5431/{DBNAME}"
 engine: Engine = create_engine(

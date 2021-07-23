@@ -9,12 +9,15 @@ from sqlalchemy.sql import Values
 from sqlalchemy.dialects.postgresql.dml import Insert
 from sqlalchemy.sql.selectable import Select
 from sqlalchemy.sql.expression import literal
+import importlib
 
+importlib.reload(board)
 def _parse_product_event_args_helper(args: dict) -> dict:
     new_args = {}
 
     ## Required
-    new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id'])
+    new_args['user_id'] = hashers.apple_id_to_user_id_hash(args['user_id']) if not p.DEV_MODE \
+            else args['user_id']
     new_args['product_id'] = args['product_id']
     new_args['event_timestamp'] = args['event_timestamp']
 
