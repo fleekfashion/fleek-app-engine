@@ -1,3 +1,4 @@
+from sqlalchemy.sql.elements import literal
 from src.utils.query import get_board_update_timestamp_statement
 from src.defs.types.board_type import BoardType
 from src.utils.sqlalchemy_utils import session_scope
@@ -5,7 +6,7 @@ from src.utils import hashers
 from src.defs import postgres as p
 import uuid
 from datetime import datetime as dt
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.dialects.postgresql import insert, UUID
 import sqlalchemy as s
 from sqlalchemy.exc import IntegrityError
 
@@ -59,6 +60,70 @@ def create_new_board(args: dict) -> dict:
         print(e)
         return {"success": False}
     
+    return {"success": True, "board_id": board_id}
+
+def create_user_suggested_board(args: dict) -> dict:
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+    smart_tag_id = args['smart_tag_id']
+    board_id = uuid.uuid4().hex
+    creation_date = dt.now().strftime('%Y-%m-%d')
+    last_modified_timestamp = int(dt.now().timestamp())
+
+    board_select_stmt = s.select(
+        s.cast(literal(board_id).label('board_id'), UUID),
+        p.SmartTag.suggestion.label('name'),
+        s.cast(literal(creation_date).label('creation_date'), s.Date),
+        literal(last_modified_timestamp).label('last_modified_timestamp'),
+        literal('ruma').label('board_type')
+    ).filter(p.SmartTag.smart_tag_id == smart_tag_id).cte()
+
+    insert_board_stmt = insert(p.Board) \
+        .from_select([col.name for col in board_select_stmt.c], board_select_stmt)
+
+    product_ids_from_product_smart_tag = s.select(p.ProductSmartTag.product_id) \
+        .filter(p.ProductSmartTag.smart_tag_id == smart_tag_id) \
+        .cte()
+
+    product_ids_from_product_faves = s.select(p.UserProductFaves.product_id) \
+        .filter(p.UserProductFaves.user_id == user_id) \
+        .cte()
+
+    join_product_ids = s.select(product_ids_from_product_smart_tag) \
+        .join(
+            product_ids_from_product_faves, 
+            product_ids_from_product_faves.c.product_id == product_ids_from_product_smart_tag.c.product_id
+        ) \
+        .cte()
+
+    board_product_select_stmt = s.select(
+        s.cast(literal(board_id).label('board_id'), UUID),
+        join_product_ids.c.product_id,
+        literal(last_modified_timestamp).label('last_modified_timestamp'),
+    ).cte()
+
+    insert_board_product_stmt = insert(p.BoardProduct) \
+        .from_select([col.name for col in board_product_select_stmt.c], board_product_select_stmt)
+    
+    user_board_args = {
+        'user_id': user_id,
+        'board_id': board_id,
+        'last_modified_timestamp': last_modified_timestamp,
+        'is_owner': True,
+        'is_collaborator': False,
+        'is_following': False,
+        'is_suggested': False,
+    }
+    user_board = p.UserBoard(**user_board_args)
+
+    try:
+        with session_scope() as session:
+            session.execute(insert_board_stmt)
+            session.execute(insert_board_product_stmt)
+            session.add(user_board)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
     return {"success": True, "board_id": board_id}
 
 def update_board_name(args: dict) -> dict:
