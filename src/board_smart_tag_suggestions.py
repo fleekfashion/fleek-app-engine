@@ -83,8 +83,6 @@ def getBoardSmartTagSuggestions(args: dict) -> dict:
 
     res = run_query(ranked)
     res = string_parser._process_smart_tags(res)
-    is_strong = len(res) > 0 and res[0]['is_strong_suggestion']
     return {
         'suggestions': res,
-        'is_strong': is_strong
     }
