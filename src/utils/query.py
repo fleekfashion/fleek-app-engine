@@ -28,14 +28,7 @@ def get_daily_random_seed() -> float:
     random.seed(datetime.utcnow().date())
     return random.random()
 
-def get_board_update_timestamp_statement(board_id: int, last_modified_timestamp: int) -> Update:
-    return s.update(p.Board) \
-        .where(p.Board.board_id == board_id) \
-        .values(last_modified_timestamp=last_modified_timestamp)
-
-def sort_columns(
-        q: t.Union[Alias, CTE]
-    ) -> Select:
+def sort_columns(q: t.Union[Alias, CTE]) -> Select:
     ordered_q = s.select(*[
         c.label(c.name) for c in sorted(q.c, key=lambda x: x.name)
     ])

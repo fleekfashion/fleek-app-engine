@@ -1,4 +1,5 @@
 from src.utils.sqlalchemy_utils import session_scope, run_query
+from src.utils import board
 from src.utils import hashers
 from src.defs import postgres as p
 from sqlalchemy.dialects.postgresql import insert
@@ -6,6 +7,7 @@ import sqlalchemy as s
 from sqlalchemy import func as F
 from sqlalchemy.sql import Values
 from sqlalchemy.dialects.postgresql.dml import Insert
+from sqlalchemy.sql.selectable import Select
 from sqlalchemy.sql.expression import literal
 
 def _parse_product_event_args_helper(args: dict) -> dict:
@@ -19,14 +21,10 @@ def _parse_product_event_args_helper(args: dict) -> dict:
     return new_args
 
 def build_write_to_smart_board_stmt(
-        user_id: int, 
+        user_boards: Select,
         product_id: int, 
         event_timestamp: int
     ) -> Insert:
-    ## Get user Boards
-    user_boards = s.select(p.UserBoard.board_id) \
-        .where(p.UserBoard.user_id == user_id)
-
     ## Get smarttags for those boards
     user_board_smart_tags = s.select(p.BoardSmartTag) \
         .where(p.BoardSmartTag.board_id.in_(user_boards)) \
@@ -43,7 +41,7 @@ def build_write_to_smart_board_stmt(
         .distinct()
 
     ## Write product to those boards
-    insert_board_product= insert(p.BoardProduct) \
+    insert_board_product = insert(p.BoardProduct) \
         .from_select(['board_id', 'product_id', 'last_modified_timestamp'], board_product) \
         .on_conflict_do_nothing()
 
@@ -52,11 +50,18 @@ def build_write_to_smart_board_stmt(
 def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
     ## Parse args
     new_args = _parse_product_event_args_helper(args)
+    user_id = new_args['user_id']
+    product_id = new_args['product_id']
+    timestamp = new_args['event_timestamp']
+
+    user_boards = s.select(p.UserBoard.board_id) \
+        .where(p.UserBoard.user_id == user_id)
 
     ## Create objects
     insert_event_statement = insert(event_table).values(**new_args).on_conflict_do_nothing()
     insert_product_seen_statement = insert(p.UserProductSeens).values(**new_args).on_conflict_do_nothing()
-    insert_to_smart_boards = build_write_to_smart_board_stmt(**new_args)
+    insert_to_smart_boards = build_write_to_smart_board_stmt(user_boards, product_id, timestamp)
+    update_boards_statement = board.get_update_board_timestamp_stmt_from_select(user_boards, timestamp)
 
     ## Execute session transaction
     try:
@@ -64,6 +69,7 @@ def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
             session.execute(insert_event_statement)
             session.execute(insert_product_seen_statement)
             session.execute(insert_to_smart_boards)
+            session.execute(update_boards_statement)
             session.commit()
     except Exception as e:
         print(e)
