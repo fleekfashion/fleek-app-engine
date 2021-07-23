@@ -73,3 +73,4 @@ OrderProduct = Base.classes.order_product
 
 ## Misc
 AdvertiserProductCount = Base.classes.advertiser_product_count
+RejectedBoardSmartTagPopup = Base.classes.rejected_board_smart_tag_popup
