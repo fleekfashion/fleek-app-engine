@@ -7,7 +7,7 @@ from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
 from src.defs import postgres as p
-from src.defs.board_type import BoardType 
+from src.defs.types.board_type import BoardType 
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 import itertools
