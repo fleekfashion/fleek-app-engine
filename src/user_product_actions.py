@@ -7,7 +7,7 @@ import sqlalchemy as s
 from sqlalchemy import func as F
 from sqlalchemy.sql import Values
 from sqlalchemy.dialects.postgresql.dml import Insert
-from sqlalchemy.sql.selectable import Select
+from sqlalchemy.sql.selectable import Select, CTE
 from sqlalchemy.sql.expression import literal
 import importlib
 
@@ -23,25 +23,48 @@ def _parse_product_event_args_helper(args: dict) -> dict:
 
     return new_args
 
-def build_write_to_smart_board_stmt(
-        user_boards: Select,
-        product_id: int, 
-        event_timestamp: int
-    ) -> Insert:
+def _get_relevent_smart_boards(
+        user_id: Select,
+        product_id: int,
+    ) -> Select:
+    """
+    Given a pid, get all relevent smart board ids
+    """
+
+    user_boards = s.select(p.UserBoard.board_id) \
+        .where(p.UserBoard.user_id == user_id)
+
     ## Get smarttags for those boards
     user_board_smart_tags = s.select(p.BoardSmartTag) \
         .where(p.BoardSmartTag.board_id.in_(user_boards)) \
         .cte()
 
     ## Get relevent boards for the product
-    board_product = s.select(
-        user_board_smart_tags.c.board_id, 
-        p.ProductSmartTag.product_id, 
-        literal(event_timestamp).label('last_modified_timestamp')
+    relevent_boards = s.select(
+        user_board_smart_tags.c.board_id,
     ) \
-        .where(p.ProductSmartTag.product_id == product_id) \
-        .join(user_board_smart_tags, p.ProductSmartTag.smart_tag_id == user_board_smart_tags.c.smart_tag_id) \
-        .distinct()
+        .where(user_board_smart_tags.c.smart_tag_id.in_(
+            s.select(p.ProductSmartTag.smart_tag_id) \
+                .where(p.ProductSmartTag.product_id == product_id)
+        )
+    )
+    return relevent_boards
+
+def build_write_to_smart_board_stmt(
+        relevent_boards: CTE,
+        product_id: int, 
+        event_timestamp: int
+    ) -> Insert:
+    """
+    Given list of boards
+    write a product to them
+    """
+
+    board_product = s.select(
+        relevent_boards.c.board_id,
+        product_id,
+        event_timestamp
+    )
 
     ## Write product to those boards
     insert_board_product = insert(p.BoardProduct) \
@@ -57,14 +80,13 @@ def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
     product_id = new_args['product_id']
     timestamp = new_args['event_timestamp']
 
-    user_boards = s.select(p.UserBoard.board_id) \
-        .where(p.UserBoard.user_id == user_id)
-
     ## Create objects
     insert_event_statement = insert(event_table).values(**new_args).on_conflict_do_nothing()
     insert_product_seen_statement = insert(p.UserProductSeens).values(**new_args).on_conflict_do_nothing()
-    insert_to_smart_boards = build_write_to_smart_board_stmt(user_boards, product_id, timestamp)
-    update_boards_statement = board.get_update_board_timestamp_stmt_from_select(user_boards, timestamp)
+
+    relevent_boards = _get_relevent_smart_boards(user_id, product_id)
+    insert_to_smart_boards = build_write_to_smart_board_stmt(relevent_boards.cte(), product_id, timestamp)
+    update_boards_statement = board.get_update_board_timestamp_stmt_from_select(relevent_boards, timestamp)
 
     ## Execute session transaction
     try:
