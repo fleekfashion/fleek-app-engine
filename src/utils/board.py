@@ -3,6 +3,7 @@ import random
 import itertools
 
 import sqlalchemy as s
+from sqlalchemy.sql.dml import Insert, Update
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from sqlalchemy import subquery 
 from sqlalchemy import Column
@@ -18,6 +19,16 @@ from src.utils import query as qutils
 
 from src.utils import user_info
 from src.utils import static 
+
+def get_update_board_timestamp_stmt_from_select(board_ids: Select, timestamp: int) -> Update:
+    return s.update(p.Board) \
+        .where(p.Board.board_id.in_(board_ids)) \
+        .values(last_modified_timestamp=last_modified_timestamp)
+
+def get_board_update_timestamp_statement(board_id: int, last_modified_timestamp: int) -> Update:
+    return s.update(p.Board) \
+        .where(p.Board.board_id == board_id) \
+        .values(last_modified_timestamp=last_modified_timestamp)
 
 def get_product_group_stats(
         products: CTE,

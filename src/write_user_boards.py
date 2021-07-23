@@ -1,5 +1,4 @@
-from sqlalchemy.sql.elements import literal
-from src.utils.query import get_board_update_timestamp_statement
+from src.utils.board import get_board_update_timestamp_statement
 from src.defs.types.board_type import BoardType
 from src.utils.query import get_board_update_timestamp_statement
 from src.utils.sqlalchemy_utils import session_scope
