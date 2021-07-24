@@ -63,7 +63,7 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
                 products.c.event_timestamp.desc(),
                 products.c.product_id.desc()
             )
-        )[0:2].label('pids'),
+        )[0:1].label('pids'),
         p.ProductSmartTag.smart_tag_id
     ).join(
         p.ProductSmartTag,

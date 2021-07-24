@@ -48,6 +48,7 @@ from src import product_board_names
 import src.db_init as dbi
 from src import board_smart_tag_suggestions
 from src import suggested_boards
+from src import trackers
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -331,6 +332,12 @@ def getUserSmartTagProductBatch():
     return jsonify(
         suggested_boards.getUserSmartTagProductBatch(request.args)
     )
+
+@app.route('/writeRejectSmartTagPopup', methods=['POST'])
+def writeRejectSmartTagPopup():
+    data = request.get_json(force=True)
+    res = trackers.writeRejectSmartTagPopup(data) 
+    return jsonify({'success': res})
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the

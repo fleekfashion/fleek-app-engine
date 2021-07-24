@@ -49,6 +49,7 @@ def _get_board_opt_smart_tag(board_products: CTE) -> Select:
     ) \
     .join(p.ProductSmartTag, p.ProductSmartTag.product_id == board_products.c.product_id) \
     .where(~board_products.c.board_id.in_(s.select(p.BoardSmartTag.board_id))) \
+    .where(~board_products.c.board_id.in_(s.select(p.RejectedBoardSmartTagPopup.board_id))) \
     .group_by(board_products.c.board_id, p.ProductSmartTag.smart_tag_id) \
     .cte()
 
