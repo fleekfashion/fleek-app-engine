@@ -98,9 +98,6 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
                 )
             )
         ) \
-        .where(~normalized_smart_tags.c.smart_tag_id.in_( ## Do not sugg
-            _get_existing_user_smart_tags(user_id)
-        )) \
         .distinct()
 
     ## Order the smarttags with random seeding
@@ -113,6 +110,9 @@ def get_ranked_user_smart_tags(user_id: int, offset: int, limit: int, rand: bool
         F.setseed(qutils.get_daily_random_seed())
     ) \
         .where(~normalized_smart_tags.c.smart_tag_id.in_(duplicate_ids)) \
+        .where(~normalized_smart_tags.c.smart_tag_id.in_( ## Do not sugg
+            _get_existing_user_smart_tags(user_id)
+        )) \
         .order_by( (
             F.power(normalized_smart_tags.c.score, SCORE_POWER)
         ).desc()
