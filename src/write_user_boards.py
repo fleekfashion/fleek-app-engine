@@ -98,7 +98,10 @@ def create_user_suggested_board(args: dict) -> dict:
     product_ids_from_product_smart_tag = s.select(p.ProductSmartTag.product_id) \
         .filter(p.ProductSmartTag.smart_tag_id == smart_tag_id)
 
-    product_ids_in_user_product_faves = s.select(p.UserProductFaves.product_id) \
+    product_ids_in_user_product_faves = s.select(
+            p.UserProductFaves.product_id, 
+            p.UserProductFaves.event_timestamp
+        ) \
         .filter(p.UserProductFaves.user_id == user_id) \
         .filter(p.UserProductFaves.product_id.in_(product_ids_from_product_smart_tag)) \
         .cte()
@@ -106,7 +109,7 @@ def create_user_suggested_board(args: dict) -> dict:
     board_product_select_stmt = s.select(
         s.cast(s.literal(board_id).label('board_id'), UUID),
         product_ids_in_user_product_faves.c.product_id,
-        s.literal(last_modified_timestamp).label('last_modified_timestamp'),
+        product_ids_in_user_product_faves.c.event_timestamp.label('last_modified_timestamp'),
     ).cte()
 
     insert_board_product_stmt = insert(p.BoardProduct) \
