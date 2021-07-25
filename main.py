@@ -250,11 +250,13 @@ def removeBoard():
     return jsonify(res)
 
 @app.route('/getBoardInfo', methods=['GET'])
+@cross_origin()
 def getBoardInfo():
     res = rub.getBoardInfo(request.args)
     return jsonify(res)
 
 @app.route('/getBoardProductsBatch', methods=['GET'])
+@cross_origin()
 def getBoardProductsBatch():
     res = rub.getBoardProductsBatch(request.args)
     return jsonify(res)
