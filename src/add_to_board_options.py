@@ -11,6 +11,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy import func as F 
 import itertools
 
+from src.defs.types.board_type import BoardType
 
 def getAddToBoardOptions(args):
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
@@ -23,10 +24,9 @@ def getAddToBoardOptions(args):
 
     user_board_info = qutils.join_board_info(
         s.select(p.UserBoard.board_id) \
-            .filter(p.UserBoard.user_id == user_id).cte()
+            .filter(p.UserBoard.user_id == user_id) \
+            .cte()
     ).cte()
-
-
 
     q = s.select(
         user_board_info.c.board_id,
@@ -36,6 +36,8 @@ def getAddToBoardOptions(args):
             s.select(p.BoardProduct.product_id) \
                 .where(p.BoardProduct.board_id == user_board_info.c.board_id)
         ).label('is_in_board')
-    ).outerjoin(user_board_products, user_board_info.c.board_id == user_board_products.c.board_id) \
+    ) \
+        .where(user_board_info.c.board_type == BoardType.USER_GENERATED) \
+        .outerjoin(user_board_products, user_board_info.c.board_id == user_board_products.c.board_id) \
         .order_by(user_board_info.c.last_modified_timestamp.desc())
     return run_query(q)

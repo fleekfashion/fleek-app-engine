@@ -8,6 +8,7 @@ from datetime import datetime as dt
 from sqlalchemy.dialects.postgresql import insert, UUID
 import sqlalchemy as s
 from sqlalchemy.exc import IntegrityError
+from src import read_user_boards
 
 def create_new_board(args: dict) -> dict:
     board_id = uuid.uuid4().hex
@@ -59,7 +60,10 @@ def create_new_board(args: dict) -> dict:
         print(e)
         return {"success": False}
     
-    return {"success": True, "board_id": board_id}
+    return {
+        "success": True, 
+        **read_user_boards.getBoardInfo({'board_id': board_id})
+    }
 
 def create_user_suggested_board(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
@@ -122,11 +126,15 @@ def create_user_suggested_board(args: dict) -> dict:
             session.add(board_smart_tag)
             session.flush()
             session.execute(insert_board_product_stmt)
+            session.commit()
     except Exception as e:
         print(e)
         return {"success": False}
 
-    return {"success": True, "board_id": board_id}
+    return {
+        "success": True, 
+        **read_user_boards.getBoardInfo({'board_id': board_id})
+    }
 
 def update_board_name(args: dict) -> dict:
     board_id = args['board_id']
