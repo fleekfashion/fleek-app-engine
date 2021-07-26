@@ -60,7 +60,10 @@ def create_new_board(args: dict) -> dict:
         print(e)
         return {"success": False}
     
-    return {"success": True, "board_id": board_id}
+    return {
+        "success": True, 
+        **read_user_boards.getBoardInfo({'board_id': board_id})
+    }
 
 def create_user_suggested_board(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
