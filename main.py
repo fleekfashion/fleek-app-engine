@@ -50,6 +50,7 @@ from src import board_smart_tag_suggestions
 from src import suggested_boards
 import src.db_init as dbi
 from src import trackers
+from src import update_user_id
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -347,6 +348,11 @@ def writeRejectSmartTagPopup():
     data = request.get_json(force=True)
     res = trackers.writeRejectSmartTagPopup(data) 
     return jsonify({'success': res})
+
+@app.route('/updateUserId', methods=['POST'])
+def updateUserId():
+    data = request.get_json(force=True)
+    return jsonify({'success': update_user_id.updateUserId(data)})
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
