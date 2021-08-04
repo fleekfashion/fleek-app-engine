@@ -5,6 +5,7 @@ import sqlalchemy as s
 
 from src.defs import postgres as p
 from src.utils.sqlalchemy_utils import session_scope, row_to_dict
+from src.utils.hashers import apple_id_to_user_id_hash
 
 def update_table_user_id(table, old_user_id: int, new_user_id: int) -> bool:
     return s.update(table) \
@@ -12,8 +13,8 @@ def update_table_user_id(table, old_user_id: int, new_user_id: int) -> bool:
         .values(user_id=new_user_id)
 
 def updateUserId(args: dict) -> dict:
-    old_user_id = args['old_user_id']
-    new_user_id = args['new_user_id']
+    old_user_id = apple_id_to_user_id_hash(args['old_user_id'])
+    new_user_id = apple_id_to_user_id_hash(args['new_user_id'])
 
     update_stmts = seq(p.Base.classes) \
         .filter(lambda x: 'user_id' in x.__table__.c) \
