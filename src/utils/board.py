@@ -132,3 +132,28 @@ def get_product_previews(
             board_product_info.c.tmp_id_col
         )
     return product_previews
+
+def get_ordered_products_batch(
+    pids_and_order_col_cte: CTE, 
+    order_col_name: str,
+    args: dict,
+    desc: bool = True
+    ) -> Select:
+
+    products = qutils.join_product_info(pids_and_order_col_cte).cte()
+    filtered_products = qutils.apply_filters(
+        products,
+        args,
+        active_only=False
+    ).cte()
+    t = literal_column(order_col_name) 
+    order_col = t.desc() if desc else t
+
+    ## Order Products
+    products_batch_ordered = s.select(filtered_products) \
+        .order_by(
+            order_col,
+            filtered_products.c.product_id.desc()
+        )
+    
+    return products_batch_ordered
