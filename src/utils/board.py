@@ -117,8 +117,6 @@ def get_product_previews(
     board_product_info = qutils.join_product_info(filtered_board_product).cte()
 
     ## Get preview
-    product_cols = [(c.name, c) for c in board_product_info.c if 'tmp_id_col' not in c.name ]
-    product_cols_json_agg = list(itertools.chain(*product_cols))
     product_previews = s.select(
             board_product_info.c.tmp_id_col.label(id_col),
             psql.array_agg(
