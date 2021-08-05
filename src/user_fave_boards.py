@@ -5,7 +5,7 @@ from src.utils import hashers
 from src.defs import postgres as p
 
 
-def getAllFavesProductBatch(args: dict) -> dict:
+def getUserFaveProductBatch(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     limit = args['limit']
     offset = args['offset']

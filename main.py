@@ -261,9 +261,9 @@ def getBoardProductsBatch():
     res = rub.getBoardProductsBatch(request.args)
     return jsonify(res)
 
-@app.route('/getAllFavesProductsBatch', methods=['GET'])
-def getAllFavesProductsBatch():
-    res = ufb.getAllFavesProductBatch(request.args)
+@app.route('/getUserFaveProductBatch', methods=['GET'])
+def getUserFaveProductBatch():
+    res = ufb.getUserFaveProductBatch(request.args)
     return jsonify(res)
 
 @app.route('/getUserBoardsBatch', methods=['GET'])
