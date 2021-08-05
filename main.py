@@ -351,7 +351,7 @@ def writeRejectSmartTagPopup():
 @app.route('/updateUserId', methods=['POST'])
 def updateUserId():
     data = request.get_json(force=True)
-    return jsonify({'success': update_user_id.updateUserId(data)})
+    return jsonify(update_user_id.updateUserId(data))
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
