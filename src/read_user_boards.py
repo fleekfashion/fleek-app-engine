@@ -96,27 +96,12 @@ def getBoardInfo(args: dict) -> dict:
     result = get_first(board)
     parsed_res = result if result else {"error": "invalid collection id"}
     processed_board = string_parser.process_boards([parsed_res])[0]
-    return processed_board 
-
-def getAllFavesProductBatch(args: dict) -> dict:
-    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
-
-    user_fave_pids_query = s.select(
-        p.UserProductFaves.product_id,
-        p.UserProductFaves.event_timestamp.label('last_modified_timestamp')
-    ) \
-        .filter(p.UserProductFaves.user_id == user_id) \
-        .cte()
-
-    products_batch_ordered = board.get_ordered_products_batch_from_pids_cte(user_fave_pids_query, args)
-    
-    result = run_query(products_batch_ordered)
-    return {
-        "products": result
-    }
+    return processed_board
 
 def getBoardProductsBatch(args: dict) -> dict:
     board_id = args['board_id']
+    limit = args['limit']
+    offset = args['offset']
 
     board_pids_query = s.select(
         p.BoardProduct.product_id, 
@@ -125,7 +110,13 @@ def getBoardProductsBatch(args: dict) -> dict:
         .filter(p.BoardProduct.board_id == board_id) \
         .cte()
 
-    products_batch_ordered = board.get_ordered_products_batch_from_pids_cte(board_pids_query, args)
+    products_batch_ordered = board.get_ordered_products_batch(
+        board_pids_query, 
+        'last_modified_timestamp',
+        args
+    ) \
+        .limit(limit) \
+        .offset(offset)
 
     result = run_query(products_batch_ordered)
     return {
