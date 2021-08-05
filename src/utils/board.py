@@ -123,7 +123,12 @@ def get_product_previews(
             board_product_info.c.tmp_id_col.label(id_col),
             psql.array_agg(
                 psql.aggregate_order_by(
-                    F.json_build_object(*product_cols_json_agg),
+                    F.json_build_object(
+                        "product_id", board_product_info.c.product_id,
+                        "advertiser_name", board_product_info.c.advertiser_name,
+                        "is_active", board_product_info.c.is_active,
+                        "product_image_url", board_product_info.c.product_image_url
+                    ),
                     board_product_info.c.row_number.asc()
                 )
             ).label('products'),
