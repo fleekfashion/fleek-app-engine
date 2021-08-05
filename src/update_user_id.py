@@ -63,5 +63,4 @@ def updateUserId(args: dict) -> dict:
     with session_scope() as session:
         [ session.execute(s) for s in insert_statements ]
         #[ session.execute(s) for s in delete_statements ] TEMP DO NOT DELETE FOR V1
-        session.commit()
     return {"success": True}
