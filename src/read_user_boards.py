@@ -3,17 +3,13 @@ import typing as t
 import sqlalchemy as s
 from src.utils import query as qutils 
 from src.utils import board, string_parser
-from sqlalchemy.sql.selectable import Alias, CTE, Select
+from sqlalchemy.sql.selectable import CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
 from src.defs import postgres as p
 from src.defs.types.board_type import BoardType
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
-import itertools
-
-import importlib
-importlib.reload(board)
 
 def _get_board_smart_tags(board_ids: Select) -> Select:
     """
@@ -102,10 +98,25 @@ def getBoardInfo(args: dict) -> dict:
     processed_board = string_parser.process_boards([parsed_res])[0]
     return processed_board 
 
+def getAllFavesProductBatch(args: dict) -> dict:
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+
+    user_fave_pids_query = s.select(
+        p.UserProductFaves.product_id,
+        p.UserProductFaves.event_timestamp.label('last_modified_timestamp')
+    ) \
+        .filter(p.UserProductFaves.user_id == user_id) \
+        .cte()
+
+    products_batch_ordered = board.get_ordered_products_batch_from_pids_cte(user_fave_pids_query, args)
+    
+    result = run_query(products_batch_ordered)
+    return {
+        "products": result
+    }
+
 def getBoardProductsBatch(args: dict) -> dict:
     board_id = args['board_id']
-    offset = args['offset']
-    limit = args['limit']
 
     board_pids_query = s.select(
         p.BoardProduct.product_id, 
@@ -114,22 +125,8 @@ def getBoardProductsBatch(args: dict) -> dict:
         .filter(p.BoardProduct.board_id == board_id) \
         .cte()
 
-    ## Get and filter products
-    products = qutils.join_product_info(board_pids_query).cte()
-    filtered_products = qutils.apply_filters(
-        products,
-        args,
-        active_only=False
-    ).cte()
+    products_batch_ordered = board.get_ordered_products_batch_from_pids_cte(board_pids_query, args)
 
-    ## Order Products
-    products_batch_ordered = s.select(filtered_products) \
-        .order_by(
-            filtered_products.c.last_modified_timestamp.desc(),
-            filtered_products.c.product_id.desc()
-        ) \
-        .limit(limit) \
-        .offset(offset)
     result = run_query(products_batch_ordered)
     return {
         "products": result

@@ -132,3 +132,25 @@ def get_product_previews(
             board_product_info.c.tmp_id_col
         )
     return product_previews
+
+def get_ordered_products_batch_from_pids_cte(pids_and_timestamps_cte: CTE, args: dict) -> Select:
+    limit = args['limit']
+    offset = args['offset']
+
+    products = qutils.join_product_info(pids_and_timestamps_cte).cte()
+    filtered_products = qutils.apply_filters(
+        products,
+        args,
+        active_only=False
+    ).cte()
+
+    ## Order Products
+    products_batch_ordered = s.select(filtered_products) \
+        .order_by(
+            filtered_products.c.last_modified_timestamp.desc(),
+            filtered_products.c.product_id.desc()
+        ) \
+        .limit(limit) \
+        .offset(offset)
+    
+    return products_batch_ordered

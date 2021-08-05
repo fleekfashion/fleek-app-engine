@@ -260,6 +260,11 @@ def getBoardProductsBatch():
     res = rub.getBoardProductsBatch(request.args)
     return jsonify(res)
 
+@app.route('/getAllFavesProductsBatch', methods=['GET'])
+def getAllFavesProductsBatch():
+    res = rub.getAllFavesProductBatch(request.args)
+    return jsonify(res)
+
 @app.route('/getUserBoardsBatch', methods=['GET'])
 def getUserBoardsBatch():
     res = rub.getUserBoardsBatch(request.args)
