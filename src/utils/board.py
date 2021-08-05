@@ -117,8 +117,6 @@ def get_product_previews(
     board_product_info = qutils.join_product_info(filtered_board_product).cte()
 
     ## Get preview
-    product_cols = [(c.name, c) for c in board_product_info.c if 'tmp_id_col' not in c.name ]
-    product_cols_json_agg = list(itertools.chain(*product_cols))
     product_previews = s.select(
             board_product_info.c.tmp_id_col.label(id_col),
             psql.array_agg(
@@ -127,7 +125,9 @@ def get_product_previews(
                         "product_id", board_product_info.c.product_id,
                         "advertiser_name", board_product_info.c.advertiser_name,
                         "is_active", board_product_info.c.is_active,
-                        "product_image_url", board_product_info.c.product_image_url
+                        "product_image_url", board_product_info.c.product_image_url,
+                        "product_price", board_product_info.c.product_price,
+                        "product_sale_price", board_product_info.c.product_sale_price,
                     ),
                     board_product_info.c.row_number.asc()
                 )
@@ -139,7 +139,7 @@ def get_product_previews(
     return product_previews
 
 def get_ordered_products_batch(
-    pids_and_order_col_cte: CTE, 
+    pids_and_order_col_cte: CTE,
     order_col_name: str,
     args: dict,
     desc: bool = True
