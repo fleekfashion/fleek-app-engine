@@ -16,6 +16,10 @@ def insert_new_user_id_data(
     old_user_id: int, 
     new_user_id: int
 ) -> Insert:
+    """
+    Creates insert statement to copy
+    existing user id data to new user id
+    """
 
     valid_cols = [ col for col in table.__table__.c if col.name != USER_ID_COL ]
     tmp = s.select(
@@ -31,10 +35,17 @@ def insert_new_user_id_data(
     return insert_stmt
 
 def delete_old_user_id_data(table, old_user_id: int) -> Delete:
+    """
+    Create delete statement to delete all old 
+    user id data
+    """
     return s.delete(table) \
         .where(table.user_id == old_user_id)
 
 def updateUserId(args: dict) -> dict:
+    """
+    Migrate from old user id to new user id
+    """
     old_user_id = apple_id_to_user_id_hash(args['old_user_id'])
     new_user_id = apple_id_to_user_id_hash(args['new_user_id'])
 
