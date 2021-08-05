@@ -125,7 +125,9 @@ def get_product_previews(
                         "product_id", board_product_info.c.product_id,
                         "advertiser_name", board_product_info.c.advertiser_name,
                         "is_active", board_product_info.c.is_active,
-                        "product_image_url", board_product_info.c.product_image_url
+                        "product_image_url", board_product_info.c.product_image_url,
+                        "product_price", board_product_info.c.product_price,
+                        "product_sale_price", board_product_info.c.product_sale_price,
                     ),
                     board_product_info.c.row_number.asc()
                 )
@@ -137,7 +139,7 @@ def get_product_previews(
     return product_previews
 
 def get_ordered_products_batch(
-    pids_and_order_col_cte: CTE, 
+    pids_and_order_col_cte: CTE,
     order_col_name: str,
     args: dict,
     desc: bool = True
