@@ -38,7 +38,7 @@ def get_product_group_stats(
 
     ## Process id col
     id_colname = id_col if id_col else "temp_id"
-    tmp_id_col = literal_column(id_col) if id_col else literal(1)
+    tmp_id_col = literal_column(id_col) if id_col else literal(1).label(id_colname)
 
     ## join pinfo
     q3 = qutils.join_base_product_info(products).cte()
@@ -64,6 +64,7 @@ def get_product_group_stats(
     ) \
         .group_by(tmp_id_col) \
         .cte()
+    print([c.name for c in full_advertiser_stats.c])
 
     active_stats = s.select(
         tmp_id_col,
