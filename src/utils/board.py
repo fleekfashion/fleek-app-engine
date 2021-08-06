@@ -64,7 +64,6 @@ def get_product_group_stats(
     ) \
         .group_by(tmp_id_col) \
         .cte()
-    print([c.name for c in full_advertiser_stats.c])
 
     active_stats = s.select(
         tmp_id_col,
