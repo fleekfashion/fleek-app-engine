@@ -41,3 +41,25 @@ def getUserFaveStats(args: dict) -> dict:
     return {
         "stats": result
     }
+
+def getUserBag(args: dict) -> dict:
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+
+    user_bag_pids_query = s.select(
+        p.UserProductBags.product_id,
+        p.UserProductBags.event_timestamp.label('last_modified_timestamp')
+    ) \
+        .filter(p.UserProductBags.user_id == user_id) \
+        .cte()
+
+    products_batch_ordered = board.get_ordered_products_batch(
+        user_bag_pids_query, 
+        'last_modified_timestamp', 
+        args
+    )
+    
+    result = run_query(products_batch_ordered)
+    return {
+        "products": result
+    }
+    
