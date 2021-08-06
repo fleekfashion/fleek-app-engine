@@ -35,6 +35,21 @@ def get_product_group_stats(
         products: CTE,
         id_col: t.Optional[str]
     ) -> Select:
+    """
+    Params
+    -----------------------
+    products: cte containing a list of product_ids
+    id_col OPTIONAL: column name to do group bys
+
+    Return
+    -----------------
+    Select with statistics on id_col level
+
+
+    Compute a set of set of statistics such as
+    advertiser distribution, total savings, n_products,
+    TODO: label distribution
+    """
 
     ## Process id col
     id_colname = id_col if id_col else "temp_id"
@@ -89,6 +104,17 @@ def get_product_previews(
     order_field: str,
     desc: bool = True
     ) -> Select:
+    """
+    Params
+    -----------------------
+    products: cte containing a list of product_ids
+    id_col OPTIONAL: column name to do group bys
+    order_field: column name to order list by
+    desc: whether to order in desc or asc
+
+    Return sa set of product preview json objects
+    grouped by the id_col field
+    """
 
     tmp_id_col = literal_column(id_col)
     t = literal_column(order_field)
@@ -139,7 +165,16 @@ def get_ordered_products_batch(
     args: dict,
     desc: bool = True
     ) -> Select:
+    """
+    Params
+    -----------------------
+    products: cte containing a list of product_ids
+    order_col_name: column name to order list by
+    args: dict of filter args
+    desc: whether to order in desc or asc
 
+    Returns a select for a batch of products
+    """
     products = qutils.join_product_info(pids_and_order_col_cte).cte()
     filtered_products = qutils.apply_filters(
         products,
