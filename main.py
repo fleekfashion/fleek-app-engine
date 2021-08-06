@@ -38,6 +38,7 @@ from src.product_price_history import get_product_price_history
 import src.user_product_actions as upa
 import src.write_user_boards as wub
 import src.read_user_boards as rub
+import src.user_fave_boards as ufb
 import src.user_brand_actions as uba
 import src.board_suggestions as bs
 from src import orders
@@ -259,6 +260,21 @@ def getBoardInfo():
 @cross_origin()
 def getBoardProductsBatch():
     res = rub.getBoardProductsBatch(request.args)
+    return jsonify(res)
+
+@app.route('/getUserFaveProductBatch', methods=['GET'])
+def getUserFaveProductBatch():
+    res = ufb.getUserFaveProductBatch(request.args)
+    return jsonify(res)
+
+@app.route('/getUserBag', methods=['GET'])
+def getUserBag():
+    res = ufb.getUserBag(request.args)
+    return jsonify(res)
+
+@app.route('/getUserFaveStats', methods=['GET'])
+def getUserFaveStats():
+    res = ufb.getUserFaveStats(request.args)
     return jsonify(res)
 
 @app.route('/getUserBoardsBatch', methods=['GET'])
