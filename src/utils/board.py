@@ -38,7 +38,7 @@ def get_product_group_stats(
 
     ## Process id col
     id_colname = id_col if id_col else "temp_id"
-    tmp_id_col = literal_column(id_col) if id_col else literal(1)
+    tmp_id_col = literal_column(id_col) if id_col else literal(1).label(id_colname)
 
     ## join pinfo
     q3 = qutils.join_base_product_info(products).cte()
