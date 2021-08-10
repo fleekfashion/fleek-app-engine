@@ -39,18 +39,21 @@ def getUserFaveStats(args: dict) -> dict:
     ) \
         .filter(p.UserProductFaves.user_id == user_id) \
         .cte()
-    get_product_group_stats_query = board.get_product_group_stats(user_fave_pids_query, None)
+    get_product_group_stats_query = board.get_product_group_stats(user_fave_pids_query, None).cte()
     product_previews = board.get_product_previews(
         user_fave_pids_query, 
         'board_id',
         'last_modified_timestamp'
-    )
+    ).cte()
     
-    stats_result = run_query(get_product_group_stats_query)
-    products_result = run_query(product_previews)
+    # Since both queries are one row, can merge into one db call
+    join_queries = s.select(get_product_group_stats_query, product_previews).join(product_previews, s.true())
+
+    result = run_query(join_queries)
+    result = result[0] if len(result) > 0 else {}
+    for dummy_key in ['temp_id', 'board_id']: result.pop(dummy_key, None)
     return {
-        "stats": stats_result,
-        "products": products_result[0]['products'] if len(products_result) > 0 else []
+        "stats_and_products": result
     }
 
 def getUserBag(args: dict) -> dict:
