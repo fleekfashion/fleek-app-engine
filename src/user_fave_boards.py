@@ -32,14 +32,25 @@ def getUserFaveProductBatch(args: dict) -> dict:
 def getUserFaveStats(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
 
-    user_fave_pids_query = s.select(p.UserProductFaves.product_id) \
+    user_fave_pids_query = s.select(
+        s.literal('all_faves').label('board_id'), # Dummy value
+        p.UserProductFaves.product_id,
+        p.UserProductFaves.event_timestamp.label('last_modified_timestamp')
+    ) \
         .filter(p.UserProductFaves.user_id == user_id) \
         .cte()
     get_product_group_stats_query = board.get_product_group_stats(user_fave_pids_query, None)
+    product_previews = board.get_product_previews(
+        user_fave_pids_query, 
+        'board_id',
+        'last_modified_timestamp'
+    )
     
-    result = run_query(get_product_group_stats_query)
+    stats_result = run_query(get_product_group_stats_query)
+    products_result = run_query(product_previews)
     return {
-        "stats": result
+        "stats": stats_result,
+        "products": products_result[0]['products'] if len(products_result) > 0 else []
     }
 
 def getUserBag(args: dict) -> dict:
