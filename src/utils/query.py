@@ -13,7 +13,7 @@ from sqlalchemy import Column
 from sqlalchemy.orm.session import Session
 from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql
-from sqlalchemy import func as F
+from sqlalchemy import func as F, or_
 from sqlalchemy.sql.expression import literal, literal_column
 from sqlalchemy.dialects.postgresql import array
 from werkzeug.datastructures import ImmutableMultiDict
@@ -107,6 +107,49 @@ def parse_filters(args: t.Union[dict, ImmutableMultiDict]) -> dict:
     res2 = { key: value for key, value in res.items() if not isinstance(value, list) or len(value) > 0 }
     return res2
 
+def _apply_product_search_filter(
+        products_subquery: t.Union[Alias, CTE],
+        query: t.Any
+    ) -> Select:
+
+    product_search_words = query.rstrip().lstrip().split(' ')
+
+    product_label_clauses = or_(*[F.array_to_string(products_subquery.c.product_labels, DELIMITER).ilike(f'%{word}%') for word in product_search_words])
+    product_color_clauses = or_(products_subquery.c.color.ilike(word) for word in product_search_words)
+    product_advertiser_name_clauses = or_(products_subquery.c.advertiser_name.ilike(f'%{word}%') for word in product_search_words)
+    product_name_clauses = or_(products_subquery.c.product_name.ilike(f'%{word}%') for word in product_search_words)
+    product_secondary_labels_clauses = or_(*[F.array_to_string(products_subquery.c.product_secondary_labels, DELIMITER).ilike(f'%{word}%') for word in product_search_words])
+    product_internal_color_clauses = or_(products_subquery.c.internal_color.ilike(word) for word in product_search_words)
+    product_brand_clauses = or_(products_subquery.c.product_brand.ilike(f'%{word}%') for word in product_search_words)
+    product_tags_clauses = or_(*[F.array_to_string(products_subquery.c.product_tags, DELIMITER).ilike(f'%{word}%') for word in product_search_words])
+
+    product_query_with_match_cols = s.select(
+        products_subquery, 
+        product_label_clauses.label('matches_product_labels'),
+        product_color_clauses.label('matches_color'),
+        product_advertiser_name_clauses.label('matches_advertiser_name'),
+        product_name_clauses.label('matches_product_name'),
+        product_secondary_labels_clauses.label('matches_product_secondary_labels'),
+        product_internal_color_clauses.label('matches_internal_color'),
+        product_brand_clauses.label('matches_product_brand'),
+        product_tags_clauses.label('matches_product_tags')
+    ).cte()
+
+    match_cols = filter(lambda col: col.name.startswith('matches_'), product_query_with_match_cols.c)
+    non_match_cols = filter(lambda col: not col.name.startswith('matches_'), product_query_with_match_cols.c)
+
+    product_search_filter_query = s.select(
+        non_match_cols
+    ).filter(
+        or_(
+            *[col == True for col in match_cols]
+        )
+    ).order_by(
+        *[col.desc() for col in match_cols]
+    )
+
+    return product_search_filter_query
+
 def _apply_filter(
         q: Select,
         products_subquery: t.Union[Alias, CTE],
@@ -128,6 +171,8 @@ def _apply_filter(
         q = q.filter(subq.c.product_labels.overlap(array(product_labels)) )
     elif key == "on_sale" and value:
         q = q.filter(subq.c.product_sale_price < subq.c.product_price)
+    elif key == "product_search_string":
+        q = _apply_product_search_filter(subq, value)
     return q
 
 def apply_filters(
