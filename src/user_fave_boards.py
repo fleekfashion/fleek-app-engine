@@ -57,9 +57,28 @@ def getUserBag(args: dict) -> dict:
         'last_modified_timestamp', 
         args
     )
-    
+
     result = run_query(products_batch_ordered)
     return {
         "products": result
     }
-    
+
+def getUserFaveProductIds(args: dict) -> dict:
+    """
+    Returns a list of product ids
+    for local sync with app
+    """
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+    limit = 3000
+
+    q = s.select(
+        p.UserProductFaves.product_id
+    ) \
+        .where(p.UserProductFaves.user_id == user_id) \
+        .order_by(p.UserProductFaves.event_timestamp.desc()) \
+        .limit(limit)
+    result = run_query(q)
+    res2 = [ r['product_id'] for r in result ]
+    return {
+        "product_ids": res2
+    }
