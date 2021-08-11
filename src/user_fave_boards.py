@@ -73,7 +73,9 @@ def getUserFaveProductIds(args: dict) -> dict:
 
     q = s.select(
         p.UserProductFaves.product_id
-    ).order_by(p.UserProductFaves.event_timestamp.desc()) \
+    ) \
+        .where(p.UserProductFaves.user_id == user_id) \
+        .order_by(p.UserProductFaves.event_timestamp.desc()) \
         .limit(limit)
     result = run_query(q)
     res2 = [ r['product_id'] for r in result ]
