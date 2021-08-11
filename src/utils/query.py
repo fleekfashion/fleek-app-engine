@@ -171,7 +171,7 @@ def _apply_filter(
     elif key == "on_sale" and value:
         q = q.filter(subq.c.product_sale_price < subq.c.product_price)
     elif key == "product_search_string":
-        q = _apply_product_search_filter(subq, value)
+        q = _apply_product_search_filter(q.cte(), value)
     return q
 
 def apply_filters(
