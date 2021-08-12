@@ -20,6 +20,7 @@ def getSimilarProducts(args: dict) -> t.List[dict]:
     product_id = args['product_id']
     offset = args.get('offset', 0)
     limit = args.get('limit', 50)
+    product_info_mode = args.get('product_info_mode', 'full')
 
     sim_pids = s.select(
         p.SimilarItems.similar_product_id.label('product_id')
@@ -30,4 +31,6 @@ def getSimilarProducts(args: dict) -> t.List[dict]:
         .cte('similar_product_ids')
     similar_products_query = qutils.join_product_info(sim_pids).cte()
     filtered_products = qutils.apply_filters(similar_products_query, args, active_only=True)
+    if(product_info_mode == 'light'): 
+        filtered_products = qutils.select_lightweight_product_info(filtered_products.cte())
     return run_query(filtered_products)
