@@ -159,6 +159,16 @@ def insert_on_filter_condition(args: dict, table: p.PostgreTable, filter_conditi
     )
     return insert_statement
 
+def select_lightweight_product_info(products_subquery: t.Union[Alias, CTE]) -> Select:
+    lightweight_products_query = s.select(
+            products_subquery.c.product_id,
+            products_subquery.c.advertiser_name,
+            products_subquery.c.product_price,
+            products_subquery.c.product_sale_price,
+            products_subquery.c.product_image_url
+        )
+    return lightweight_products_query
+
 def join_product_color_info(products_subquery: t.Union[Alias, CTE], product_id_field: str = 'product_id') -> Select:
     join_field = products_subquery.c[product_id_field]
 
@@ -247,10 +257,29 @@ def join_base_product_info(
         ).filter(join_field == p.ProductInfo.product_id)
     return products_query
 
-def join_product_info(
-        subquery: t.Union[Alias, CTE], 
+def join_lightweight_product_info(
+        subquery: t.Union[Alias, CTE],
         product_id_field: str = 'product_id'
     ) -> Select:
+    join_field = subquery.c[product_id_field]
+
+    lightweight_products_query = s.select(
+            p.ProductInfo.product_id,
+            p.ProductInfo.advertiser_name,
+            p.ProductInfo.product_price,
+            p.ProductInfo.product_sale_price,
+            p.ProductInfo.product_image_url
+        ).filter(join_field == p.ProductInfo.product_id)
+    return lightweight_products_query
+
+def join_product_info(
+        subquery: t.Union[Alias, CTE], 
+        product_id_field: str = 'product_id',
+        join_lightweight_info: bool = False
+    ) -> Select:
+
+    if join_lightweight_info:
+        return join_lightweight_product_info(subquery, product_id_field=product_id_field)
 
     ## Base product info
     products_query = join_base_product_info(
