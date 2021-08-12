@@ -1,3 +1,4 @@
+from src.defs.types.product_info_mode import ProductInfoMode
 import typing as t
 from random import shuffle
 from src.defs import postgres as p
@@ -55,12 +56,12 @@ def process_products(
 def loadProducts(args: dict) -> list:
 
     user_id = args.get('user_id', -1)
+    product_info_mode = args.get('product_info_mode', 'full')
     if user_id != -1:
         user_id = hashers.apple_id_to_user_id_hash(user_id)
     user_has_recs = _user_has_recs(user_id)
     n_top = 5 if user_has_recs else 15
     n_rand = 30 - n_top
-
 
     top_products = qutils.join_base_product_info(
         s.select(p.TopProducts).cte('top_product_ids'),
@@ -94,6 +95,12 @@ def loadProducts(args: dict) -> list:
     complete_products_query = qutils.join_external_product_info(
         all_products
     )
+    
+    if (product_info_mode == ProductInfoMode.SWIPE_PAGE):
+        complete_products_query = qutils.select_product_info_cols(complete_products_query.cte(), product_info_mode)
+        products = run_query(complete_products_query)
+        return products
+
     products = run_query(complete_products_query)
     return products
 
