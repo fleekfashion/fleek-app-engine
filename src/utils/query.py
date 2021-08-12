@@ -1,3 +1,4 @@
+from src.defs.types.product_info_mode import ProductInfoMode
 import typing as t
 import random
 from datetime import datetime, timedelta
@@ -159,15 +160,19 @@ def insert_on_filter_condition(args: dict, table: p.PostgreTable, filter_conditi
     )
     return insert_statement
 
-def select_lightweight_product_info(products_subquery: t.Union[Alias, CTE]) -> Select:
-    lightweight_products_query = s.select(
-            products_subquery.c.product_id,
-            products_subquery.c.advertiser_name,
-            products_subquery.c.product_price,
-            products_subquery.c.product_sale_price,
-            products_subquery.c.product_image_url
-        )
-    return lightweight_products_query
+def _get_product_info_cols_from_mode(product_info_mode: str) -> t.List[str]:
+    if product_info_mode == ProductInfoMode.LIGHT:
+        return ['product_id', 'advertiser_name', 'product_name', 'product_price', 'product_sale_price', 'product_image_url']
+    elif product_info_mode == ProductInfoMode.SWIPE_PAGE:
+        return ['product_id', 'advertiser_name', 'product_name', 'product_price', 'product_sale_price', 'product_image_url', 'product_additional_image_urls']
+    else:
+        return [*[col.name for col in p.ProductInfo.__table__.c], 'product_color_options', 'sizes']
+
+def select_product_info_cols(products_subquery: t.Union[Alias, CTE], product_info_mode: str) -> Select:
+    product_info_col_names = _get_product_info_cols_from_mode(product_info_mode)
+    product_info_cols = [col for col in products_subquery.c if col.name in product_info_col_names]
+    products_query = s.select(product_info_cols)
+    return products_query
 
 def join_product_color_info(products_subquery: t.Union[Alias, CTE], product_id_field: str = 'product_id') -> Select:
     join_field = products_subquery.c[product_id_field]
