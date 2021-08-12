@@ -18,7 +18,6 @@ from sqlalchemy import func as F, or_
 from sqlalchemy.sql.expression import literal, literal_column
 from sqlalchemy.dialects.postgresql import array
 from werkzeug.datastructures import ImmutableMultiDict
-import src.utils.sqlalchemy_utils as sqa
 
 from src.utils import user_info
 from src.utils import static 
@@ -110,6 +109,7 @@ def parse_filters(args: t.Union[dict, ImmutableMultiDict]) -> dict:
     return res2
 
 def _apply_product_search_filter(
+        q: Select,
         products_subquery: t.Union[Alias, CTE],
         query: t.Any
     ) -> Select:
@@ -130,23 +130,18 @@ def _apply_product_search_filter(
         word_match_col = or_(*[col == True for col in col_match_clauses])
         word_match_cols.append(word_match_col)
 
-    col_prefix = "matches"
+    match_col_prefix = "matches"
     product_query_with_match_cols = s.select(
-        products_subquery,
-        *[col.label(f"{col_prefix}_${index}") for index, col in enumerate(word_match_cols)]
+        products_subquery.c.product_id,
+        *[col.label(f"{match_col_prefix}_${index}") for index, col in enumerate(word_match_cols)]
     ).cte()
+    match_cols = filter(lambda col: col.name.startswith(match_col_prefix), product_query_with_match_cols.c)
 
-    match_cols = filter(lambda col: col.name.startswith(col_prefix), product_query_with_match_cols.c)
-    non_match_cols = filter(lambda col: not col.name.startswith(col_prefix), product_query_with_match_cols.c)
+    filtered_product_ids = s.select(product_query_with_match_cols.c.product_id)
+    for col in match_cols: filtered_product_ids = filtered_product_ids.filter(col == True)
 
-    # print(sqa.run_query(s.select(match_cols)))
-
-    product_search_filter_query = s.select(
-        non_match_cols
-    )
-    for col in match_cols: product_search_filter_query = product_search_filter_query.where(col == True)
-
-    return product_search_filter_query
+    q = q.filter(products_subquery.c.product_id.in_(filtered_product_ids))
+    return q
 
 def _apply_filter(
         q: Select,
@@ -170,7 +165,7 @@ def _apply_filter(
     elif key == "on_sale" and value:
         q = q.filter(subq.c.product_sale_price < subq.c.product_price)
     elif key == "product_search_string":
-        q = _apply_product_search_filter(q.cte(), value)
+        q = _apply_product_search_filter(q, subq, value)
     return q
 
 def apply_filters(
