@@ -12,7 +12,7 @@ from sqlalchemy import Column
 from sqlalchemy.orm.session import Session
 from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql
-from sqlalchemy import func as F
+from sqlalchemy import func as F, or_
 from sqlalchemy.sql.expression import literal, literal_column
 from sqlalchemy.dialects.postgresql import array
 from werkzeug.datastructures import ImmutableMultiDict
@@ -106,6 +106,41 @@ def parse_filters(args: t.Union[dict, ImmutableMultiDict]) -> dict:
     res2 = { key: value for key, value in res.items() if not isinstance(value, list) or len(value) > 0 }
     return res2
 
+def _apply_product_search_filter(
+        q: Select,
+        products_subquery: t.Union[Alias, CTE],
+        query: t.Any
+    ) -> Select:
+
+    product_search_words = query.replace('-', ' ').lower().rstrip().lstrip().split(' ')
+
+    word_match_cols = []
+    for word in product_search_words:
+        col_match_clauses = [
+            products_subquery.c.product_labels.overlap(array([word])),
+            products_subquery.c.color.op('~*')(f'\m{word}\M'),
+            products_subquery.c.advertiser_name.op('~*')(f'\m{word}\M'),
+            products_subquery.c.product_name.op('~*')(f'\m{word}\M'),
+            products_subquery.c.product_secondary_labels.overlap(array([word])),
+            products_subquery.c.internal_color.op('~*')(f'\m{word}\M'),
+            products_subquery.c.product_tags.overlap(array([word])),
+        ]
+        word_match_col = or_(*[col == True for col in col_match_clauses])
+        word_match_cols.append(word_match_col)
+
+    match_col_prefix = "matches"
+    product_query_with_match_cols = s.select(
+        products_subquery.c.product_id,
+        *[col.label(f"{match_col_prefix}_${index}") for index, col in enumerate(word_match_cols)]
+    ).cte()
+    match_cols = filter(lambda col: col.name.startswith(match_col_prefix), product_query_with_match_cols.c)
+
+    filtered_product_ids = s.select(product_query_with_match_cols.c.product_id)
+    for col in match_cols: filtered_product_ids = filtered_product_ids.filter(col == True)
+
+    q = q.filter(products_subquery.c.product_id.in_(filtered_product_ids))
+    return q
+
 def _apply_filter(
         q: Select,
         products_subquery: t.Union[Alias, CTE],
@@ -127,6 +162,8 @@ def _apply_filter(
         q = q.filter(subq.c.product_labels.overlap(array(product_labels)) )
     elif key == "on_sale" and value:
         q = q.filter(subq.c.product_sale_price < subq.c.product_price)
+    elif key == "product_search_string":
+        q = _apply_product_search_filter(q, subq, value)
     return q
 
 def apply_filters(
