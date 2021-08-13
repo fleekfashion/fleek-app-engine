@@ -118,11 +118,11 @@ def _apply_product_search_filter(
     for word in product_search_words:
         col_match_clauses = [
             products_subquery.c.product_labels.overlap(array([word])),
-            products_subquery.c.color.op('~*')(f'\m{word}\M'),
-            products_subquery.c.advertiser_name.op('~*')(f'\m{word}\M'),
-            products_subquery.c.product_name.op('~*')(f'\m{word}\M'),
+            products_subquery.c.color.op('~*')(f'\m{word}'),
+            products_subquery.c.advertiser_name.op('~*')(f'\m{word}'),
+            products_subquery.c.product_name.op('~*')(f'\m{word}'),
             products_subquery.c.product_secondary_labels.overlap(array([word])),
-            products_subquery.c.internal_color.op('~*')(f'\m{word}\M'),
+            products_subquery.c.internal_color.op('~*')(f'\m{word}'),
             products_subquery.c.product_tags.overlap(array([word])),
         ]
         word_match_col = or_(*[col == True for col in col_match_clauses])
