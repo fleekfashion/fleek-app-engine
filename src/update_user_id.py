@@ -9,6 +9,8 @@ from sqlalchemy.dialects import postgresql as psql
 from src.defs import postgres as p
 from src.utils.sqlalchemy_utils import session_scope, row_to_dict
 from src.utils.hashers import apple_id_to_user_id_hash
+from src.utils.user_info import pop_user_fave_brands 
+
 USER_ID_COL = 'user_id'
 
 def insert_new_user_id_data(
@@ -48,6 +50,7 @@ def updateUserId(args: dict) -> dict:
     """
     old_user_id = apple_id_to_user_id_hash(args['old_user_id'])
     new_user_id = apple_id_to_user_id_hash(args['new_user_id'])
+    pop_user_fave_brands(old_user_id)
 
     valid_tables = seq(p.Base.classes) \
         .filter(lambda x: USER_ID_COL in x.__table__.c)
