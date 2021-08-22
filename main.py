@@ -239,6 +239,12 @@ def writeProductToBoard():
     res = wub.write_product_to_board(data)
     return jsonify(res)
 
+@app.route('/writeProductBatchToBoard', methods=['POST'])
+def writeProductBatchToBoard():
+    data = request.get_json(force=True)
+    res = wub.write_product_batch_to_board(data)
+    return jsonify(res)
+
 @app.route('/removeProductFromBoard', methods=['POST'])
 def removeProductFromBoard():
     data = request.get_json(force=True)

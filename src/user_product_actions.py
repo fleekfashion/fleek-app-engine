@@ -11,7 +11,6 @@ from sqlalchemy.sql.selectable import Select, CTE
 from sqlalchemy.sql.expression import literal
 import importlib
 
-importlib.reload(board)
 def _parse_product_event_args_helper(args: dict) -> dict:
     new_args = {}
 
@@ -101,7 +100,7 @@ def _add_product_event_helper(event_table: p.PostgreTable, args: dict) -> bool:
         return False
     return True
 
-def _get_insert_statement_for_bulk_upload(event_table: p.PostgreTable, args: dict) -> Insert:
+def get_insert_statement_for_bulk_upload(event_table: p.PostgreTable, args: dict) -> Insert:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     product_event_values_cte = s.select(
         Values(
@@ -122,8 +121,8 @@ def _get_insert_statement_for_bulk_upload(event_table: p.PostgreTable, args: dic
 
 
 def _add_product_event_batch_helper(event_table: p.PostgreTable, args: dict):
-    insert_product_event_statement = _get_insert_statement_for_bulk_upload(event_table, args)
-    insert_product_seen_statement = _get_insert_statement_for_bulk_upload(p.UserProductSeens, args)
+    insert_product_event_statement = get_insert_statement_for_bulk_upload(event_table, args)
+    insert_product_seen_statement = get_insert_statement_for_bulk_upload(p.UserProductSeens, args)
 
     try:
         with session_scope() as session:
@@ -136,7 +135,7 @@ def _add_product_event_batch_helper(event_table: p.PostgreTable, args: dict):
     return True
 
 def _add_product_seen_batch_helper(args: dict):
-    insert_product_seen_statement = _get_insert_statement_for_bulk_upload(p.UserProductSeens, args)
+    insert_product_seen_statement = get_insert_statement_for_bulk_upload(p.UserProductSeens, args)
 
     try:
         with session_scope() as session:
