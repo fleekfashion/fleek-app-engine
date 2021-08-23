@@ -1,8 +1,10 @@
+from src.defs.types.product_group_by_type import ProductGroupByType
 import sqlalchemy as s
 from src.utils import board
 from src.utils.sqlalchemy_utils import run_query
 from src.utils import hashers
 from src.defs import postgres as p
+from sqlalchemy import func as F
 
 def getUserFaveProductBatch(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
@@ -95,4 +97,55 @@ def getUserFaveProductIds(args: dict) -> dict:
     res2 = [ r['product_id'] for r in result ]
     return {
         "product_ids": res2
+    }
+
+def getUserFaveProductsGrouped(args: dict) -> dict:
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+    group_by_field = args['group_by_field']
+
+    if group_by_field == ProductGroupByType.ADVERTISER_NAME:
+        user_fave_pids_query = s.select(
+            p.UserProductFaves.product_id,
+            p.ProductInfo.advertiser_name,
+            p.UserProductFaves.event_timestamp.label('last_modified_timestamp')
+        ) \
+            .join(p.ProductInfo, p.UserProductFaves.product_id == p.ProductInfo.product_id) \
+            .filter(p.UserProductFaves.user_id == user_id) \
+            .cte()
+
+        product_previews = board.get_product_previews(
+            user_fave_pids_query, 
+            'advertiser_name',
+            'last_modified_timestamp'
+        )
+
+        final_product_previews = s.select(
+            product_previews.c.advertiser_name.label('name'),
+            product_previews.c.products
+        )
+    else:
+        user_fave_pids_query = s.select(
+            p.UserProductFaves.product_id,
+            F.unnest(p.ProductInfo.product_labels).label('item_type'),
+            p.UserProductFaves.event_timestamp.label('last_modified_timestamp')
+        ) \
+            .join(p.ProductInfo, p.UserProductFaves.product_id == p.ProductInfo.product_id) \
+            .filter(p.UserProductFaves.user_id == user_id) \
+            .cte()
+
+        product_previews = board.get_product_previews(
+            user_fave_pids_query, 
+            'item_type',
+            'last_modified_timestamp'
+        )
+
+        final_product_previews = s.select(
+            product_previews.c.item_type.label('name'),
+            product_previews.c.products
+        )
+
+    result = run_query(final_product_previews)
+
+    return {
+        "faves": result
     }
