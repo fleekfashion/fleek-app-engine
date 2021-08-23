@@ -5,6 +5,40 @@ from src.utils.sqlalchemy_utils import run_query
 from src.utils import hashers
 from src.defs import postgres as p
 from sqlalchemy import func as F
+from sqlalchemy.sql.selectable import Alias, CTE, Select
+import typing as t
+
+def _get_all_faves_grouped_product_previews_stmt(
+    fave_pids_query: CTE, 
+    group_by_field: str,
+    ) -> Select:
+
+    product_previews = board.get_product_previews(
+        fave_pids_query, 
+        group_by_field,
+        'last_modified_timestamp'
+    )
+
+    num_products_query = s.select(
+        fave_pids_query.c[group_by_field],
+        F.count(fave_pids_query.c.product_id).label('n_products')
+    ) \
+        .group_by(fave_pids_query.c[group_by_field]) \
+        .cte()
+
+    final_product_previews = s.select(
+        product_previews.c[group_by_field].label('name'),
+        product_previews.c.products,
+        num_products_query.c.n_products
+    ) \
+        .join(
+            num_products_query, 
+            product_previews.c[group_by_field] == num_products_query.c[group_by_field]
+        ) \
+        .order_by(product_previews.c[group_by_field])
+
+    return final_product_previews
+
 
 def getUserFaveProductBatch(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
@@ -101,7 +135,7 @@ def getUserFaveProductIds(args: dict) -> dict:
 
 def getUserFaveProductsGrouped(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
-    group_by_field = args['group_by_field']
+    group_by_field = args.get('group_by_field', ProductGroupByType.ITEM_TYPE)
 
     if group_by_field == ProductGroupByType.ADVERTISER_NAME:
         user_fave_pids_query = s.select(
@@ -113,16 +147,7 @@ def getUserFaveProductsGrouped(args: dict) -> dict:
             .filter(p.UserProductFaves.user_id == user_id) \
             .cte()
 
-        product_previews = board.get_product_previews(
-            user_fave_pids_query, 
-            'advertiser_name',
-            'last_modified_timestamp'
-        )
-
-        final_product_previews = s.select(
-            product_previews.c.advertiser_name.label('name'),
-            product_previews.c.products
-        )
+        grouped_product_previews = _get_all_faves_grouped_product_previews_stmt(user_fave_pids_query, 'advertiser_name')
     else:
         user_fave_pids_query = s.select(
             p.UserProductFaves.product_id,
@@ -133,19 +158,9 @@ def getUserFaveProductsGrouped(args: dict) -> dict:
             .filter(p.UserProductFaves.user_id == user_id) \
             .cte()
 
-        product_previews = board.get_product_previews(
-            user_fave_pids_query, 
-            'item_type',
-            'last_modified_timestamp'
-        )
+        grouped_product_previews = _get_all_faves_grouped_product_previews_stmt(user_fave_pids_query, 'item_type')
 
-        final_product_previews = s.select(
-            product_previews.c.item_type.label('name'),
-            product_previews.c.products
-        )
-
-    result = run_query(final_product_previews)
-
+    result = run_query(grouped_product_previews)
     return {
         "faves": result
     }
