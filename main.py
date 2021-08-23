@@ -267,6 +267,11 @@ def getUserFaveProductBatch():
     res = ufb.getUserFaveProductBatch(request.args)
     return jsonify(res)
 
+@app.route('/getUserFaveProductsGrouped', methods=['GET'])
+def getUserFaveProductsGrouped():
+    res = ufb.getUserFaveProductsGrouped(request.args)
+    return jsonify(res)
+
 @app.route('/getUserBag', methods=['GET'])
 def getUserBag():
     res = ufb.getUserBag(request.args)
