@@ -7,33 +7,33 @@ from src.defs import postgres as p
 from sqlalchemy import func as F
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 import typing as t
+from sqlalchemy.sql import Values
 
 def _get_all_faves_grouped_product_previews_stmt(
-    fave_pids_query: CTE, 
+    fave_pids_query: CTE,
     group_by_field: str,
     ) -> Select:
 
     product_previews = board.get_product_previews(
-        fave_pids_query, 
+        fave_pids_query,
         group_by_field,
         'last_modified_timestamp'
-    )
+    ).cte()
 
-    num_products_query = s.select(
-        fave_pids_query.c[group_by_field],
-        F.count(fave_pids_query.c.product_id).label('n_products')
-    ) \
-        .group_by(fave_pids_query.c[group_by_field]) \
-        .cte()
+    product_stats = board.get_product_group_stats(
+        fave_pids_query,
+        group_by_field
+    ).cte()
 
     final_product_previews = s.select(
         product_previews.c[group_by_field].label('name'),
         product_previews.c.products,
-        num_products_query.c.n_products
+        product_stats.c.n_products,
+        product_stats.c.advertiser_stats
     ) \
         .join(
-            num_products_query, 
-            product_previews.c[group_by_field] == num_products_query.c[group_by_field]
+            product_stats, 
+            product_previews.c[group_by_field] == product_stats.c[group_by_field]
         ) \
         .order_by(product_previews.c[group_by_field])
 
@@ -140,25 +140,39 @@ def getUserFaveProductsGrouped(args: dict) -> dict:
     if group_by_field == ProductGroupByType.ADVERTISER_NAME:
         user_fave_pids_query = s.select(
             p.UserProductFaves.product_id,
-            p.ProductInfo.advertiser_name,
+            p.ProductInfo.advertiser_name.label('_advertiser_name_'), ## To avoid ambiguous column on product preview join
             p.UserProductFaves.event_timestamp.label('last_modified_timestamp')
         ) \
             .join(p.ProductInfo, p.UserProductFaves.product_id == p.ProductInfo.product_id) \
             .filter(p.UserProductFaves.user_id == user_id) \
             .cte()
 
-        grouped_product_previews = _get_all_faves_grouped_product_previews_stmt(user_fave_pids_query, 'advertiser_name')
+        grouped_product_previews = _get_all_faves_grouped_product_previews_stmt(user_fave_pids_query, '_advertiser_name_')
     else:
         user_fave_pids_query = s.select(
             p.UserProductFaves.product_id,
-            F.unnest(p.ProductInfo.product_labels).label('item_type'),
+            p.ProductLabels.product_label.label('item_type'),
             p.UserProductFaves.event_timestamp.label('last_modified_timestamp')
         ) \
-            .join(p.ProductInfo, p.UserProductFaves.product_id == p.ProductInfo.product_id) \
+            .join(p.ProductLabels, p.UserProductFaves.product_id == p.ProductLabels.product_id) \
             .filter(p.UserProductFaves.user_id == user_id) \
             .cte()
 
-        grouped_product_previews = _get_all_faves_grouped_product_previews_stmt(user_fave_pids_query, 'item_type')
+        grouped_product_previews_unsorted = _get_all_faves_grouped_product_previews_stmt(user_fave_pids_query, 'item_type').cte()
+        ordering_cte = s.select(
+            Values(
+                s.column('item_type', s.Text),
+                s.column('item_rank', s.Integer),
+                name='ordering'
+            ).data([
+                ('top', 1), ('dress', 2), ('shirt', 3), ('pants', 4), ('sweatshirt', 5), 
+                ('hoodie', 6), ('shorts', 7), ('skirt', 8), ('jacket', 9), ('coat', 10), 
+                ('sweater', 11), ('jumpsuit', 12), ('swimwear', 13), ('lingerie', 14)
+            ])
+        ).cte()
+        grouped_product_previews = s.select(grouped_product_previews_unsorted) \
+            .join(ordering_cte, grouped_product_previews_unsorted.c.name == ordering_cte.c.item_type, isouter=True) \
+            .order_by(ordering_cte.c.item_rank)
 
     result = run_query(grouped_product_previews)
     return {
