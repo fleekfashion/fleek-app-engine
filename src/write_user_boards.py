@@ -1,3 +1,4 @@
+from src.user_product_actions import get_insert_statement_for_bulk_upload
 from src.utils.board import get_board_update_timestamp_statement
 from src.defs.types.board_type import BoardType
 from src.utils.sqlalchemy_utils import session_scope
@@ -9,6 +10,7 @@ from sqlalchemy.dialects.postgresql import insert, UUID
 import sqlalchemy as s
 from sqlalchemy.exc import IntegrityError
 from src import read_user_boards
+from sqlalchemy.sql import Values
 
 def create_new_board(args: dict) -> dict:
     board_id = uuid.uuid4().hex
@@ -183,6 +185,47 @@ def write_product_to_board(args: dict) -> dict:
     except IntegrityError as e:
         return {"success": False, "error": "IntegrityError: Product already exists in this board."}
     except Exception as e:
+        return {"success": False}
+    
+    return {"success": True}
+
+def write_product_batch_to_board(args: dict) -> dict:
+    board_id = args['board_id']
+    product_ids = args['product_ids']
+    timestamp = int(dt.now().timestamp())
+
+    ## Register product event
+    product_event_args = {
+        'user_id': args['user_id'],
+        'products': [{'product_id': product_id, 'event_timestamp': timestamp} for product_id in product_ids]
+    }
+
+    insert_bulk_fave_statement  = get_insert_statement_for_bulk_upload(p.UserProductFaves, product_event_args)
+    insert_bulk_seen_statement  = get_insert_statement_for_bulk_upload(p.UserProductSeens, product_event_args)
+    update_board_statement = get_board_update_timestamp_statement(board_id, timestamp)
+
+    ## Actually insert products
+    insert_product_to_board_statements = [
+        insert(p.BoardProduct) \
+            .values(
+                {
+                    'board_id': board_id, 
+                    'product_id': product_id, 
+                    'last_modified_timestamp': timestamp
+                }
+            ) \
+            .on_conflict_do_nothing()
+        for product_id in product_ids
+    ]
+
+    try:
+        with session_scope() as session:
+            session.execute(insert_bulk_fave_statement)
+            session.execute(insert_bulk_seen_statement)
+            session.execute(update_board_statement)
+            for stmt in insert_product_to_board_statements: session.execute(stmt)
+    except Exception as e:
+        print(e)
         return {"success": False}
     
     return {"success": True}
