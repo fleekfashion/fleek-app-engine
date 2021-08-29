@@ -74,6 +74,10 @@ Advertiser = Base.classes.advertiser
 Order = Base.classes.order
 OrderProduct = Base.classes.order_product
 
+## User Profile
+UserProfile = Base.classes.user_profile
+
 ## Misc
 AdvertiserProductCount = Base.classes.advertiser_product_count
 RejectedBoardSmartTagPopup = Base.classes.rejected_board_smart_tag_popup
+
