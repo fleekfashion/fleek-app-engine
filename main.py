@@ -41,6 +41,7 @@ import src.read_user_boards as rub
 import src.user_fave_boards as ufb
 import src.user_brand_actions as uba
 import src.board_suggestions as bs
+import src.user_profile as up
 from src import orders
 from src import loadProducts  
 from src import add_to_board_options as atb
@@ -384,6 +385,11 @@ def writeRejectSmartTagPopup():
 def updateUserId():
     data = request.get_json(force=True)
     return jsonify(update_user_id.updateUserId(data))
+
+@app.route('/upsertUserProfileInfo', methods=['POST'])
+def upsertUserProfileInfo():
+    data = request.get_json(force=True)
+    return jsonify(up.upsert_user_profile_info(data))
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
