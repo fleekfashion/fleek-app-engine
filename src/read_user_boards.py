@@ -81,10 +81,12 @@ def _get_boards_info(boards: CTE) -> Select:
                 / F.coalesce(board_stats.c.n_products, 1)
             ) > .5
         ).label('has_strong_suggestion'),
-        F.json_build_object(
-            'user_id', p.UserProfile.user_id,
-            'name', p.UserProfile.name,
-            'profile_photo_url', p.UserProfile.profile_photo_url,
+        F.json_strip_nulls(
+            F.json_build_object(
+                'user_id', p.UserProfile.user_id,
+                'name', p.UserProfile.name,
+                'profile_photo_url', p.UserProfile.profile_photo_url,
+            )
         ).label('owner')
     ) \
         .where(p.Board.board_id.in_(board_ids)) \
