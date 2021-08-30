@@ -22,7 +22,7 @@ def _parse_board_args(args: dict, board_id: str, last_modified_timestamp: int, b
         'description': args.get('description', None),
         'last_modified_timestamp': last_modified_timestamp,
         'artwork_url': args.get('artwork_url', None),
-        'board_type': BoardType.PRICE_DROP
+        'board_type': board_type
     }
 
 def _parse_user_board_args(args: dict, board_id: str, user_id: int, last_modified_timestamp: int) -> dict:
