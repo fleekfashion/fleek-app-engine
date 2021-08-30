@@ -27,6 +27,7 @@ def create_new_board(args: dict) -> dict:
         'last_modified_timestamp': last_modified_timestamp,
         'name': board_name,
         'board_type': board_type,
+        'owner_user_id': user_id
     }
 
     user_board_args = {
@@ -81,6 +82,7 @@ def create_user_suggested_board(args: dict) -> dict:
         'last_modified_timestamp': last_modified_timestamp,
         'name': board_name,
         'board_type': BoardType.USER_GENERATED,
+        'owner_user_id': user_id
     }
     board = p.Board(**board_args)
     
