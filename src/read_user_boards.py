@@ -82,6 +82,8 @@ def _get_boards_info(boards: CTE) -> Select:
             ) > .5
         ).label('has_strong_suggestion'),
         p.UserBoard.is_owner,
+        p.UserBoard.is_collaborator,
+        p.UserBoard.is_following,
         p.UserBoard.last_modified_timestamp.label('ub_last_modified_timestamp')
     ) \
         .where(p.Board.board_id.in_(board_ids)) \
