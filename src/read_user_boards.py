@@ -80,12 +80,15 @@ def _get_boards_info(boards: CTE) -> Select:
             (   1.0*F.coalesce(board_opt_tag.c.n_products, 0)
                 / F.coalesce(board_stats.c.n_products, 1)
             ) > .5
-        ).label('has_strong_suggestion')
+        ).label('has_strong_suggestion'),
+        p.UserBoard.is_owner,
+        p.UserBoard.last_modified_timestamp.label('ub_last_modified_timestamp')
     ) \
         .where(p.Board.board_id.in_(board_ids)) \
         .outerjoin(board_stats, board_stats.c.board_id == p.Board.board_id) \
         .outerjoin(board_smart_tags, board_smart_tags.c.board_id == p.Board.board_id) \
-        .outerjoin(board_opt_tag, board_opt_tag.c.board_id == p.Board.board_id)
+        .outerjoin(board_opt_tag, board_opt_tag.c.board_id == p.Board.board_id) \
+        .outerjoin(p.UserBoard, p.UserBoard.board_id == p.Board.board_id)
     return board_info
 
 
@@ -174,7 +177,7 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
                     F.cardinality(boards.c.products) > 0
                 )
             ) \
-            .order_by(boards.c.last_modified_timestamp.desc())
+            .order_by(F.greatest(boards.c.last_modified_timestamp, boards.c.ub_last_modified_timestamp).desc())
     result = run_query(boards_ordered)
     parsed_boards = string_parser.process_boards(result)
     
