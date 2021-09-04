@@ -81,6 +81,13 @@ def _get_boards_info(boards: CTE) -> Select:
                 / F.coalesce(board_stats.c.n_products, 1)
             ) > .5
         ).label('has_strong_suggestion'),
+        F.json_strip_nulls(
+            F.json_build_object(
+                'user_id', p.UserProfile.user_id,
+                'name', p.UserProfile.name,
+                'profile_photo_url', p.UserProfile.profile_photo_url,
+            )
+        ).label('owner'),
         p.UserBoard.is_owner,
         p.UserBoard.is_collaborator,
         p.UserBoard.is_following,
@@ -90,6 +97,7 @@ def _get_boards_info(boards: CTE) -> Select:
         .outerjoin(board_stats, board_stats.c.board_id == p.Board.board_id) \
         .outerjoin(board_smart_tags, board_smart_tags.c.board_id == p.Board.board_id) \
         .outerjoin(board_opt_tag, board_opt_tag.c.board_id == p.Board.board_id) \
+        .outerjoin(p.UserProfile, p.UserProfile.user_id == p.Board.owner_user_id) \
         .outerjoin(p.UserBoard, p.UserBoard.board_id == p.Board.board_id)
     return board_info
 

@@ -14,7 +14,7 @@ from src.utils import hashers
 from sqlalchemy.sql.dml import Insert
 
 
-def _parse_board_args(args: dict, board_id: str, last_modified_timestamp: int, board_type: BoardType) -> dict:
+def _parse_board_args(args: dict, board_id: str, user_id: int, last_modified_timestamp: int, board_type: BoardType) -> dict:
     return {
         'board_id': board_id,
         'creation_date': cast(dt.now().strftime('%Y-%m-%d'), s.Date),
@@ -22,7 +22,8 @@ def _parse_board_args(args: dict, board_id: str, last_modified_timestamp: int, b
         'description': args.get('description', None),
         'last_modified_timestamp': last_modified_timestamp,
         'artwork_url': args.get('artwork_url', None),
-        'board_type': BoardType.PRICE_DROP
+        'board_type': board_type,
+        'owner_user_id': user_id
     }
 
 def _parse_user_board_args(args: dict, board_id: str, user_id: int, last_modified_timestamp: int) -> dict:
@@ -41,7 +42,7 @@ def get_insert_board_on_board_type_not_exists_statements(args: dict, board_type:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     last_modified_timestamp = int(dt.now().timestamp())
     
-    board_args = _parse_board_args(args, board_id, last_modified_timestamp, board_type)
+    board_args = _parse_board_args(args, board_id, user_id, last_modified_timestamp, board_type)
     user_board_args = _parse_user_board_args(args, board_id, user_id, last_modified_timestamp)
     
     get_boards_for_user_id_cte = s.select(p.Board.board_type) \
