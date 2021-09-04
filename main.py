@@ -234,6 +234,18 @@ def updateBoardName():
     res = wub.update_board_name(data)
     return jsonify(res)
 
+@app.route('/writeUserFollowBoard', methods=['POST'])
+def writeUserFollowBoard():
+    data = request.get_json(force=True)
+    res = wub.write_user_follow_board(data)
+    return jsonify(res)
+
+@app.route('/removeUserFollowBoard', methods=['POST'])
+def removeUserFollowBoard():
+    data = request.get_json(force=True)
+    res = wub.remove_user_follow_board(data)
+    return jsonify(res)
+
 @app.route('/writeProductToBoard', methods=['POST'])
 def writeProductToBoard():
     data = request.get_json(force=True)

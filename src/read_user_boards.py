@@ -138,7 +138,7 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
     limit = args['limit']
 
     user_board_ids = s.select(p.UserBoard.board_id) \
-        .filter(p.UserBoard.user_id == user_id) \
+        .filter(p.UserBoard.user_id == user_id)
 
     ## Get current boards batch
     boards_batch = s.select(
