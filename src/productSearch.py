@@ -182,6 +182,8 @@ def productSearch(args, index: Index) -> dict:
     max_price = int(args.get("max_price", 10000))
     min_price = int(args.get("min_price", 0))
     user_id = apple_id_to_user_id_hash(args.get("user_id", None))
+    is_swipe_page = args.get('swipe_page', 'true').lower() == 'true'
+    is_legacy = args.get('legacy', 'true').lower() == 'true'
 
     query_args = {
             "offset": int(args.get('offset', 0)),
