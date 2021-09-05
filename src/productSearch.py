@@ -1,16 +1,17 @@
 import typing as t
 import re
 import itertools
+import json
 
 from meilisearch.index import Index
 from functional import seq
-import json
+from fuzzywuzzy import fuzz
 from src.defs.utils import HIDDEN_LABEL_FIELDS
 from src.utils.user_info import get_user_fave_brands
 from src.utils.static import get_advertiser_counts, get_advertiser_price_quantile
 from src.utils.hashers import apple_id_to_user_id_hash
 from src.utils.fuzzymatching import rm_token, _handle_spaces
-from fuzzywuzzy import fuzz
+from src.defs.utils import get_relevent_fields
 
 N_SEARCH_TAGS = 12
 MIN_SEARCH_TAG_HITS = 5
@@ -52,6 +53,9 @@ def build_filters(
         internal_colors: t.Optional[t.List[str]],
         min_price: int,
         max_price: int,
+        is_swipe: bool,
+        is_legacy: bool,
+
     ) -> dict:
     filters = {
         "facetFilters": _build_facet_filters(
@@ -59,7 +63,8 @@ def build_filters(
             product_labels, 
             product_secondary_labels, 
             internal_colors),
-        "filters": _build_value_filters(min_price, max_price)
+        "filters": _build_value_filters(min_price, max_price),
+        'attributesToRetrieve': get_relevent_fields(is_swipe, is_legacy)
     }
     return filters
 
@@ -168,7 +173,7 @@ def process_facets_distributions(
     final_res = _build_final_tags(processed_tags, advertiser_tags)
     return final_res
 
-def productSearch(args, index: Index) -> list:
+def productSearch(args, index: Index) -> dict:
     searchString  = args['searchString'].rstrip().lstrip()
     advertiser_names = args.getlist("advertiser_names")
     product_labels = args.getlist("product_labels")
@@ -197,7 +202,9 @@ def productSearch(args, index: Index) -> list:
         product_secondary_labels=product_secondary_labels,
         internal_colors=internal_colors,
         max_price=max_price,
-        min_price=min_price
+        min_price=min_price,
+        is_legacy=is_legacy,
+        is_swipe=is_swipe_page
         )
     )
     data = index.search(query=searchString, opt_params=query_args)
