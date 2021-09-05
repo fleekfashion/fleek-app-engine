@@ -31,7 +31,8 @@ def _get_relevent_smart_boards(
     """
 
     user_boards = s.select(p.UserBoard.board_id) \
-        .where(p.UserBoard.user_id == user_id)
+        .where(p.UserBoard.user_id == user_id) \
+        .where(p.UserBoard.is_owner | p.UserBoard.is_collaborator)
 
     ## Get smarttags for those boards
     user_board_smart_tags = s.select(p.BoardSmartTag) \
