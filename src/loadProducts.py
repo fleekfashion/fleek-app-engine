@@ -55,6 +55,8 @@ def process_products(
 def loadProducts(args: dict) -> list:
 
     user_id = args.get('user_id', -1)
+    is_swipe_page = args.get('swipe_page', 'true').lower() == 'true'
+    is_legacy = args.get('legacy', 'true').lower() == 'true'
     if user_id != -1:
         user_id = hashers.apple_id_to_user_id_hash(user_id)
     user_has_recs = _user_has_recs(user_id)
@@ -93,8 +95,15 @@ def loadProducts(args: dict) -> list:
 
     complete_products_query = qutils.join_external_product_info(
         all_products
+    ).cte()
+
+    select_product_cols = qutils.select_product_fields(
+        complete_products_query, 
+        is_swipe_page, 
+        is_legacy
     )
-    products = run_query(complete_products_query)
+
+    products = run_query(select_product_cols)
     return products
 
 

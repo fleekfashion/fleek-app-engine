@@ -16,9 +16,10 @@ from src.productSearch import productSearch
 
 def getBoardSuggestions(args: dict) -> dict:
     board_id = args['board_id']
-    user_id = args['user_id']
     offset = args['offset']
     limit = args['limit']
+    is_swipe_page = args.get('swipe_page', 'true').lower() == 'true'
+    is_legacy = args.get('legacy', 'true').lower() == 'true'
     MAX_PRODUCTS = 50
     
     board_products = s.select(p.BoardProduct) \
@@ -73,8 +74,9 @@ def getBoardSuggestions(args: dict) -> dict:
         .filter(pinfo.c.is_active == True) \
         .offset(offset) \
         .limit(limit)
+    select_product_cols = qutils.select_product_fields(products, is_swipe_page, is_legacy)
 
-    result = run_query(products)
+    result = run_query(select_product_cols)
 
     res2 = result if len(result) > 0 else productSearch(
         index=index, 

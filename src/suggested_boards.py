@@ -183,6 +183,8 @@ def getUserSmartTagProductBatch(args: dict, dev_mode: bool=False) -> dict:
     smart_tag_id = args['smart_tag_id']
     offset = args['offset']
     limit = args['limit']
+    is_swipe_page = args.get('swipe_page', 'true').lower() == 'true'
+    is_legacy = args.get('legacy', 'true').lower() == 'true'
 
     smart_products = s.select(
         p.ProductSmartTag.product_id
@@ -211,8 +213,9 @@ def getUserSmartTagProductBatch(args: dict, dev_mode: bool=False) -> dict:
         ) \
         .limit(limit) \
         .offset(offset)
+    select_product_cols = qutils.select_product_fields(products_batch_ordered, is_swipe_page, is_legacy)
 
-    result = run_query(products_batch_ordered)
+    result = run_query(select_product_cols)
     return {
         "products": result
     }

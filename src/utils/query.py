@@ -340,3 +340,17 @@ def join_board_info(q: CTE) -> Select:
             p.Board.last_modified_timestamp
         ) \
         .join(q, q.c.board_id == p.Board.board_id)
+
+def select_product_fields(products: CTE, is_swipe_page: bool, is_legacy: bool) -> Select:
+    product_col_names = [
+        'product_name', 'product_price', 'product_sale_price', 'advertiser_name', 
+        'product_image_url'
+    ]
+
+    if is_swipe_page:
+        product_col_names.append('product_additional_image_urls')
+    if is_legacy:
+        product_col_names.append('product_purchase_url')
+
+    product_cols = [products.c[col_name] for col_name in product_col_names]
+    return s.select(product_cols)
