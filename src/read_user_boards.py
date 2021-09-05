@@ -87,13 +87,18 @@ def _get_boards_info(boards: CTE) -> Select:
                 'name', p.UserProfile.name,
                 'profile_photo_url', p.UserProfile.profile_photo_url,
             )
-        ).label('owner')
+        ).label('owner'),
+        p.UserBoard.is_owner,
+        p.UserBoard.is_collaborator,
+        p.UserBoard.is_following,
+        p.UserBoard.last_modified_timestamp.label('ub_last_modified_timestamp')
     ) \
         .where(p.Board.board_id.in_(board_ids)) \
         .outerjoin(board_stats, board_stats.c.board_id == p.Board.board_id) \
         .outerjoin(board_smart_tags, board_smart_tags.c.board_id == p.Board.board_id) \
         .outerjoin(board_opt_tag, board_opt_tag.c.board_id == p.Board.board_id) \
-        .outerjoin(p.UserProfile, p.Board.owner_user_id == p.UserProfile.user_id)
+        .outerjoin(p.UserProfile, p.UserProfile.user_id == p.Board.owner_user_id) \
+        .outerjoin(p.UserBoard, p.UserBoard.board_id == p.Board.board_id)
     return board_info
 
 
@@ -138,7 +143,7 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
     limit = args['limit']
 
     user_board_ids = s.select(p.UserBoard.board_id) \
-        .filter(p.UserBoard.user_id == user_id) \
+        .filter(p.UserBoard.user_id == user_id)
 
     ## Get current boards batch
     boards_batch = s.select(
@@ -182,7 +187,7 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
                     F.cardinality(boards.c.products) > 0
                 )
             ) \
-            .order_by(boards.c.last_modified_timestamp.desc())
+            .order_by(F.greatest(boards.c.last_modified_timestamp, boards.c.ub_last_modified_timestamp).desc())
     result = run_query(boards_ordered)
     parsed_boards = string_parser.process_boards(result)
     

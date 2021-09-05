@@ -140,6 +140,49 @@ def create_user_suggested_board(args: dict) -> dict:
         **read_user_boards.getBoardInfo({'board_id': board_id})
     }
 
+def write_user_follow_board(args: dict) -> dict:
+    board_id = args['board_id']
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+    last_modified_timestamp = int(dt.now().timestamp())
+
+    user_board_args = {
+        'user_id': user_id,
+        'board_id': board_id,
+        'last_modified_timestamp': last_modified_timestamp,
+        'is_owner': False,
+        'is_collaborator': False,
+        'is_following': True,
+        'is_suggested': False,
+    }
+
+    user_board = p.UserBoard(**user_board_args)
+
+    try:
+        with session_scope() as session:
+            session.add(user_board)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
+    return {"success": True}
+
+def remove_user_follow_board(args: dict) -> dict:
+    board_id = args['board_id']
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+
+    remove_user_follow_stmt = s.delete(p.UserBoard) \
+        .where(p.UserBoard.board_id == board_id) \
+        .where(p.UserBoard.user_id == user_id)
+
+    try:
+        with session_scope() as session:
+            session.execute(remove_user_follow_stmt)
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
+    return {"success": True}
+
 def update_board_name(args: dict) -> dict:
     board_id = args['board_id']
     board_name = args['board_name']
