@@ -177,6 +177,8 @@ def productSearch(args, index: Index) -> list:
     max_price = int(args.get("max_price", 10000))
     min_price = int(args.get("min_price", 0))
     user_id = apple_id_to_user_id_hash(args.get("user_id", None))
+    is_swipe_page = args.get('swipe_page', 'true').lower() == 'true'
+    is_legacy = args.get('legacy', 'true').lower() == 'true'
 
     query_args = {
             "offset": int(args.get('offset', 0)),
@@ -208,4 +210,23 @@ def productSearch(args, index: Index) -> list:
         max_price=max_price,
         nbHits=data['nbHits']
     )
+
+    product_col_names = [
+        'product_name', 'product_price', 'product_sale_price', 'advertiser_name', 
+        'product_image_url'
+    ]
+    if is_swipe_page:
+        product_col_names.append('product_additional_image_urls')
+    if is_legacy:
+        product_col_names.append('product_purchase_url')
+    products = data['hits']
+    filtered_products_array = []
+    for product in products:
+        filtered_product_dict = dict()
+        for key, value in product.items():
+            if key in product_col_names:
+                filtered_product_dict[key] = value
+        filtered_products_array.append(filtered_product_dict)
+    data['hits'] = filtered_products_array
+
     return data
