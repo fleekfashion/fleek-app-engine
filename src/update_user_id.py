@@ -3,7 +3,7 @@ import typing as t
 from functional import seq
 import sqlalchemy as s
 from sqlalchemy.sql.expression import literal
-from sqlalchemy.sql.dml import Insert, Delete
+from sqlalchemy.sql.dml import Insert, Delete, Update
 from sqlalchemy.dialects import postgresql as psql
 
 from src.defs import postgres as p
@@ -12,6 +12,17 @@ from src.utils.hashers import apple_id_to_user_id_hash
 from src.utils.user_info import pop_user_fave_brands 
 
 USER_ID_COL = 'user_id'
+
+def _update_user_id_stmt(
+    table,
+    col: str,
+    old_user_id: int, 
+    new_user_id: int
+    ) -> Update:
+
+    return Update(p.Board) \
+        .where(p.Board.__table__.c[col] == old_user_id) \
+        .values({"owner_user_id": new_user_id}) 
 
 def insert_new_user_id_data(
     table, 
@@ -63,7 +74,12 @@ def updateUserId(args: dict) -> dict:
         .map(lambda table: delete_old_user_id_data(table, old_user_id)) \
         .to_list()
 
+    update_statements = [
+        _update_user_id_stmt(p.Board, "owner_user_id", old_user_id, new_user_id)
+    ]
+
     with session_scope() as session:
         [ session.execute(s) for s in insert_statements ]
         [ session.execute(s) for s in delete_statements ]
+        [ session.execute(s) for s in update_statements ]
     return {"success": True}
