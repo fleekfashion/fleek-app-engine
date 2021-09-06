@@ -19,6 +19,7 @@ PostgreTable = Table
 
 def get_relevent_fields(is_swipe_page: bool, is_legacy: bool) -> t.List[str]:
     product_col_names = [
+        'product_id',
         'product_name', 
         'product_price', 
         'product_sale_price', 
