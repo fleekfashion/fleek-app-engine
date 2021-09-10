@@ -309,6 +309,7 @@ def _get_user_board_products(
         n_products: int) -> Select:
     user_board_ids_subq = s.select(p.UserBoard.board_id, p.UserBoard.user_id) \
         .filter(p.UserBoard.user_id == user_id) \
+        .where(p.UserBoard.is_owner | p.UserBoard.is_collaborator) \
         .order_by(p.UserBoard.last_modified_timestamp.desc()) \
         .offset(offset) \
         .limit(limit) \
