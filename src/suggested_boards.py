@@ -1,4 +1,5 @@
 import typing as t
+import itertools
 
 import sqlalchemy as s
 from src.utils import string_parser, board, query as qutils 
@@ -8,7 +9,7 @@ from src.utils import hashers
 from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
-import itertools
+from sqlalchemy.sql.expression import literal
 
 def _get_user_board_products(user_id: int) -> Select:
     ## Get products already in boards
@@ -166,6 +167,7 @@ def getSuggestedBoardsBatch(args: dict, dev_mode: bool=False) -> dict:
         tag_stats.c.n_products,
         tag_stats.c.advertiser_stats,
         product_previews.c.products,
+        literal(True).label("isOwner")
     ) \
         .join(product_previews, tag_stats.c.smart_tag_id == product_previews.c.smart_tag_id) \
         .join(ranked_smart_tags, tag_stats.c.smart_tag_id == ranked_smart_tags.c.smart_tag_id) \
