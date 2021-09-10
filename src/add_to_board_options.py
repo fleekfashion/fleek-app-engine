@@ -24,7 +24,8 @@ def getAddToBoardOptions(args):
 
     user_board_info = qutils.join_board_info(
         s.select(p.UserBoard.board_id) \
-            .filter(p.UserBoard.user_id == user_id) \
+            .where(p.UserBoard.user_id == user_id) \
+            .where(p.UserBoard.is_owner | p.UserBoard.is_collaborator) \
             .cte()
     ).cte()
 
