@@ -55,7 +55,7 @@ def _get_board_opt_smart_tag(board_products: CTE) -> Select:
     ).group_by(board_smart_tag.c.board_id)
     return max_smart_tags
 
-def _get_boards_info(boards: CTE) -> Select:
+def _get_boards_info(boards: CTE, user_id: t.Optional[int]) -> Select:
     """
     Get all relevant board metadata given a list of boards
     """
@@ -69,6 +69,7 @@ def _get_boards_info(boards: CTE) -> Select:
     board_stats = board.get_product_group_stats(board_products, 'board_id').cte()
     board_smart_tags = _get_board_smart_tags(board_ids).cte()
     board_opt_tag = _get_board_opt_smart_tag(board_products).cte()
+    user_boards = s.select(p.UserBoard).where(p.UserBoard.user_id == user_id).cte()
 
     board_info = s.select(
         p.Board.__table__,
@@ -88,24 +89,26 @@ def _get_boards_info(boards: CTE) -> Select:
                 'profile_photo_url', p.UserProfile.profile_photo_url,
             )
         ).label('owner'),
-        p.UserBoard.is_owner,
-        p.UserBoard.is_collaborator,
-        p.UserBoard.is_following,
-        p.UserBoard.last_modified_timestamp.label('ub_last_modified_timestamp')
+        F.coalesce(user_boards.c.is_owner, False).label('is_owner'),
+        F.coalesce(user_boards.c.is_collaborator, False).label('is_collaborator'),
+        F.coalesce(user_boards.c.is_following, False).label('is_following'),
+        user_boards.c.last_modified_timestamp.label('ub_last_modified_timestamp')
     ) \
         .where(p.Board.board_id.in_(board_ids)) \
         .outerjoin(board_stats, board_stats.c.board_id == p.Board.board_id) \
         .outerjoin(board_smart_tags, board_smart_tags.c.board_id == p.Board.board_id) \
         .outerjoin(board_opt_tag, board_opt_tag.c.board_id == p.Board.board_id) \
         .outerjoin(p.UserProfile, p.UserProfile.user_id == p.Board.owner_user_id) \
-        .outerjoin(p.UserBoard, p.UserBoard.board_id == p.Board.board_id)
-    return board_info
+        .outerjoin(user_boards, user_boards.c.board_id == p.Board.board_id)
 
+    return board_info
 
 def getBoardInfo(args: dict) -> dict:
     board_id = args['board_id']
+    user_id = args.get('user_id', None)
+    user_id = hashers.apple_id_to_user_id_hash(user_id) if user_id else None
     basic_board = s.select(p.Board.board_id).filter(p.Board.board_id == board_id).cte()
-    board = _get_boards_info(basic_board)
+    board = _get_boards_info(basic_board, user_id)
     result = get_first(board)
     parsed_res = result if result else {"error": "invalid collection id"}
     processed_board = string_parser.process_boards([parsed_res])[0]
@@ -175,7 +178,7 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
     ).cte()
     
     ## Join board info with the board products
-    board_info = _get_boards_info(boards_batch).cte()
+    board_info = _get_boards_info(boards_batch, user_id).cte()
     boards = s.select(
             board_info,
             product_previews.c.products
