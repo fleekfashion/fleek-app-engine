@@ -32,7 +32,9 @@ def get_first_image_url(
             product_secondary_labels=None,
             internal_colors=None,
             max_price=10*6,
-            min_price=0
+            min_price=0,
+            is_swipe=False,
+            is_legacy=False
     )
 
     query_args = {

@@ -8,6 +8,7 @@ from sqlalchemy import func as F
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 import typing as t
 from sqlalchemy.sql import Values
+from src.utils import query as qutils 
 
 def _get_all_faves_grouped_product_previews_stmt(
     fave_pids_query: CTE,
@@ -44,6 +45,8 @@ def getUserFaveProductBatch(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
     limit = args['limit']
     offset = args['offset']
+    is_swipe_page = args.get('swipe_page', 'true').lower() == 'true'
+    is_legacy = args.get('legacy', 'true').lower() == 'true'
 
     user_fave_pids_query = s.select(
         p.UserProductFaves.product_id,
@@ -59,8 +62,9 @@ def getUserFaveProductBatch(args: dict) -> dict:
     ) \
         .limit(limit) \
         .offset(offset)
-    
-    result = run_query(products_batch_ordered)
+    select_product_cols = qutils.select_product_fields(products_batch_ordered, is_swipe_page, is_legacy)
+
+    result = run_query(select_product_cols)
     return {
         "products": result
     }
@@ -94,6 +98,8 @@ def getUserFaveStats(args: dict) -> dict:
 
 def getUserBag(args: dict) -> dict:
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+    is_swipe_page = args.get('swipe_page', 'true').lower() == 'true'
+    is_legacy = args.get('legacy', 'true').lower() == 'true'
 
     user_bag_pids_query = s.select(
         p.UserProductBags.product_id,
@@ -107,8 +113,9 @@ def getUserBag(args: dict) -> dict:
         'last_modified_timestamp', 
         args
     )
+    select_product_cols = qutils.select_product_fields(products_batch_ordered, is_swipe_page, is_legacy)
 
-    result = run_query(products_batch_ordered)
+    result = run_query(select_product_cols)
     return {
         "products": result
     }

@@ -18,7 +18,8 @@ from sqlalchemy.dialects.postgresql import array
 from werkzeug.datastructures import ImmutableMultiDict
 
 from src.utils import user_info
-from src.utils import static 
+from src.utils import static
+from src.defs.utils import get_relevent_fields
 DELIMITER = ",_,"
 
 def days_ago_timestamp(days: int) -> int:
@@ -340,3 +341,8 @@ def join_board_info(q: CTE) -> Select:
             p.Board.last_modified_timestamp
         ) \
         .join(q, q.c.board_id == p.Board.board_id)
+
+def select_product_fields(products: CTE, is_swipe_page: bool, is_legacy: bool) -> Select:
+    product_col_names = get_relevent_fields(is_swipe_page, is_legacy)
+    product_cols = [products.c[col_name] for col_name in product_col_names]
+    return s.select(product_cols)
