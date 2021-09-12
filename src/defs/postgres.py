@@ -71,6 +71,7 @@ UserProductSeens = Base.classes.user_product_seens
 
 ## Order Tables
 Advertiser = Base.classes.advertiser
+AdvertiserTopSmartTag = Base.classes.advertiser_top_smart_tag 
 Order = Base.classes.order
 OrderProduct = Base.classes.order_product
 

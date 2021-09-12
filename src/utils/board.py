@@ -100,7 +100,7 @@ def get_product_group_stats(
 
 def get_product_previews(
     products: CTE,
-    id_col: str,
+    id_col: t.Union[str, t.List[str]],
     order_field: str,
     desc: bool = True
     ) -> Select:
@@ -116,18 +116,18 @@ def get_product_previews(
     grouped by the id_col field
     """
 
-    tmp_id_col = literal_column(id_col)
+    id_col = [id_col] if isinstance(id_col, str) else id_col
+    id_cols = [literal_column(c) for c in id_col ]
     t = literal_column(order_field)
     order_by_field = t.desc() if desc else t
 
     ## Get row numbers
     board_products = s.select(
-            tmp_id_col.label('tmp_id_col'),
+            *id_cols,
             products.c.product_id,
-            products.c.last_modified_timestamp,
             F.row_number() \
                 .over(
-                    tmp_id_col,
+                    partition_by=id_cols,
                     order_by=(
                         order_by_field,
                         products.c.product_id.desc()
@@ -144,7 +144,7 @@ def get_product_previews(
 
     ## Get preview
     product_previews = s.select(
-            board_product_info.c.tmp_id_col.label(id_col),
+            *id_cols,
             psql.array_agg(
                 psql.aggregate_order_by(
                     F.json_build_object(
@@ -160,7 +160,7 @@ def get_product_previews(
             ).label('products'),
         ) \
         .group_by(
-            board_product_info.c.tmp_id_col
+            *id_cols
         )
     return product_previews
 
