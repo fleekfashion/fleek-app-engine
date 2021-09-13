@@ -20,6 +20,8 @@ from src.utils import query as qutils
 from src.utils import user_info
 from src.utils import static 
 
+TMP_ID_COL = "tmp_id_colname"
+
 def get_update_board_timestamp_stmt_from_select(board_ids: Select, timestamp: int) -> Update:
     return s.update(p.Board) \
         .where(p.Board.board_id.in_(board_ids)) \
@@ -32,12 +34,14 @@ def get_board_update_timestamp_statement(board_id: int, last_modified_timestamp:
         .values(last_modified_timestamp=last_modified_timestamp)
 
 def _map_colnames(
-        q: CTE, 
+        q: CTE,
         c1: t.List[ColumnClause],
         c2: t.List[ColumnClause]
     ) -> t.List[ColumnClause]:
     return [ 
         q.c[real.name].label(tmp.name)
+        if real.name != TMP_ID_COL
+        else  literal(1).label(tmp.name)
         for real, tmp in zip(c1, c2)
     ]
 
@@ -143,9 +147,9 @@ def get_product_previews(
     """
 
     ## Process id col
-    TMP_ID_COL = "tmp_id_colname"
     id_col = id_col if id_col else TMP_ID_COL
     id_col2 = [id_col] if isinstance(id_col, str) else id_col
+    print(id_col2)
 
     id_cols = [literal_column(c) for c in id_col2 ]
     tmp_ids = [ literal_column(f"tmp_{i}_{c}") for i, c in enumerate(id_col2) ]
@@ -166,7 +170,7 @@ def get_product_previews(
             products.c.product_id,
             F.row_number() \
                 .over(
-                    partition_by=id_cols,
+                    partition_by=tmp_ids,
                     order_by=(
                         order_by_field,
                         products.c.product_id.desc()
