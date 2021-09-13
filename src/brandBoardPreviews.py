@@ -9,7 +9,7 @@ from src.utils import hashers
 from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
-from sqlalchemy.sql.expression import literal
+from sqlalchemy.sql.expression import literal, literal_column
 
 def _get_ranked_smart_tags(advertiser_name) -> Select:
     q = s.select(
@@ -43,7 +43,11 @@ def _get_product_smart_tag(ranked_tags: CTE) -> Select:
                 s.select(ranked_tags.c.smart_tag_id)
             )
         ) \
-        .join(p.ProductSmartTag, p.ProductInfo.product_id == p.ProductSmartTag.product_id)
+        .join(p.ProductSmartTag, p.ProductInfo.product_id == p.ProductSmartTag.product_id) \
+        .join(
+            ranked_tags,
+            ranked_tags.c.advertiser_name == p.ProductInfo.advertiser_name
+        )
     return relevent_products
 
 def getAdvertiserTopBoardsBatch(args: dict):
@@ -57,7 +61,7 @@ def getAdvertiserTopBoardsBatch(args: dict):
         .limit(limit) \
         .cte()
 
-    product_adv_tag = _get_product_smart_tag(ranked_tags)
+    product_adv_tag = _get_product_smart_tag(ranked_tags).cte()
 
     product_previews = board.get_product_previews(
         product_adv_tag,
@@ -65,7 +69,12 @@ def getAdvertiserTopBoardsBatch(args: dict):
         "execution_date"
     )
 
+    tag_stats = board.get_product_group_stats(
+            product_adv_tag, 
+            "smart_tag_id"
+    )
+
     return {
-        "boards": run_query(product_previews)
+        "boards": run_query(tag_stats)
     }
 
