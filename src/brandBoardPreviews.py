@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 from sqlalchemy.sql.expression import literal, literal_column
 
-def _get_ranked_smart_tags(advertiser_name) -> Select:
+def _get_ranked_smart_tags(advertiser_name, offset, limit) -> Select:
     q = s.select(
         p.AdvertiserTopSmartTag.smart_tag_id,
         p.AdvertiserTopSmartTag.advertiser_name,
@@ -23,19 +23,27 @@ def _get_ranked_smart_tags(advertiser_name) -> Select:
                     p.AdvertiserTopSmartTag.score
                 )
             ).label("rank"),
+        p.SmartTag.suggestion.label('name'),
+        p.SmartTag.product_label
     ) \
         .where(p.AdvertiserTopSmartTag.advertiser_name == advertiser_name) \
+        .join(
+            p.SmartTag,
+            p.SmartTag.smart_tag_id == p.AdvertiserTopSmartTag.smart_tag_id
+        ) \
         .cte()
 
     return s.select(q) \
-        .order_by(q.c.rank.desc())
+        .order_by(q.c.rank.desc()) \
+        .offset(offset) \
+        .limit(limit)
 
 def _get_product_smart_tag(ranked_tags: CTE) -> Select:
     relevent_products = s.select(
         p.ProductInfo.product_id,
         p.ProductInfo.advertiser_name,
         p.ProductSmartTag.smart_tag_id,
-        p.ProductInfo.execution_date
+        p.ProductInfo.execution_date,
     ) \
         .where(p.ProductInfo.is_active) \
         .where(
@@ -56,9 +64,7 @@ def getAdvertiserTopBoardsBatch(args: dict):
     offset = args['offset']
     limit = args['limit']
 
-    ranked_tags = _get_ranked_smart_tags(advertiser_name) \
-        .offset(offset) \
-        .limit(limit) \
+    ranked_tags = _get_ranked_smart_tags(advertiser_name, offset, limit) \
         .cte()
 
     product_adv_tag = _get_product_smart_tag(ranked_tags).cte()
@@ -67,14 +73,27 @@ def getAdvertiserTopBoardsBatch(args: dict):
         product_adv_tag,
         ["smart_tag_id", "advertiser_name"],
         "execution_date"
-    )
+    ).cte()
 
     tag_stats = board.get_product_group_stats(
             product_adv_tag, 
             "smart_tag_id"
-    )
+    ).cte()
+
+    q = s.select(
+        ranked_tags,
+        tag_stats.c.n_products,
+        tag_stats.c.advertiser_stats,
+        product_previews.c.products,
+    ) \
+        .join(product_previews, tag_stats.c.smart_tag_id == product_previews.c.smart_tag_id) \
+        .join(ranked_tags, tag_stats.c.smart_tag_id == ranked_tags.c.smart_tag_id) \
+        .order_by(ranked_tags.c.rank.desc())
+
+    boards = run_query(q)
+    parsed_boards = string_parser.process_suggested_boards(boards)
 
     return {
-        "boards": run_query(tag_stats)
+        "boards": boards
     }
 
