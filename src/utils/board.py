@@ -66,7 +66,6 @@ def get_product_group_stats(
     """
 
     ## Process id col
-    TMP_ID_COL = "tmp_id_colname"
     id_col = id_col if id_col else TMP_ID_COL
     id_col2 = [id_col] if isinstance(id_col, str) else id_col
 
@@ -117,15 +116,13 @@ def get_product_group_stats(
         *_map_colnames(full_advertiser_stats, tmp_ids, id_cols)
     ).outerjoin(
         active_stats,
-        s.and_(
-            *[ 
-                full_advertiser_stats.c[c] == active_stats.c[c] 
-                for c in tmp_ids
-            ]
-        )
+        s.and_(*[ 
+            full_advertiser_stats.c[c.name] == active_stats.c[c.name]
+            for c in tmp_ids
+        ])
     )
 
-    return board_stats
+    return s.select(full_advertiser_stats)
 
 def get_product_previews(
     products: CTE,
