@@ -122,7 +122,7 @@ def get_product_group_stats(
         ])
     )
 
-    return s.select(full_advertiser_stats)
+    return board_stats 
 
 def get_product_previews(
     products: CTE,
@@ -146,7 +146,6 @@ def get_product_previews(
     ## Process id col
     id_col = id_col if id_col else TMP_ID_COL
     id_col2 = [id_col] if isinstance(id_col, str) else id_col
-    print(id_col2)
 
     id_cols = [literal_column(c) for c in id_col2 ]
     tmp_ids = [ literal_column(f"tmp_{i}_{c}") for i, c in enumerate(id_col2) ]
