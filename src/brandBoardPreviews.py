@@ -20,7 +20,7 @@ def _get_ranked_smart_tags(advertiser_name, offset, limit) -> Select:
         F.row_number() \
             .over(
                 order_by=(
-                    p.AdvertiserTopSmartTag.score
+                    F.power(p.AdvertiserTopSmartTag.score, 2)*F.random()
                 )
             ).label("rank"),
         p.SmartTag.suggestion.label('name'),
@@ -94,6 +94,6 @@ def getAdvertiserTopBoardsBatch(args: dict):
     parsed_boards = string_parser.process_suggested_boards(boards)
 
     return {
-        "boards": boards
+        "boards": parsed_boards
     }
 
