@@ -95,7 +95,10 @@ def getAdvertiserBoardsPreviewBatch(args: dict):
 
     filtered_q = board.drop_duplicate_previews(q, keys, row_number="rank", n=1) \
             .cte()
-    res = s.select(filtered_q).order_by(filtered_q.c.rank)
+    res = s.select(filtered_q) \
+            .order_by(filtered_q.c.rank) \
+            .offset(offset) \
+            .limit(limit)
 
     boards = run_query(res)
     parsed_boards = string_parser.process_suggested_boards(boards)
