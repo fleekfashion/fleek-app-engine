@@ -92,6 +92,7 @@ def getAdvertiserBoardsPreviewBatch(args: dict):
     ) \
         .join(product_previews, tag_stats.c.smart_tag_id == product_previews.c.smart_tag_id) \
         .join(ranked_tags, tag_stats.c.smart_tag_id == ranked_tags.c.smart_tag_id)
+
     filtered_q = board.drop_duplicate_previews(q, keys, row_number="rank", n=1) \
             .cte()
     res = s.select(filtered_q).order_by(filtered_q.c.rank)

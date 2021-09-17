@@ -229,7 +229,7 @@ def drop_duplicate_previews(
         *[t.c[tid.name] for tid in tmp_ids]
     ) \
         .join(t2, s.and_(*[
-            t.c.product_id_array[:i] == t2.c.product_id_array[:i]
+            t.c.product_id_array[i] == t2.c.product_id_array[i]
             for i in range(1, n+1)
             ])
         ) \
