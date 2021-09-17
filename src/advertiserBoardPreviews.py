@@ -11,7 +11,9 @@ from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 from sqlalchemy.sql.expression import literal, literal_column
 
-def _get_ranked_smart_tags(advertiser_name, offset, limit) -> Select:
+import importlib
+importlib.reload(board)
+def _get_ranked_smart_tags(advertiser_name) -> Select:
     q = s.select(
         p.AdvertiserTopSmartTag.smart_tag_id,
         p.AdvertiserTopSmartTag.advertiser_name,
@@ -30,13 +32,9 @@ def _get_ranked_smart_tags(advertiser_name, offset, limit) -> Select:
         .join(
             p.SmartTag,
             p.SmartTag.smart_tag_id == p.AdvertiserTopSmartTag.smart_tag_id
-        ) \
-        .cte()
+        )
 
-    return s.select(q) \
-        .order_by(q.c.rank.desc()) \
-        .offset(offset) \
-        .limit(limit)
+    return q 
 
 def _get_product_smart_tag(ranked_tags: CTE) -> Select:
     relevent_products = s.select(
@@ -67,20 +65,22 @@ def getAdvertiserBoardsPreviewBatch(args: dict):
     offset = args['offset']
     limit = args['limit']
 
-    ranked_tags = _get_ranked_smart_tags(advertiser_name, offset, limit) \
+    keys = ["smart_tag_id", "advertiser_name"]
+
+    ranked_tags = _get_ranked_smart_tags(advertiser_name) \
         .cte()
 
     product_adv_tag = _get_product_smart_tag(ranked_tags).cte()
 
     product_previews = board.get_product_previews(
         product_adv_tag,
-        ["smart_tag_id", "advertiser_name"],
+        keys,
         "execution_date"
     ).cte()
 
     tag_stats = board.get_product_group_stats(
-            product_adv_tag, 
-            "smart_tag_id"
+            product_adv_tag,
+            keys
     ).cte()
 
     q = s.select(
@@ -88,12 +88,15 @@ def getAdvertiserBoardsPreviewBatch(args: dict):
         tag_stats.c.n_products,
         tag_stats.c.advertiser_stats,
         product_previews.c.products,
+        product_previews.c.product_id_array,
     ) \
         .join(product_previews, tag_stats.c.smart_tag_id == product_previews.c.smart_tag_id) \
-        .join(ranked_tags, tag_stats.c.smart_tag_id == ranked_tags.c.smart_tag_id) \
-        .order_by(ranked_tags.c.rank.desc())
+        .join(ranked_tags, tag_stats.c.smart_tag_id == ranked_tags.c.smart_tag_id)
+    filtered_q = board.drop_duplicate_previews(q, keys, row_number="rank", n=1) \
+            .cte()
+    res = s.select(filtered_q).order_by(filtered_q.c.rank)
 
-    boards = run_query(q)
+    boards = run_query(res)
     parsed_boards = string_parser.process_suggested_boards(boards)
 
     return {

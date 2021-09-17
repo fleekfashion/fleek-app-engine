@@ -47,7 +47,7 @@ def _map_colnames(
 
 def get_product_group_stats(
         products: CTE,
-        id_col: t.Optional[str]
+        id_col: t.Optional[t.Union[t.List[str], str]]
     ) -> Select:
     """
     Params
@@ -128,7 +128,8 @@ def get_product_previews(
     products: CTE,
     id_col: t.Union[str, t.List[str]],
     order_field: str,
-    desc: bool = True
+    desc: bool = True,
+    drop_duplicates=False,
     ) -> Select:
     """
     Params
@@ -197,16 +198,48 @@ def get_product_previews(
                     board_product_info.c.row_number.asc()
                 )
             ).label('products'),
+            psql.array_agg(
+                psql.aggregate_order_by(
+                    board_product_info.c.product_id,
+                    board_product_info.c.row_number.asc()
+                )
+            ).label('product_id_array'),
         ) \
         .group_by(
             *tmp_ids
-        ) \
-        .cte()
+        ).cte()
 
     return s.select(
         product_previews.c.products,
+        product_previews.c.product_id_array,
         *_map_colnames(product_previews, tmp_ids, id_cols)
     )
+
+def drop_duplicate_previews(
+    q: Select,
+    col_ids: t.List[str],
+    row_number: str,
+    n : int = 1
+    ) -> Select:
+    tmp_ids = [ literal_column(c) for c in col_ids ]
+    t = q.cte()
+    t2 = q.alias("t2")
+
+    duplicate_ids = s.select(
+        *[t.c[tid.name] for tid in tmp_ids]
+    ) \
+        .join(t2, s.and_(*[
+            t.c.product_id_array[:i] == t2.c.product_id_array[:i]
+            for i in range(1, n+1)
+            ])
+        ) \
+        .where(
+            t.c[row_number] > t2.c[row_number] ## Take the item with higher row number (to remove)
+        )
+
+    res = s.select(t) \
+        .where(s.tuple_(*tmp_ids).not_in(duplicate_ids))
+    return res
 
 def get_ordered_products_batch(
     pids_and_order_col_cte: CTE,
