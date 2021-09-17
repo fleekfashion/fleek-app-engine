@@ -54,7 +54,10 @@ def _get_product_smart_tag(ranked_tags: CTE) -> Select:
         .join(p.ProductSmartTag, p.ProductInfo.product_id == p.ProductSmartTag.product_id) \
         .join(
             ranked_tags,
-            ranked_tags.c.advertiser_name == p.ProductInfo.advertiser_name
+            s.and_(
+                ranked_tags.c.advertiser_name == p.ProductInfo.advertiser_name,
+                ranked_tags.c.smart_tag_id == p.ProductSmartTag.smart_tag_id
+            )
         )
     return relevent_products
 
