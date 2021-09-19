@@ -21,3 +21,8 @@ def process_boards(boards: t.List[dict]) -> t.List[dict]:
 def process_suggested_boards(boards: t.List[dict]) -> t.List[dict]:
     parsed_boards = [ {**b, "name": _pluralize(b['name'], b['product_label'])} for b in boards ]
     return parsed_boards 
+
+def convert_product_ids_to_string(products: t.List[dict]) -> t.List[dict]:
+    for product in products:
+        product['product_id'] = str(product['product_id'])
+    return products 
