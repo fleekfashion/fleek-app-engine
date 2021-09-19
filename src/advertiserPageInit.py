@@ -38,7 +38,10 @@ def advertiserPageInit(args: dict):
     q = s.select(
         n_products,
         agg_images
-        )
+    ).join(
+        agg_images, 
+        n_products.c.n_products > (F.cardinality(agg_images.c.top_brand_images) - 10)
+    )
 
     res = get_first(q)
     return res
