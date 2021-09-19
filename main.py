@@ -54,6 +54,7 @@ from src import trackers
 from src import update_user_id
 from src import advertiserBoardPreviews 
 from src import advertiserPageInit 
+from src import getProducts 
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -416,6 +417,14 @@ def getAdvertiserPageInit():
     return jsonify(
         advertiserPageInit.advertiserPageInit(request.args)
     )
+
+@app.route('/getProducts', methods=['GET'])
+def getProducts():
+    return jsonify(
+        getProducts.getProducts(request.args)
+    )
+
+
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
     # application on Google App Engine. See entrypoint in app.yaml.
