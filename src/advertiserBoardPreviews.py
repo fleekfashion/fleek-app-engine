@@ -23,7 +23,7 @@ def _get_ranked_smart_tags(advertiser_name) -> Select:
             .over(
                 order_by=(
                     F.power(p.AdvertiserTopSmartTag.score, 2)*F.random()
-                )
+                ).desc()
             ).label("rank"),
         p.SmartTag.suggestion.label('name'),
         p.SmartTag.product_label
