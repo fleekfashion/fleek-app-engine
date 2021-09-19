@@ -120,6 +120,7 @@ def getBoardProductsBatch(args: dict) -> dict:
     offset = args['offset']
     is_swipe_page = args.get('swipe_page', 'true').lower() == 'true'
     is_legacy = args.get('legacy', 'true').lower() == 'true'
+    product_id_type = args.get('product_id_type', 'number')
 
     board_pids_query = s.select(
         p.BoardProduct.product_id, 
@@ -138,6 +139,7 @@ def getBoardProductsBatch(args: dict) -> dict:
     select_product_cols = qutils.select_product_fields(products_batch_ordered, is_swipe_page, is_legacy)
 
     result = run_query(select_product_cols)
+    if product_id_type == 'string': result = string_parser.convert_product_ids_to_string(result)
     return {
         "products": result
     }
