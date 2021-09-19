@@ -42,5 +42,3 @@ def advertiserPageInit(args: dict):
 
     res = get_first(q)
     return res
-
-
