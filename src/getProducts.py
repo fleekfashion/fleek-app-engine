@@ -27,11 +27,11 @@ def getProducts(args: dict):
         q = s.select(
             p.BoardProduct.product_id,
             p.BoardProduct.last_modified_timestamp
-        )
+        ).where(p.BoardProduct.board_id == board_id)
     elif smart_tag_id is not None:
         q = s.select(
             p.ProductSmartTag.product_id
-        )
+        ).where(p.ProductSmartTag.smart_tag_id == smart_tag_id)
     else:
         return {
             "error": "must pass board id or smart tag id"

@@ -54,7 +54,7 @@ from src import trackers
 from src import update_user_id
 from src import advertiserBoardPreviews 
 from src import advertiserPageInit 
-from src import getProducts 
+from src import getProducts as gp
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -419,9 +419,9 @@ def getAdvertiserPageInit():
     )
 
 @app.route('/getProducts', methods=['GET'])
-def getProductsEndpoint():
+def getProducts():
     return jsonify(
-        getProducts.getProducts(request.args)
+        gp.getProducts(request.args)
     )
 
 
