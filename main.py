@@ -419,7 +419,7 @@ def getAdvertiserPageInit():
     )
 
 @app.route('/getProducts', methods=['GET'])
-def getProducts():
+def getProductsEndpoint():
     return jsonify(
         getProducts.getProducts(request.args)
     )
