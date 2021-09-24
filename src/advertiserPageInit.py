@@ -8,6 +8,7 @@ from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
 from src.defs import postgres as p
+from src.defs.types.board_type import BoardType
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 from sqlalchemy.sql.expression import literal, literal_column
@@ -16,14 +17,27 @@ from sqlalchemy.sql.expression import literal, literal_column
 def _load_new_products(advertiser_name: str) -> Select:
     pids = s.select(
         p.ProductInfo.product_id, 
-        p.ProductInfo.execution_date
+        p.ProductInfo.execution_date,
+        #literal(BoardType.ADVERTISER_NEW_PRODUCTS).label('board_type')
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
-        .where(p.ProductInfo.execution_date >= qutils.days_ago(7)) \
+        .order_by(p.ProductInfo.execution_date) \
         .limit(1000)
     return pids
 
+def _load_sale_products(advertiser_name: str) -> Select:
+    pids = s.select(
+        p.ProductInfo.product_id, 
+        p.ProductInfo.execution_date,
+        #literal(BoardType.ADVERTISER_SALE_PRODUCTS).label('board_type')
+    ) \
+        .where(p.ProductInfo.is_active) \
+        .where(p.ProductInfo.advertiser_name == advertiser_name) \
+        .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price + 3)) \
+        .order_by(p.ProductInfo.execution_date) \
+        .limit(1000)
+    return pids
 
 def _get_board_object(pids: CTE) -> Select:
     preview = board.get_product_previews(products=pids, id_col=None, order_field="execution_date").cte()
@@ -36,8 +50,16 @@ def _get_board_object(pids: CTE) -> Select:
         .join(
             preview,
             stats.c.n_products > (F.cardinality(preview.c.products) - 10)
-        )
-    return q
+        ).cte()
+
+    json_q = s.select(
+        F.json_build_object(
+            *(seq(q.c) \
+                .flat_map(lambda c: [c.name, c ]) \
+                .to_list())
+        ).label('board'),
+    )
+    return json_q
 
 
 def advertiserPageInit(args: dict):
@@ -66,9 +88,14 @@ def advertiserPageInit(args: dict):
     new_products_board = _get_board_object(
         _load_new_products(advertiser_name).cte()
     ).limit(1).cte()
-
+    sale_products_board = _get_board_object(
+        _load_sale_products(advertiser_name).cte()
+    ).limit(1).cte()
     board_cols = [ c.name for c in new_products_board.c ]
+
     q = s.select(
+        sale_products_board.c.board.label("sale_p"),
+        new_products_board.c.board.label("new_p"),
         F.json_build_object(
             *(seq(board_cols) \
                 .flat_map(lambda c: [c, new_products_board.c[c] ]) \
@@ -79,7 +106,19 @@ def advertiserPageInit(args: dict):
     ).join(
         agg_images, 
         n_products.c.n_products > (F.cardinality(agg_images.c.top_brand_images) - 10)
-    ).outerjoin(new_products_board, True)
+    ).outerjoin(
+        new_products_board,
+        s.or_(
+            new_products_board.c.board is None,
+            new_products_board.c.board is not None
+        )
+    ).outerjoin(
+        sale_products_board,
+        s.or_(
+            sale_products_board.c.board is None,
+            sale_products_board.c.board is not None
+        )
+    ) \
 
-    res = run_query(q)
+    res = get_first(q)
     return res
