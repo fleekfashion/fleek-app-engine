@@ -44,21 +44,21 @@ def getProducts(args: dict):
         res = filtered_products
     elif order_by == "execution_date":
         res = filtered_products.order_by(
-            [
+            *[
                 literal_column("execution_date").desc(),
                 literal_column('product_id').desc()
             ]
         )
     elif order_by == "last_modified_timestamp":
         res = filtered_products.order_by(
-            [
+            *[
                 literal_column("last_modified_timestamp").desc(),
                 literal_column('product_id').desc()
             ]
         )
     elif order_by == "swipe_rate":
         res = filtered_products.order_by(
-            [
+            *[
                 literal_column('n_likes').desc(),
                 literal_column('product_id').desc()
             ]
@@ -67,14 +67,14 @@ def getProducts(args: dict):
         res = qutils.apply_ranking(filtered_products.cte(), user_id, .8)
     elif order_by == "price_low":
         res = filtered_products.order_by(
-            [
+            *[
                 literal_column("product_sale_price").asc(),
                 literal_column('product_id').desc()
             ]
         )
     elif order_by == "price_high":
         res = filtered_products.order_by(
-            [
+            *[
                 literal_column("product_sale_price").desc(),
                 literal_column('product_id').desc()
             ]
