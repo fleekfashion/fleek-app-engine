@@ -39,7 +39,7 @@ def _load_sale_products(advertiser_name: str) -> Select:
         .limit(1000)
     return pids
 
-def _get_board_object(pids: CTE) -> Select:
+def _get_board_object(pids: CTE, name: str) -> Select:
     preview = board.get_product_previews(products=pids, id_col=None, order_field="execution_date").cte()
     stats = board.get_product_group_stats(pids, None).cte()
 
@@ -56,8 +56,11 @@ def _get_board_object(pids: CTE) -> Select:
         F.json_build_object(
             *(seq(q.c) \
                 .flat_map(lambda c: [c.name, c ]) \
-                .to_list())
+                .to_list() + [
+                    "name", literal(name)
+                ])
         ).label('board'),
+        literal(0).label("stupid_int_col")
     )
     return json_q
 
@@ -86,10 +89,12 @@ def advertiserPageInit(args: dict):
     ).cte()
 
     new_products_board = _get_board_object(
-        _load_new_products(advertiser_name).cte()
+        _load_new_products(advertiser_name).cte(),
+        f"Lastest Items from {advertiser_name}"
     ).limit(1).cte()
     sale_products_board = _get_board_object(
-        _load_sale_products(advertiser_name).cte()
+        _load_sale_products(advertiser_name).cte(),
+        f"On Sale at {advertiser_name}"
     ).limit(1).cte()
     board_cols = [ c.name for c in new_products_board.c ]
 
@@ -108,16 +113,10 @@ def advertiserPageInit(args: dict):
         n_products.c.n_products > (F.cardinality(agg_images.c.top_brand_images) - 10)
     ).outerjoin(
         new_products_board,
-        s.or_(
-            new_products_board.c.board is None,
-            new_products_board.c.board is not None
-        )
+        n_products.c.n_products > new_products_board.c.stupid_int_col
     ).outerjoin(
         sale_products_board,
-        s.or_(
-            sale_products_board.c.board is None,
-            sale_products_board.c.board is not None
-        )
+        n_products.c.n_products > sale_products_board.c.stupid_int_col
     ) \
 
     res = get_first(q)

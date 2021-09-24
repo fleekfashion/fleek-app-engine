@@ -39,7 +39,7 @@ def getProducts(args: dict):
         ).where(p.ProductInfo.advertiser_name == advertiser_name)
     else:
         return {
-            "error": "must pass board id or smart tag id"
+            "error": "must pass board id or smart tag id or advertiser_name"
         }
 
     products = qutils.join_product_info(q.cte()).cte()
