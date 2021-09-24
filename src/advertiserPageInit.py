@@ -94,8 +94,8 @@ def advertiserPageInit(args: dict):
     board_cols = [ c.name for c in new_products_board.c ]
 
     q = s.select(
-        sale_products_board.c.board.label("sale_p"),
-        new_products_board.c.board.label("new_p"),
+        sale_products_board.c.board.label("advertiser_sale_products"),
+        new_products_board.c.board.label("advertiser_new_products"),
         F.json_build_object(
             *(seq(board_cols) \
                 .flat_map(lambda c: [c, new_products_board.c[c] ]) \
