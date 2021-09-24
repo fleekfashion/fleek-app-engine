@@ -1,5 +1,6 @@
 import typing as t
 import itertools
+from functional import seq
 
 import sqlalchemy as s
 from src.utils import string_parser, board, query as qutils 
@@ -10,6 +11,33 @@ from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 from sqlalchemy.sql.expression import literal, literal_column
+
+
+def _load_new_products(advertiser_name: str) -> Select:
+    pids = s.select(
+        p.ProductInfo.product_id, 
+        p.ProductInfo.execution_date
+    ) \
+        .where(p.ProductInfo.is_active) \
+        .where(p.ProductInfo.advertiser_name == advertiser_name) \
+        .where(p.ProductInfo.execution_date >= qutils.days_ago(7)) \
+        .limit(1000)
+    return pids
+
+
+def _get_board_object(pids: CTE) -> Select:
+    preview = board.get_product_previews(products=pids, id_col=None, order_field="execution_date").cte()
+    stats = board.get_product_group_stats(pids, None).cte()
+
+    q = s.select(
+        preview.c.products,
+        stats
+    ) \
+        .join(
+            preview,
+            stats.c.n_products > (F.cardinality(preview.c.products) - 10)
+        )
+    return q
 
 
 def advertiserPageInit(args: dict):
@@ -35,13 +63,23 @@ def advertiserPageInit(args: dict):
         psql.array_agg(images.c.product_image_url).label("top_brand_images")
     ).cte()
 
+    new_products_board = _get_board_object(
+        _load_new_products(advertiser_name).cte()
+    ).limit(1).cte()
+
+    board_cols = [ c.name for c in new_products_board.c ]
     q = s.select(
+        F.json_build_object(
+            *(seq(board_cols) \
+                .flat_map(lambda c: [c, new_products_board.c[c] ]) \
+                .to_list())
+        ).label('new_products_board'),
         n_products,
         agg_images
     ).join(
         agg_images, 
         n_products.c.n_products > (F.cardinality(agg_images.c.top_brand_images) - 10)
-    )
+    ).outerjoin(new_products_board, True)
 
-    res = get_first(q)
+    res = run_query(q)
     return res

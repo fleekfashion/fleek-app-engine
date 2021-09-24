@@ -22,8 +22,11 @@ from src.utils import static
 from src.defs.utils import get_relevent_fields
 DELIMITER = ",_,"
 
+def days_ago(days: int) -> datetime:
+    return datetime.utcnow() - timedelta(days=days)
+
 def days_ago_timestamp(days: int) -> int:
-    return int((datetime.utcnow() - timedelta(days=days) ).timestamp())
+    return int(days_ago(days).timestamp())
 
 def get_daily_random_seed() -> float:
     random.seed(datetime.utcnow().date())

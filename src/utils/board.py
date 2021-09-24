@@ -126,10 +126,9 @@ def get_product_group_stats(
 
 def get_product_previews(
     products: CTE,
-    id_col: t.Union[str, t.List[str]],
+    id_col: t.Optional[t.Union[str, t.List[str]]],
     order_field: str,
     desc: bool = True,
-    drop_duplicates=False,
     ) -> Select:
     """
     Params
