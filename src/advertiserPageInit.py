@@ -22,7 +22,7 @@ def _load_new_products(advertiser_name: str) -> Select:
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
-        .order_by(p.ProductInfo.execution_date) \
+        .order_by(p.ProductInfo.execution_date.desc()) \
         .limit(1000)
     return pids
 
@@ -35,7 +35,20 @@ def _load_sale_products(advertiser_name: str) -> Select:
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price + 3)) \
-        .order_by(p.ProductInfo.execution_date) \
+        .order_by(p.ProductInfo.execution_date.desc()) \
+        .limit(1000)
+    return pids
+
+def _load_top_products(advertiser_name: str) -> Select:
+    pids = s.select(
+        p.ProductInfo.product_id, 
+        p.ProductInfo.execution_date,
+        #literal(BoardType.ADVERTISER_SALE_PRODUCTS).label('board_type')
+    ) \
+        .where(p.ProductInfo.is_active) \
+        .where(p.ProductInfo.advertiser_name == advertiser_name) \
+        .where(p.ProductInfo.n_likes > 1) \
+        .order_by(p.ProductInfo.n_likes.desc()) \
         .limit(1000)
     return pids
 
@@ -96,11 +109,16 @@ def advertiserPageInit(args: dict):
         _load_sale_products(advertiser_name).cte(),
         f"On Sale at {advertiser_name}"
     ).limit(1).cte()
+    top_products_board = _get_board_object(
+        _load_top_products(advertiser_name).cte(),
+        f"Top Products at {advertiser_name}"
+    ).limit(1).cte()
     board_cols = [ c.name for c in new_products_board.c ]
 
     q = s.select(
         sale_products_board.c.board.label("advertiser_sale_products"),
         new_products_board.c.board.label("advertiser_new_products"),
+        top_products_board.c.board.label("advertiser_top_products"),
         n_products,
         agg_images
     ).join(
@@ -112,7 +130,10 @@ def advertiserPageInit(args: dict):
     ).outerjoin(
         sale_products_board,
         n_products.c.n_products > sale_products_board.c.stupid_int_col
-    ) \
+    ).outerjoin(
+        top_products_board,
+        n_products.c.n_products > top_products_board.c.stupid_int_col
+    ) 
 
     res = get_first(q)
     return res
