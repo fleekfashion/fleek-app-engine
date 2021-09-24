@@ -20,6 +20,7 @@ def getProducts(args: dict):
 
     board_id = args.get("board_id")
     smart_tag_id = args.get("smart_tag_id")
+    advertiser_name = args.get("advertiser_name")
 
     order_by = args.get("order_by")
 
@@ -32,6 +33,10 @@ def getProducts(args: dict):
         q = s.select(
             p.ProductSmartTag.product_id
         ).where(p.ProductSmartTag.smart_tag_id == smart_tag_id)
+    elif advertiser_name is not None:
+        q = s.select(
+            p.ProductInfo.product_id
+        ).where(p.ProductInfo.advertiser_name == advertiser_name)
     else:
         return {
             "error": "must pass board id or smart tag id"
