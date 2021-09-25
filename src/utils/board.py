@@ -127,8 +127,7 @@ def get_product_group_stats(
 def get_product_previews(
     products: CTE,
     id_col: t.Optional[t.Union[str, t.List[str]]],
-    order_field: str,
-    desc: bool = True,
+    order_field: Column,
     ) -> Select:
     """
     Params
@@ -151,8 +150,7 @@ def get_product_previews(
     tmp_ids = [ literal_column(f"tmp_{i}_{c}") for i, c in enumerate(id_col2) ]
 
     ## Order process
-    t = literal_column(order_field)
-    order_by_field = t.desc() if desc else t
+    order_by_field = order_field
 
     ## Convert to tmp ids
     products = s.select(

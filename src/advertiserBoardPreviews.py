@@ -75,7 +75,7 @@ def getAdvertiserBoardsPreviewBatch(args: dict):
     product_previews = board.get_product_previews(
         product_adv_tag,
         keys,
-        "execution_date"
+        literal_column("execution_date").desc()
     ).cte()
 
     tag_stats = board.get_product_group_stats(

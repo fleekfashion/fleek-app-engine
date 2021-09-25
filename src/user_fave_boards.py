@@ -6,6 +6,7 @@ from src.utils import hashers
 from src.defs import postgres as p
 from sqlalchemy import func as F
 from sqlalchemy.sql.selectable import Alias, CTE, Select
+from sqlalchemy.sql.expression import literal_column
 import typing as t
 from sqlalchemy.sql import Values
 from src.utils import query as qutils 
@@ -18,7 +19,7 @@ def _get_all_faves_grouped_product_previews_stmt(
     product_previews = board.get_product_previews(
         fave_pids_query,
         group_by_field,
-        'last_modified_timestamp'
+        literal_column('last_modified_timestamp').desc()
     ).cte()
 
     product_stats = board.get_product_group_stats(
@@ -83,7 +84,7 @@ def getUserFaveStats(args: dict) -> dict:
     product_previews = board.get_product_previews(
         user_fave_pids_query, 
         'board_id',
-        'last_modified_timestamp'
+        literal_column('last_modified_timestamp').desc()
     ).cte()
     
     # Since both queries are one row, can merge into one db call

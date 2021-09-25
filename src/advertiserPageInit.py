@@ -3,6 +3,7 @@ import itertools
 from functional import seq
 
 import sqlalchemy as s
+from sqlalchemy import Column
 from src.utils import string_parser, board, query as qutils 
 from sqlalchemy.sql.selectable import Alias, CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
@@ -22,7 +23,7 @@ def _load_new_products(advertiser_name: str) -> Select:
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
-        .order_by(p.ProductInfo.execution_date.desc()) \
+        .order_by(p.ProductInfo.execution_date.desc(), p.ProductInfo.product_id) \
         .limit(1000)
     return pids
 
@@ -35,25 +36,31 @@ def _load_sale_products(advertiser_name: str) -> Select:
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price + 3)) \
-        .order_by(p.ProductInfo.execution_date.desc()) \
+        .order_by(p.ProductInfo.execution_date.desc(), p.ProductInfo.product_id) \
         .limit(1000)
     return pids
 
 def _load_top_products(advertiser_name: str) -> Select:
     pids = s.select(
-        p.ProductInfo.product_id, 
+        p.ProductInfo.product_id,
         p.ProductInfo.execution_date,
+        p.ProductInfo.n_likes,
+        p.ProductInfo.n_views
         #literal(BoardType.ADVERTISER_SALE_PRODUCTS).label('board_type')
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.n_likes > 1) \
-        .order_by(p.ProductInfo.n_likes.desc()) \
+        .order_by(qutils.get_swipe_rate(), p.ProductInfo.product_id) \
         .limit(1000)
     return pids
 
-def _get_board_object(pids: CTE, name: str) -> Select:
-    preview = board.get_product_previews(products=pids, id_col=None, order_field="execution_date").cte()
+def _get_board_object(pids: CTE, name: str, order_field: Column) -> Select:
+    preview = board.get_product_previews(
+        products=pids, 
+        id_col=None, 
+        order_field=order_field
+    ).cte()
     stats = board.get_product_group_stats(pids, None).cte()
 
     q = s.select(
@@ -103,15 +110,18 @@ def advertiserPageInit(args: dict):
 
     new_products_board = _get_board_object(
         _load_new_products(advertiser_name).cte(),
-        f"Lastest Items from {advertiser_name}"
+        f"Lastest Items from {advertiser_name}",
+        literal_column("execution_date").desc()
     ).limit(1).cte()
     sale_products_board = _get_board_object(
         _load_sale_products(advertiser_name).cte(),
-        f"On Sale at {advertiser_name}"
+        f"On Sale at {advertiser_name}",
+        literal_column("execution_date").desc()
     ).limit(1).cte()
     top_products_board = _get_board_object(
         _load_top_products(advertiser_name).cte(),
-        f"Top Products at {advertiser_name}"
+        f"Top Products at {advertiser_name}",
+        qutils.get_swipe_rate()
     ).limit(1).cte()
     board_cols = [ c.name for c in new_products_board.c ]
 

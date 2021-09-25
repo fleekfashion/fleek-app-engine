@@ -22,6 +22,12 @@ from src.utils import static
 from src.defs.utils import get_relevent_fields
 DELIMITER = ",_,"
 
+def get_swipe_rate() -> Column:
+    return (
+        (literal_column('n_likes') + 1) /
+        (literal_column('n_views') + 10)
+    ).desc()
+
 def days_ago(days: int) -> datetime:
     return datetime.utcnow() - timedelta(days=days)
 

@@ -64,7 +64,7 @@ def getProducts(args: dict):
     elif order_by == "swipe_rate":
         res = filtered_products.order_by(
             *[
-                literal_column('n_likes').desc(),
+                qutils.get_swipe_rate(),
                 literal_column('product_id').desc()
             ]
         )
