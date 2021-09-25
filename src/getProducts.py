@@ -84,6 +84,13 @@ def getProducts(args: dict):
                 literal_column('product_id').desc()
             ]
         )
+    elif order_by == "pct_on_sale":
+        res = filtered_products.order_by(
+            *[
+                qutils.get_pct_on_sale(),
+                literal_column('product_id').desc()
+            ]
+        )
 
     results = run_query(res.offset(offset).limit(limit))
 

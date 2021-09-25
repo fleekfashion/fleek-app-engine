@@ -36,7 +36,7 @@ def _load_sale_products(advertiser_name: str) -> Select:
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price + 3)) \
-        .order_by(p.ProductInfo.execution_date.desc(), p.ProductInfo.product_id) \
+        .order_by(qutils.get_pct_on_sale(), p.ProductInfo.product_id) \
         .limit(1000)
     return pids
 
