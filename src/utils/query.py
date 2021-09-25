@@ -177,7 +177,7 @@ def _apply_filter(
         product_labels = value.split(DELIMITER) if type(value) == str else value
         q = q.filter(subq.c.product_labels.overlap(array(product_labels)) )
     elif key == "on_sale" and value:
-        q = q.filter(subq.c.product_sale_price < (subq.c.product_price - 3))
+        q = q.filter(subq.c.product_sale_price < (subq.c.product_price ))
     elif key == "product_search_string":
         q = _apply_product_search_filter(q, subq, value)
     return q

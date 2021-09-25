@@ -31,12 +31,14 @@ def _load_sale_products(advertiser_name: str) -> Select:
     pids = s.select(
         p.ProductInfo.product_id, 
         p.ProductInfo.execution_date,
+        p.ProductInfo.product_price,
+        p.ProductInfo.product_sale_price,
         #literal(BoardType.ADVERTISER_SALE_PRODUCTS).label('board_type')
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
-        .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price + 3)) \
-        .order_by(qutils.get_pct_on_sale(), p.ProductInfo.product_id) \
+        .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price)) \
+        .order_by(qutils.get_pct_on_sale(), p.ProductInfo.product_id.desc()) \
         .limit(1000)
     return pids
 
@@ -57,8 +59,8 @@ def _load_top_products(advertiser_name: str) -> Select:
 
 def _get_board_object(pids: CTE, name: str, order_field: Column) -> Select:
     preview = board.get_product_previews(
-        products=pids, 
-        id_col=None, 
+        products=pids,
+        id_col=None,
         order_field=order_field
     ).cte()
     stats = board.get_product_group_stats(pids, None).cte()
@@ -116,7 +118,7 @@ def advertiserPageInit(args: dict):
     sale_products_board = _get_board_object(
         _load_sale_products(advertiser_name).cte(),
         f"On Sale at {advertiser_name}",
-        literal_column("execution_date").desc()
+        qutils.get_pct_on_sale()
     ).limit(1).cte()
     top_products_board = _get_board_object(
         _load_top_products(advertiser_name).cte(),
