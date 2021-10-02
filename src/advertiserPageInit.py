@@ -4,30 +4,35 @@ from functional import seq
 
 import sqlalchemy as s
 from sqlalchemy import Column
-from src.utils import string_parser, board, query as qutils 
 from sqlalchemy.sql.selectable import Alias, CTE, Select
-from src.utils.sqlalchemy_utils import run_query, get_first 
-from src.utils import hashers
-from src.defs import postgres as p
-from src.defs.types.board_type import BoardType
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 from sqlalchemy.sql.expression import literal, literal_column
 
+from src.utils import static
+from src.utils import string_parser, board, query as qutils 
+from src.utils.sqlalchemy_utils import run_query, get_first 
+from src.utils import hashers
+from src.defs import postgres as p
+from src.defs.types.board_type import BoardType
 MAX_DAYS_NEW = 7
 MIN_PCT_SALE = .3
+
+def _get_limit(advertiser_name: str) -> int:
+    counts = static.get_advertiser_counts()
+    return max(counts.get(advertiser_name, 0) // 50, 13)
 
 def _load_new_products(advertiser_name: str) -> Select:
     pids = s.select(
         p.ProductInfo.product_id, 
         p.ProductInfo.execution_date,
-        #literal(BoardType.ADVERTISER_NEW_PRODUCTS).label('board_type')
+        literal(BoardType.ADVERTISER_NEW_PRODUCTS).label('board_type')
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.execution_date > qutils.days_ago(MAX_DAYS_NEW)) \
         .order_by(p.ProductInfo.execution_date.desc(), p.ProductInfo.product_id) \
-        .limit(1000)
+        .limit(_get_limit(advertiser_name))
     return pids
 
 def _load_sale_products(advertiser_name: str) -> Select:
@@ -36,14 +41,14 @@ def _load_sale_products(advertiser_name: str) -> Select:
         p.ProductInfo.execution_date,
         p.ProductInfo.product_price,
         p.ProductInfo.product_sale_price,
-        #literal(BoardType.ADVERTISER_SALE_PRODUCTS).label('board_type')
+        literal(BoardType.ADVERTISER_SALE_PRODUCTS).label('board_type')
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price)) \
         .where(qutils.get_pct_on_sale() > MIN_PCT_SALE) \
         .order_by(qutils.get_pct_on_sale().desc(), p.ProductInfo.product_id.desc()) \
-        .limit(1000)
+        .limit(_get_limit(advertiser_name))
     return pids
 
 def _load_top_products(advertiser_name: str) -> Select:
@@ -51,14 +56,14 @@ def _load_top_products(advertiser_name: str) -> Select:
         p.ProductInfo.product_id,
         p.ProductInfo.execution_date,
         p.ProductInfo.n_likes,
-        p.ProductInfo.n_views
-        #literal(BoardType.ADVERTISER_SALE_PRODUCTS).label('board_type')
+        p.ProductInfo.n_views,
+        literal(BoardType.ADVERTISER_TOP_PRODUCTS).label('board_type')
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.n_views > 5) \
         .order_by(qutils.get_swipe_rate(), p.ProductInfo.product_id) \
-        .limit(1000)
+        .limit(_get_limit(advertiser_name))
     return pids
 
 def _get_board_object(pids: CTE, name: str, order_field: Column) -> Select:
