@@ -4,7 +4,7 @@ import itertools
 
 import sqlalchemy as s
 from sqlalchemy.sql.dml import Insert, Update
-from sqlalchemy.sql.selectable import Alias, CTE, Select
+from sqlalchemy.sql.selectable import Alias, CTE, Select, ColumnClause
 from sqlalchemy import subquery 
 from sqlalchemy import Column
 from sqlalchemy.orm.session import Session
@@ -20,6 +20,8 @@ from src.utils import query as qutils
 from src.utils import user_info
 from src.utils import static 
 
+TMP_ID_COL = "tmp_id_colname"
+
 def get_update_board_timestamp_stmt_from_select(board_ids: Select, timestamp: int) -> Update:
     return s.update(p.Board) \
         .where(p.Board.board_id.in_(board_ids)) \
@@ -31,9 +33,21 @@ def get_board_update_timestamp_statement(board_id: int, last_modified_timestamp:
         .where(p.Board.board_id == board_id) \
         .values(last_modified_timestamp=last_modified_timestamp)
 
+def _map_colnames(
+        q: CTE,
+        c1: t.List[ColumnClause],
+        c2: t.List[ColumnClause]
+    ) -> t.List[ColumnClause]:
+    return [ 
+        q.c[real.name].label(tmp.name)
+        if real.name != TMP_ID_COL
+        else  literal(1).label(tmp.name)
+        for real, tmp in zip(c1, c2)
+    ]
+
 def get_product_group_stats(
         products: CTE,
-        id_col: t.Optional[str]
+        id_col: t.Optional[t.Union[t.List[str], str]]
     ) -> Select:
     """
     Params
@@ -52,23 +66,30 @@ def get_product_group_stats(
     """
 
     ## Process id col
-    id_colname = id_col if id_col else "temp_id"
-    tmp_id_col = literal_column(id_col) if id_col else literal(1).label(id_colname)
+    id_col = id_col if id_col else TMP_ID_COL
+    id_col2 = [id_col] if isinstance(id_col, str) else id_col
+
+    id_cols = [literal_column(c) for c in id_col2 ]
+    tmp_ids = [ literal_column(f"tmp_{i}_{c}") for i, c in enumerate(id_col2) ]
 
     ## join pinfo
     q3 = qutils.join_base_product_info(products).cte()
+    q3 = s.select(
+        q3,
+        *_map_colnames(q3, id_cols, tmp_ids)
+    )
 
     ## Get advertiser level stats
     advertiser_stats = s.select(
-        tmp_id_col,
+        *tmp_ids,
         q3.c.advertiser_name,
         F.count(q3.c.product_id).label('n_products')
-    ).group_by(tmp_id_col, q3.c.advertiser_name) \
+    ).group_by(*tmp_ids, q3.c.advertiser_name) \
         .cte()
 
     ## Get total group level stats
     full_advertiser_stats = s.select(
-        tmp_id_col,
+        *tmp_ids,
         F.sum(advertiser_stats.c.n_products).label('n_products'),
         psql.array_agg(
             F.json_build_object(
@@ -77,38 +98,43 @@ def get_product_group_stats(
             )
         ).label('advertiser_stats'),
     ) \
-        .group_by(tmp_id_col) \
+        .group_by(*tmp_ids) \
         .cte()
 
     active_stats = s.select(
-        tmp_id_col,
+        *tmp_ids,
         F.sum(q3.c.product_price - q3.c.product_sale_price).label('total_savings')
     ) \
         .where(q3.c.is_active) \
-        .group_by(tmp_id_col) \
+        .group_by(*tmp_ids) \
         .cte()
 
     board_stats = s.select(
-        full_advertiser_stats,
-        active_stats.c.total_savings
+        full_advertiser_stats.c.advertiser_stats,
+        full_advertiser_stats.c.n_products,
+        active_stats.c.total_savings,
+        *_map_colnames(full_advertiser_stats, tmp_ids, id_cols)
     ).outerjoin(
-        active_stats, 
-        full_advertiser_stats.c[id_colname] == active_stats.c[id_colname]
+        active_stats,
+        s.and_(*[ 
+            full_advertiser_stats.c[c.name] == active_stats.c[c.name]
+            for c in tmp_ids
+        ])
     )
 
-    return board_stats
+    return board_stats 
 
 def get_product_previews(
     products: CTE,
-    id_col: str,
-    order_field: str,
-    desc: bool = True
+    id_col: t.Optional[t.Union[str, t.List[str]]],
+    order_field: Column,
     ) -> Select:
     """
     Params
     -----------------------
     products: cte containing a list of product_ids
-    id_col OPTIONAL: column name to do group bys
+    id_col OPTIONAL: column name  or list of column names
+    to do group bys
     order_field: column name to order list by
     desc: whether to order in desc or asc
 
@@ -116,18 +142,29 @@ def get_product_previews(
     grouped by the id_col field
     """
 
-    tmp_id_col = literal_column(id_col)
-    t = literal_column(order_field)
-    order_by_field = t.desc() if desc else t
+    ## Process id col
+    id_col = id_col if id_col else TMP_ID_COL
+    id_col2 = [id_col] if isinstance(id_col, str) else id_col
+
+    id_cols = [literal_column(c) for c in id_col2 ]
+    tmp_ids = [ literal_column(f"tmp_{i}_{c}") for i, c in enumerate(id_col2) ]
+
+    ## Order process
+    order_by_field = order_field
+
+    ## Convert to tmp ids
+    products = s.select(
+        products,
+        *_map_colnames(products, id_cols, tmp_ids)
+    ).cte()
 
     ## Get row numbers
     board_products = s.select(
-            tmp_id_col.label('tmp_id_col'),
+            *tmp_ids,
             products.c.product_id,
-            products.c.last_modified_timestamp,
             F.row_number() \
                 .over(
-                    tmp_id_col,
+                    partition_by=tmp_ids,
                     order_by=(
                         order_by_field,
                         products.c.product_id.desc()
@@ -144,7 +181,7 @@ def get_product_previews(
 
     ## Get preview
     product_previews = s.select(
-            board_product_info.c.tmp_id_col.label(id_col),
+            *tmp_ids,
             psql.array_agg(
                 psql.aggregate_order_by(
                     F.json_build_object(
@@ -158,11 +195,48 @@ def get_product_previews(
                     board_product_info.c.row_number.asc()
                 )
             ).label('products'),
+            psql.array_agg(
+                psql.aggregate_order_by(
+                    board_product_info.c.product_id,
+                    board_product_info.c.row_number.asc()
+                )
+            ).label('product_id_array'),
         ) \
         .group_by(
-            board_product_info.c.tmp_id_col
+            *tmp_ids
+        ).cte()
+
+    return s.select(
+        product_previews.c.products,
+        product_previews.c.product_id_array,
+        *_map_colnames(product_previews, tmp_ids, id_cols)
+    )
+
+def drop_duplicate_previews(
+    q: Select,
+    col_ids: t.List[str],
+    row_number: str,
+    n : int = 1
+    ) -> Select:
+    tmp_ids = [ literal_column(c) for c in col_ids ]
+    t = q.cte()
+    t2 = q.alias("t2")
+
+    duplicate_ids = s.select(
+        *[t.c[tid.name] for tid in tmp_ids]
+    ) \
+        .join(t2, s.and_(*[
+            t.c.product_id_array[i] == t2.c.product_id_array[i]
+            for i in range(1, n+1)
+            ])
+        ) \
+        .where(
+            t.c[row_number] > t2.c[row_number] ## Take the item with higher row number (to remove)
         )
-    return product_previews
+
+    res = s.select(t) \
+        .where(s.tuple_(*tmp_ids).not_in(duplicate_ids))
+    return res
 
 def get_ordered_products_batch(
     pids_and_order_col_cte: CTE,

@@ -9,7 +9,7 @@ from src.utils import hashers
 from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
-from sqlalchemy.sql.expression import literal
+from sqlalchemy.sql.expression import literal, literal_column
 
 def _get_user_board_products(user_id: int) -> Select:
     ## Get products already in boards
@@ -155,9 +155,10 @@ def getSuggestedBoardsBatch(args: dict, dev_mode: bool=False) -> dict:
     smart_tag_products = _get_smart_tag_products(ranked_smart_tags, user_id)
 
     product_previews = board.get_product_previews(
-            smart_tag_products, 
-            "smart_tag_id", 
-            "last_modified_timestamp").cte()
+            smart_tag_products,
+            "smart_tag_id",
+            literal_column("last_modified_timestamp").desc()
+        ).cte()
     tag_stats = board.get_product_group_stats(
             smart_tag_products, 
             "smart_tag_id").cte()

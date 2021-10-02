@@ -52,6 +52,9 @@ from src import board_smart_tag_suggestions
 from src import suggested_boards
 from src import trackers
 from src import update_user_id
+from src import advertiserBoardPreviews 
+from src import advertiserPageInit 
+from src import getProducts as gp
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -402,6 +405,25 @@ def updateUserId():
 def upsertUserProfileInfo():
     data = request.get_json(force=True)
     return jsonify(up.upsert_user_profile_info(data))
+
+@app.route('/getAdvertiserBoardsPreviewBatch', methods=['GET'])
+def getAdvertiserBoardsPreviewBatch():
+    return jsonify(
+        advertiserBoardPreviews.getAdvertiserBoardsPreviewBatch(request.args)
+    )
+
+@app.route('/getAdvertiserPageInit', methods=['GET'])
+def getAdvertiserPageInit():
+    return jsonify(
+        advertiserPageInit.advertiserPageInit(request.args)
+    )
+
+@app.route('/getProducts', methods=['GET'])
+def getProducts():
+    return jsonify(
+        gp.getProducts(request.args)
+    )
+
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the

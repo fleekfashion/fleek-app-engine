@@ -22,8 +22,23 @@ from src.utils import static
 from src.defs.utils import get_relevent_fields
 DELIMITER = ",_,"
 
+def get_pct_on_sale() -> Column:
+    return (
+        (literal_column('product_price') - literal_column('product_sale_price') - 3 ) /
+        (literal_column('product_price'))
+    ).desc()
+
+def get_swipe_rate() -> Column:
+    return (
+        (literal_column('n_likes') + 1) /
+        (literal_column('n_views') + 10)
+    ).desc()
+
+def days_ago(days: int) -> datetime:
+    return datetime.utcnow() - timedelta(days=days)
+
 def days_ago_timestamp(days: int) -> int:
-    return int((datetime.utcnow() - timedelta(days=days) ).timestamp())
+    return int(days_ago(days).timestamp())
 
 def get_daily_random_seed() -> float:
     random.seed(datetime.utcnow().date())
@@ -162,7 +177,7 @@ def _apply_filter(
         product_labels = value.split(DELIMITER) if type(value) == str else value
         q = q.filter(subq.c.product_labels.overlap(array(product_labels)) )
     elif key == "on_sale" and value:
-        q = q.filter(subq.c.product_sale_price < subq.c.product_price)
+        q = q.filter(subq.c.product_sale_price < (subq.c.product_price ))
     elif key == "product_search_string":
         q = _apply_product_search_filter(q, subq, value)
     return q

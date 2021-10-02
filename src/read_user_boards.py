@@ -6,6 +6,7 @@ from src.utils import board, string_parser
 from sqlalchemy.sql.selectable import CTE, Select
 from src.utils.sqlalchemy_utils import run_query, get_first 
 from src.utils import hashers
+from sqlalchemy.sql.expression import literal_column
 from src.defs import postgres as p
 from src.defs.types.board_type import BoardType
 from sqlalchemy.dialects import postgresql as psql
@@ -175,8 +176,7 @@ def getUserBoardsBatch(args: dict, dev_mode: bool = False) -> dict:
     product_previews = board.get_product_previews(
             board_products,
             'board_id',
-            'last_modified_timestamp',
-            desc=True
+            literal_column('last_modified_timestamp').desc()
     ).cte()
     
     ## Join board info with the board products
