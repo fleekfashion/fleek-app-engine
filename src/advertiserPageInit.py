@@ -14,6 +14,8 @@ from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 from sqlalchemy.sql.expression import literal, literal_column
 
+MAX_DAYS_NEW = 7
+MIN_PCT_SALE = .3
 
 def _load_new_products(advertiser_name: str) -> Select:
     pids = s.select(
@@ -23,6 +25,7 @@ def _load_new_products(advertiser_name: str) -> Select:
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
+        .where(p.ProductInfo.execution_date > qutils.days_ago(MAX_DAYS_NEW)) \
         .order_by(p.ProductInfo.execution_date.desc(), p.ProductInfo.product_id) \
         .limit(1000)
     return pids
@@ -38,6 +41,7 @@ def _load_sale_products(advertiser_name: str) -> Select:
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price)) \
+        .where(qutils.get_pct_on_sale() > MIN_PCT_SALE) \
         .order_by(qutils.get_pct_on_sale(), p.ProductInfo.product_id.desc()) \
         .limit(1000)
     return pids
@@ -52,7 +56,7 @@ def _load_top_products(advertiser_name: str) -> Select:
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
-        .where(p.ProductInfo.n_likes > 1) \
+        .where(p.ProductInfo.n_views > 5) \
         .order_by(qutils.get_swipe_rate(), p.ProductInfo.product_id) \
         .limit(1000)
     return pids
