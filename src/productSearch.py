@@ -12,6 +12,7 @@ from src.utils.static import get_advertiser_counts, get_advertiser_price_quantil
 from src.utils.hashers import apple_id_to_user_id_hash
 from src.utils.fuzzymatching import rm_token, _handle_spaces
 from src.defs.utils import get_relevent_fields
+from src.defs.types.board_type import BoardType
 
 N_SEARCH_TAGS = 12
 MIN_SEARCH_TAG_HITS = 5
@@ -217,4 +218,11 @@ def productSearch(args, index: Index) -> dict:
         max_price=max_price,
         nbHits=data['nbHits']
     )
+
+    data['n_products'] = data['nbHits']
+    data['advertiser_stats'] = [ 
+        {"advertiser_name": key, "n_products": value} 
+        for key, value in data['facetsDistribution']['advertiser_name'].items() 
+    ]
+    data['board_type'] = BoardType.PRODUCT_SEARCH_BOARD
     return data
