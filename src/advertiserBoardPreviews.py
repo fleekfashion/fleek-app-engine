@@ -2,17 +2,17 @@ import typing as t
 import itertools
 
 import sqlalchemy as s
-from src.utils import string_parser, board, query as qutils 
 from sqlalchemy.sql.selectable import Alias, CTE, Select
-from src.utils.sqlalchemy_utils import run_query, get_first 
-from src.utils import hashers
-from src.defs import postgres as p
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import func as F 
 from sqlalchemy.sql.expression import literal, literal_column
 
-import importlib
-importlib.reload(board)
+from src.utils import string_parser, board, query as qutils 
+from src.utils.sqlalchemy_utils import run_query, get_first 
+from src.utils import hashers
+from src.defs import postgres as p
+from src.defs.types.board_type import BoardType
+
 def _get_ranked_smart_tags(advertiser_name) -> Select:
     q = s.select(
         p.AdvertiserTopSmartTag.smart_tag_id,
@@ -89,6 +89,7 @@ def getAdvertiserBoardsPreviewBatch(args: dict):
         tag_stats.c.advertiser_stats,
         product_previews.c.products,
         product_previews.c.product_id_array,
+        literal(BoardType.SMART_TAG).label("board_type"),
     ) \
         .join(product_previews, tag_stats.c.smart_tag_id == product_previews.c.smart_tag_id) \
         .join(ranked_tags, tag_stats.c.smart_tag_id == ranked_tags.c.smart_tag_id)
