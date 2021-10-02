@@ -62,7 +62,6 @@ def getProducts(args: dict):
             ]
         )
     elif order_by == "swipe_rate":
-        print('boom')
         res = filtered_products.order_by(
             *[
                 qutils.get_swipe_rate().desc(),
