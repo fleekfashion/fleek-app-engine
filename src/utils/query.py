@@ -26,7 +26,7 @@ def get_pct_on_sale() -> Column:
     return (
         (literal_column('product_price') - literal_column('product_sale_price') - 3 ) /
         (literal_column('product_price'))
-    ).desc()
+    )
 
 def get_swipe_rate() -> Column:
     return (

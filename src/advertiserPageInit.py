@@ -42,7 +42,7 @@ def _load_sale_products(advertiser_name: str) -> Select:
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price)) \
         .where(qutils.get_pct_on_sale() > MIN_PCT_SALE) \
-        .order_by(qutils.get_pct_on_sale(), p.ProductInfo.product_id.desc()) \
+        .order_by(qutils.get_pct_on_sale().desc(), p.ProductInfo.product_id.desc()) \
         .limit(1000)
     return pids
 
@@ -122,7 +122,7 @@ def advertiserPageInit(args: dict):
     sale_products_board = _get_board_object(
         _load_sale_products(advertiser_name).cte(),
         f"On Sale at {advertiser_name}",
-        qutils.get_pct_on_sale()
+        qutils.get_pct_on_sale().desc()
     ).limit(1).cte()
     top_products_board = _get_board_object(
         _load_top_products(advertiser_name).cte(),

@@ -87,7 +87,7 @@ def getProducts(args: dict):
     elif order_by == "pct_on_sale":
         res = filtered_products.order_by(
             *[
-                qutils.get_pct_on_sale(),
+                qutils.get_pct_on_sale().desc(),
                 literal_column('product_id').desc()
             ]
         )
