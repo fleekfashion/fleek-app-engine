@@ -57,12 +57,13 @@ def _load_top_products(advertiser_name: str) -> Select:
         p.ProductInfo.execution_date,
         p.ProductInfo.n_likes,
         p.ProductInfo.n_views,
+        qutils.get_swipe_rate(),
         literal(BoardType.ADVERTISER_TOP_PRODUCTS).label('board_type')
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.n_views > 5) \
-        .order_by(qutils.get_swipe_rate(), p.ProductInfo.product_id) \
+        .order_by(qutils.get_swipe_rate().desc(), p.ProductInfo.product_id.desc()) \
         .limit(_get_limit(advertiser_name))
     return pids
 
@@ -132,7 +133,7 @@ def advertiserPageInit(args: dict):
     top_products_board = _get_board_object(
         _load_top_products(advertiser_name).cte(),
         f"Top Products at {advertiser_name}",
-        qutils.get_swipe_rate()
+        qutils.get_swipe_rate().desc()
     ).limit(1).cte()
     board_cols = [ c.name for c in new_products_board.c ]
 

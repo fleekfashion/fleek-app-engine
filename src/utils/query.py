@@ -30,9 +30,9 @@ def get_pct_on_sale() -> Column:
 
 def get_swipe_rate() -> Column:
     return (
-        (literal_column('n_likes') + 1) /
+        F.cast(literal_column('n_likes') + 1, s.FLOAT) /
         (literal_column('n_views') + 10)
-    ).desc()
+    )
 
 def days_ago(days: int) -> datetime:
     return datetime.utcnow() - timedelta(days=days)
