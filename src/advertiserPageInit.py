@@ -1,6 +1,7 @@
 import typing as t
 import itertools
 from functional import seq
+import math
 
 import sqlalchemy as s
 from sqlalchemy import Column
@@ -20,7 +21,10 @@ MIN_PCT_SALE = .3
 
 def _get_limit(advertiser_name: str) -> int:
     counts = static.get_advertiser_counts()
-    return max(counts.get(advertiser_name, 0) // 50, 13)
+    return max(
+        int(math.sqrt(counts.get(advertiser_name, 0))),
+        13
+    )
 
 def _load_new_products(advertiser_name: str) -> Select:
     pids = s.select(
@@ -32,7 +36,7 @@ def _load_new_products(advertiser_name: str) -> Select:
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.execution_date > qutils.days_ago(MAX_DAYS_NEW)) \
         .order_by(p.ProductInfo.execution_date.desc(), p.ProductInfo.product_id.desc()) \
-        .limit(_get_limit(advertiser_name) + 13) # for slight difference
+        .limit(int(_get_limit(advertiser_name)*.95)) # for slight difference
     return pids
 
 def _load_sale_products(advertiser_name: str) -> Select:
@@ -48,7 +52,7 @@ def _load_sale_products(advertiser_name: str) -> Select:
         .where(p.ProductInfo.product_price > (p.ProductInfo.product_sale_price)) \
         .where(qutils.get_pct_on_sale() > MIN_PCT_SALE) \
         .order_by(qutils.get_pct_on_sale().desc(), p.ProductInfo.product_id.desc()) \
-        .limit(_get_limit(advertiser_name) - 4) # for slight difference
+        .limit(int(_get_limit(advertiser_name)*1.07)) # for slight difference
     return pids
 
 def _load_top_products(advertiser_name: str) -> Select:
