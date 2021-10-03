@@ -62,7 +62,6 @@ def _load_top_products(advertiser_name: str) -> Select:
     ) \
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
-        .where(p.ProductInfo.n_views > 5) \
         .order_by(qutils.get_swipe_rate().desc(), p.ProductInfo.product_id.desc()) \
         .limit(_get_limit(advertiser_name))
     return pids
