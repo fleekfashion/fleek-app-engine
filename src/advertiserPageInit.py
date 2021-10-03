@@ -31,7 +31,7 @@ def _load_new_products(advertiser_name: str) -> Select:
         .where(p.ProductInfo.is_active) \
         .where(p.ProductInfo.advertiser_name == advertiser_name) \
         .where(p.ProductInfo.execution_date > qutils.days_ago(MAX_DAYS_NEW)) \
-        .order_by(p.ProductInfo.execution_date.desc(), p.ProductInfo.product_id) \
+        .order_by(p.ProductInfo.execution_date.desc(), p.ProductInfo.product_id.desc()) \
         .limit(_get_limit(advertiser_name))
     return pids
 
@@ -122,17 +122,17 @@ def advertiserPageInit(args: dict):
 
     new_products_board = _get_board_object(
         _load_new_products(advertiser_name).cte(),
-        f"Lastest Items from {advertiser_name}",
+        f"Newest Additions",
         literal_column("execution_date").desc()
     ).limit(1).cte()
     sale_products_board = _get_board_object(
         _load_sale_products(advertiser_name).cte(),
-        f"On Sale at {advertiser_name}",
+        f"Best Deals",
         qutils.get_pct_on_sale().desc()
     ).limit(1).cte()
     top_products_board = _get_board_object(
         _load_top_products(advertiser_name).cte(),
-        f"Top Products at {advertiser_name}",
+        f"Hottest on Fleek",
         qutils.get_swipe_rate().desc()
     ).limit(1).cte()
     board_cols = [ c.name for c in new_products_board.c ]
