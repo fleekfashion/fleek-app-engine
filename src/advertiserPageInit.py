@@ -135,7 +135,7 @@ def advertiserPageInit(args: dict):
     ).limit(1).cte()
     top_products_board = _get_board_object(
         _load_top_products(advertiser_name).cte(),
-        f"Hottest on Fleek",
+        f"Trending on Fleek",
         qutils.get_swipe_rate().desc()
     ).limit(1).cte()
     board_cols = [ c.name for c in new_products_board.c ]
