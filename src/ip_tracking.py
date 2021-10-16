@@ -9,7 +9,7 @@ from src.utils import query as qutils
 from src.defs import postgres as p
 from src.utils.sqlalchemy_utils import get_first 
 
-def uploadIPBoard(args: dict) -> dict:
+def upsertIPBoard(args: dict) -> dict:
     ip_address = args['ip_address']
     board_id = args['board_id']
     timestamp = qutils.days_ago_timestamp(0)

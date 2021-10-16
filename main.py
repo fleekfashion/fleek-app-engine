@@ -55,6 +55,7 @@ from src import update_user_id
 from src import advertiserBoardPreviews 
 from src import advertiserPageInit 
 from src import getProducts as gp
+from src import ip_tracking
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -424,7 +425,18 @@ def getProducts():
         gp.getProducts(request.args)
     )
 
+@app.route('/upsertIPBoard', methods=['POST'])
+def upsertIPBoard():
+    data = request.get_json(force=True)
+    return jsonify(
+        ip_tracking.upsertIPBoard(data)
+    )
 
+@app.route('/getRecentIPBoard', methods=['GET'])
+def getRecentIPBoard():
+    return jsonify(
+        ip_tracking.getRecentIPBoard(request.args)
+    )
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
     # application on Google App Engine. See entrypoint in app.yaml.
