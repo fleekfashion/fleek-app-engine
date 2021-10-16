@@ -81,4 +81,4 @@ UserProfile = Base.classes.user_profile
 ## Misc
 AdvertiserProductCount = Base.classes.advertiser_product_count
 RejectedBoardSmartTagPopup = Base.classes.rejected_board_smart_tag_popup
-
+IP_BOARD = Base.classes.ip_board
