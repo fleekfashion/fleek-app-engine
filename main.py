@@ -428,14 +428,16 @@ def getProducts():
 @app.route('/upsertIPBoard', methods=['POST'])
 def upsertIPBoard():
     data = request.get_json(force=True)
+    ip_address = request.remote_addr
     return jsonify(
-        ip_tracking.upsertIPBoard(data)
+        ip_tracking.upsertIPBoard(data, ip_address)
     )
 
 @app.route('/getRecentIPBoard', methods=['GET'])
 def getRecentIPBoard():
+    ip_address = request.remote_addr
     return jsonify(
-        ip_tracking.getRecentIPBoard(request.args)
+        ip_tracking.getRecentIPBoard(request.args, ip_address)
     )
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the

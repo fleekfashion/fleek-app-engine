@@ -9,8 +9,7 @@ from src.utils import query as qutils
 from src.defs import postgres as p
 from src.utils.sqlalchemy_utils import get_first 
 
-def upsertIPBoard(args: dict) -> dict:
-    ip_address = args['ip_address']
+def upsertIPBoard(args: dict, ip_address: str) -> dict:
     board_id = args['board_id']
     timestamp = qutils.days_ago_timestamp(0)
 
@@ -43,13 +42,14 @@ def upsertIPBoard(args: dict) -> dict:
         "success": True
     }
 
-def getRecentIPBoard(args: dict) -> dict:
-    ip_address = args['ip_address']
+def getRecentIPBoard(args: dict, ip_address: str) -> dict:
     max_timestamp = qutils.days_ago_timestamp(1)
 
     q = s.select(
         p.IP_BOARD.board_id
-    ).where(p.IP_BOARD.event_timestamp > max_timestamp)
+    ) \
+    .where(p.IP_BOARD.event_timestamp > max_timestamp) \
+    .where(p.IP_BOARD.ip_address == ip_address)
 
     res = get_first(q)
     board_id = None if res is None else res['board_id']
