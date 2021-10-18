@@ -428,6 +428,7 @@ def getProducts():
     )
 
 @app.route('/upsertIPBoard', methods=['POST'])
+@cross_origin()
 def upsertIPBoard():
     data = request.get_json(force=True)
     ip_address = request.remote_addr
