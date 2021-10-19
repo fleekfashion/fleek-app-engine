@@ -431,14 +431,14 @@ def getProducts():
 @cross_origin()
 def upsertIPBoard():
     data = request.get_json(force=True)
-    ip_address = request.remote_addr
+    ip_address = request.access_route[0]
     return jsonify(
         ip_tracking.upsertIPBoard(data, ip_address)
     )
 
 @app.route('/getRecentIPBoard', methods=['GET'])
 def getRecentIPBoard():
-    ip_address = request.remote_addr
+    ip_address = request.access_route[0]
     return jsonify(
         ip_tracking.getRecentIPBoard(request.args, ip_address)
     )
