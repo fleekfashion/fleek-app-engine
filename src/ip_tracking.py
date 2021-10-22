@@ -45,13 +45,15 @@ def upsertIPBoard(args: dict, ip_address: str) -> dict:
 def getRecentIPBoard(args: dict, ip_address: str) -> dict:
     max_timestamp = qutils.days_ago_timestamp(1)
 
-    q = s.select(
-        p.IP_BOARD.board_id
+    q = s.delete(
+        p.IP_BOARD
     ) \
-    .where(p.IP_BOARD.event_timestamp > max_timestamp) \
-    .where(p.IP_BOARD.ip_address == ip_address)
+        .where(p.IP_BOARD.event_timestamp > max_timestamp) \
+        .where(p.IP_BOARD.ip_address == ip_address) \
+        .returning(p.IP_BOARD.board_id)
 
-    res = get_first(q)
+    with session_scope() as session:
+        res = session.execute(q).fetchone()
     board_id = None if res is None else res['board_id']
 
     return {
