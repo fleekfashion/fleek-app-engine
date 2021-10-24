@@ -450,6 +450,13 @@ def getExploreBoardsBatch():
         explore_boards.getExploreBoardsBatch(request.args)
     )
 
+@app.route('/getDailyMixProductsBatch', methods=['GET'])
+def getDailyMixProductsBatch():
+    return jsonify(
+        explore_boards.getDailyMixProductsBatch(request.args)
+    )
+
+
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
     # application on Google App Engine. See entrypoint in app.yaml.
