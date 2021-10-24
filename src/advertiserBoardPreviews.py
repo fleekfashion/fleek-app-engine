@@ -76,9 +76,11 @@ def getAdvertiserBoardsPreviewBatch(args: dict):
     res = board.build_board_objects(
         ranked_tags,
         product_adv_tag,
+        product_adv_tag,
         keys,
         literal_column('execution_date').desc(),
-        BoardType.SMART_TAG
+        BoardType.SMART_TAG,
+        True
     )
     boards = run_query(res)
     parsed_boards = string_parser.process_suggested_boards(boards)

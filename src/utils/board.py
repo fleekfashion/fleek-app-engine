@@ -47,20 +47,22 @@ def _map_colnames(
 
 def build_board_objects(
         ranked_keys: CTE,
-        key_products: CTE,
+        preview_products: CTE,
+        stat_products: CTE,
         keys: t.List[str],
         order_field: Column,
-        board_type: str
+        board_type: str,
+        drop_duplicates: bool
     ) -> Select:
 
     product_previews = get_product_previews(
-        key_products,
+        preview_products,
         keys,
         literal_column("execution_date").desc()
     ).cte()
 
     tag_stats = get_product_group_stats(
-            key_products,
+            stat_products,
             keys
     ).cte()
 
@@ -76,13 +78,17 @@ def build_board_objects(
         .join(
             ranked_keys, 
             s.and_(*[
-                tag_stats.c[k] == ranked_keys.c[k] 
+                tag_stats.c[k] == ranked_keys.c[k]
                 for k in keys
             ])
         )
 
-    filtered_q = drop_duplicate_previews(q, keys, row_number="rank", n=1) \
-        .cte()
+    if drop_duplicates:
+        filtered_q = drop_duplicate_previews(q, keys, row_number="rank", n=1) \
+            .cte()
+    else:
+        filtered_q = q.cte()
+
     res = s.select(filtered_q) \
             .order_by(filtered_q.c.rank)
     return res

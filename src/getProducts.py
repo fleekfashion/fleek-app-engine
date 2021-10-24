@@ -69,7 +69,12 @@ def getProducts(args: dict):
             ]
         )
     elif order_by == "personalized":
-        res = qutils.apply_ranking(filtered_products.cte(), user_id, .8)
+        res = qutils.apply_ranking(
+            filtered_products.cte(), 
+            user_id, 
+            .8,
+            random_seed=qutils.get_daily_random_seed()
+        )
     elif order_by == "price_low":
         res = filtered_products.order_by(
             *[
