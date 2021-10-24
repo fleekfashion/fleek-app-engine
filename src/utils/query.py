@@ -77,8 +77,6 @@ def join_normalized_score(
     pct: float,
     random_seed=None
     ) -> Select:
-    if random_seed is None:
-        random_seed = random.random()
 
     def _get_scaling_factor(user_id: int, pct: float):
         n_advertisers = len(static.get_advertiser_names())
@@ -97,7 +95,9 @@ def join_normalized_score(
     .cte()
 
     ranked_products = s.select(
-        F.setseed(random_seed),
+        (F.setseed(random_seed) 
+            if random_seed is not None 
+            else literal(1)).label('seed'),
         products_subquery,
         (F.random()*F.sqrt(AC.n_products) \
             *F.cbrt(AC.n_products) \
@@ -119,7 +119,7 @@ def apply_ranking(
     ) -> Select:
 
     ranked_products = join_normalized_score(
-        products_subquery, user_id, pct
+        products_subquery, user_id, pct, random_seed
     ).cte()
     final_q = s.select(ranked_products) \
                   .order_by(ranked_products.c.normalized_rank.asc())

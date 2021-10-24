@@ -56,6 +56,7 @@ from src import advertiserBoardPreviews
 from src import advertiserPageInit 
 from src import getProducts as gp
 from src import ip_tracking
+from src import explore_boards
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -442,6 +443,13 @@ def getRecentIPBoard():
     return jsonify(
         ip_tracking.getRecentIPBoard(request.args, ip_address)
     )
+
+@app.route('/getExploreBoardsBatch', methods=['GET'])
+def getExploreBoardsBatch():
+    return jsonify(
+        explore_boards.getExploreBoardsBatch(request.args)
+    )
+
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
     # application on Google App Engine. See entrypoint in app.yaml.
