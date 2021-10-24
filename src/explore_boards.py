@@ -51,7 +51,7 @@ def get_random_smart_tags() -> Select:
         literal(1).label('c')
     ) \
         .order_by(F.random()) \
-        .limit(100)
+        .limit(50)
     return q
 
 def _get_product_smart_tag(smart_tags: CTE) -> Select:
@@ -177,4 +177,24 @@ def getDailyMixProductsBatch(args):
     res = run_query(batch)
     return {
         'products': res
+    }
+
+
+def getDailyMixPreview(args):
+    user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
+    offset = args['offset']
+    limit = args['limit']
+
+    products = _get_daily_mix_products(user_id).cte()
+
+    batch = s.select(products) \
+        .limit(6)
+    product_batch = run_query(batch)
+    
+    stats_q = board.get_product_group_stats(products, None,)
+    stats = get_first(stats_q)
+
+    return {
+        **stats,
+        'products': product_batch,
     }
