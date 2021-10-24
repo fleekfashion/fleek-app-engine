@@ -89,15 +89,16 @@ def join_normalized_score(
     scaling_factor = _get_scaling_factor(user_id, pct)
     
     faved_brands = s.select(
+        (F.setseed(random_seed) 
+            if random_seed is not None
+            else literal(1)).label('seed'),
         p.UserFavedBrands.advertiser_name,
         literal(scaling_factor).label('scaling_factor')
     ).filter(p.UserFavedBrands.user_id == literal(user_id)) \
     .cte()
 
+    print(random_seed)
     ranked_products = s.select(
-        (F.setseed(random_seed) 
-            if random_seed is not None 
-            else literal(1)).label('seed'),
         products_subquery,
         (F.random()*F.sqrt(AC.n_products) \
             *F.cbrt(AC.n_products) \
