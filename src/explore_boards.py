@@ -46,4 +46,3 @@ def getExploreBoardsBatch(args):
         .limit(30) \
         .cte()
 
-    smart_tag_products = s.select(

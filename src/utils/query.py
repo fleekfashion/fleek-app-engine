@@ -115,6 +115,7 @@ def apply_ranking(
         products_subquery: t.Union[Alias, CTE], 
         user_id: int, 
         pct: float,
+        random_seed=None
     ) -> Select:
 
     ranked_products = join_normalized_score(
