@@ -182,8 +182,6 @@ def getDailyMixProductsBatch(args):
 
 def getDailyMixPreview(args):
     user_id = hashers.apple_id_to_user_id_hash(args['user_id'])
-    offset = args['offset']
-    limit = args['limit']
 
     products = _get_daily_mix_products(user_id).cte()
 
