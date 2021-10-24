@@ -97,7 +97,6 @@ def join_normalized_score(
     ).filter(p.UserFavedBrands.user_id == literal(user_id)) \
     .cte()
 
-    print(random_seed)
     ranked_products = s.select(
         products_subquery,
         (F.random()*F.sqrt(AC.n_products) \
