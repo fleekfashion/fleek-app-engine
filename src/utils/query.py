@@ -70,11 +70,16 @@ def union_by_names(
         else ordered_q1.union(ordered_q2)
     return res
 
-def apply_ranking(
-        products_subquery: t.Union[Alias, CTE], 
-        user_id: int, 
-        pct: float,
+
+def join_normalized_score(
+    products_subquery: t.Union[Alias, CTE], 
+    user_id: int,
+    pct: float,
+    random_seed=None
     ) -> Select:
+    if random_seed is None:
+        random_seed = random.random()
+
     def _get_scaling_factor(user_id: int, pct: float):
         n_advertisers = len(static.get_advertiser_names())
         n_fave_brands = len(user_info.get_user_fave_brands(user_id))
@@ -92,6 +97,7 @@ def apply_ranking(
     .cte()
 
     ranked_products = s.select(
+        F.setseed(random_seed),
         products_subquery,
         (F.random()*F.sqrt(AC.n_products) \
             *F.cbrt(AC.n_products) \
@@ -102,9 +108,18 @@ def apply_ranking(
         faved_brands,
         products_subquery.c.advertiser_name == faved_brands.c.advertiser_name,
         isouter=True
-    ).filter(products_subquery.c.advertiser_name == AC.advertiser_name) \
-    .cte()
+    ).filter(products_subquery.c.advertiser_name == AC.advertiser_name)
+    return ranked_products
 
+def apply_ranking(
+        products_subquery: t.Union[Alias, CTE], 
+        user_id: int, 
+        pct: float,
+    ) -> Select:
+
+    ranked_products = join_normalized_score(
+        products_subquery, user_id, pct
+    ).cte()
     final_q = s.select(ranked_products) \
                   .order_by(ranked_products.c.normalized_rank.asc())
     return final_q
