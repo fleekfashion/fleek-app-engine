@@ -45,6 +45,54 @@ def _map_colnames(
         for real, tmp in zip(c1, c2)
     ]
 
+def build_board_objects(
+        ranked_keys: CTE,
+        preview_products: CTE,
+        stat_products: CTE,
+        keys: t.List[str],
+        order_field: Column,
+        board_type: str,
+        drop_duplicates: bool
+    ) -> Select:
+
+    product_previews = get_product_previews(
+        preview_products,
+        keys,
+        literal_column("execution_date").desc()
+    ).cte()
+
+    tag_stats = get_product_group_stats(
+            stat_products,
+            keys
+    ).cte()
+
+    q = s.select(
+        ranked_keys,
+        tag_stats.c.n_products,
+        tag_stats.c.advertiser_stats,
+        product_previews.c.products,
+        product_previews.c.product_id_array,
+        literal(board_type).label("board_type"),
+    ) \
+        .join(product_previews, tag_stats.c.smart_tag_id == product_previews.c.smart_tag_id) \
+        .join(
+            ranked_keys, 
+            s.and_(*[
+                tag_stats.c[k] == ranked_keys.c[k]
+                for k in keys
+            ])
+        )
+
+    if drop_duplicates:
+        filtered_q = drop_duplicate_previews(q, keys, row_number="rank", n=1) \
+            .cte()
+    else:
+        filtered_q = q.cte()
+
+    res = s.select(filtered_q) \
+            .order_by(filtered_q.c.rank)
+    return res
+
 def get_product_group_stats(
         products: CTE,
         id_col: t.Optional[t.Union[t.List[str], str]]

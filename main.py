@@ -56,6 +56,7 @@ from src import advertiserBoardPreviews
 from src import advertiserPageInit 
 from src import getProducts as gp
 from src import ip_tracking
+from src import explore_boards
 
 app = Flask(__name__)
 conn = psycopg2.connect(user=DATABASE_USER, password=PASSWORD,
@@ -441,6 +442,24 @@ def getRecentIPBoard():
     ip_address = request.access_route[0]
     return jsonify(
         ip_tracking.getRecentIPBoard(request.args, ip_address)
+    )
+
+@app.route('/getExploreBoardsBatch', methods=['GET'])
+def getExploreBoardsBatch():
+    return jsonify(
+        explore_boards.getExploreBoardsBatch(request.args)
+    )
+
+@app.route('/getDailyMixProductsBatch', methods=['GET'])
+def getDailyMixProductsBatch():
+    return jsonify(
+        explore_boards.getDailyMixProductsBatch(request.args)
+    )
+
+@app.route('/getDailyMixPreview', methods=['GET'])
+def getDailyMixPreview():
+    return jsonify(
+        explore_boards.getDailyMixPreview(request.args)
     )
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the

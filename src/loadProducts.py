@@ -1,5 +1,6 @@
 import typing as t
 from random import shuffle
+import random
 from src.defs import postgres as p
 
 from src.utils.psycop_utils import cur_execute, get_labeled_values, get_columns
@@ -44,10 +45,14 @@ def process_products(
         products_subquery,
         args,
         active_only=True
-    ).cte(f'filtered_products_{descr}')
+    ).cte()
 
     pct = FIRST_SESSION_FAVE_PCT if is_first_session else FAVE_PCT
-    ranked_products = qutils.apply_ranking(filtered_products, user_id, pct) \
+    ranked_products = qutils.apply_ranking(
+            filtered_products,
+            user_id,
+            pct
+        ) \
         .limit(limit)
 
     return ranked_products
@@ -65,12 +70,12 @@ def loadProducts(args: dict) -> list:
 
 
     top_products = qutils.join_base_product_info(
-        s.select(p.TopProducts).cte('top_product_ids'),
-    ).cte('top_product_info')
+        s.select(p.TopProducts).cte(),
+    ).cte()
 
     sampled_products = s.select(
         s.tablesample(p.ProductInfo, s.func.bernoulli(3))
-    ).cte("sampled_products")
+    ).cte()
 
     final_top_products = process_products(
         top_products,
@@ -78,7 +83,7 @@ def loadProducts(args: dict) -> list:
         args,
         n_top,
         "top_products"
-    ).cte('final_top_products')
+    ).cte()
 
     final_random_products = process_products(
         sampled_products,
@@ -86,12 +91,12 @@ def loadProducts(args: dict) -> list:
         args,
         n_top,
         "random_products"
-    ).cte('final_random_products')
+    ).cte()
 
     all_products = qutils.union_by_names(
         final_top_products,
         final_random_products
-    ).cte('all_products')
+    ).cte()
 
     complete_products_query = qutils.join_external_product_info(
         all_products
@@ -121,7 +126,7 @@ def getProductColorOptions(args: dict) -> dict:
         s.select(
             literal(product_id).label('product_id')
         )
-    ).cte('all_pids')
+    ).cte()
 
     ## Get product info
     pinfo_subq = qutils.join_product_info(
